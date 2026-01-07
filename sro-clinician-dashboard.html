@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SRO Clinical Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Fraunces:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #f8fafc; --card: #ffffff; --sidebar: #0f172a;
+      --text: #1e293b; --text-secondary: #64748b; --text-muted: #94a3b8;
+      --border: #e2e8f0; --red: #ef4444; --red-bg: #fef2f2;
+      --yellow: #f59e0b; --yellow-bg: #fffbeb; --green: #10b981;
+      --green-bg: #ecfdf5; --blue: #3b82f6; --radius: 12px;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); }
+    .layout { display: flex; min-height: 100vh; }
+    
+    /* Sidebar */
+    .sidebar { width: 220px; background: var(--sidebar); padding: 20px 12px; height: 100vh; display: flex; flex-direction: column; flex-shrink: 0; }
+    .logo { font-family: 'Fraunces', serif; font-size: 18px; color: white; padding: 0 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
+
+    /* Mobile - hide sidebar */
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { padding: 16px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+      .header { flex-direction: column; gap: 16px; }
+      .header-actions { width: 100%; }
+      .header-actions .btn { flex: 1; justify-content: center; }
+      .filter-bar { flex-direction: column; gap: 12px; align-items: stretch; }
+      .search-box { width: 100%; }
+      .table-header { display: none; }
+      .patient-row { grid-template-columns: 36px 1fr auto; gap: 8px; padding: 12px; }
+      .patient-row > div:nth-child(3),
+      .patient-row > div:nth-child(4),
+      .patient-row > div:nth-child(5),
+      .patient-row > div:nth-child(6) { display: none; }
+      .modal { margin: 16px; max-height: calc(100vh - 32px); }
+      .detail-grid { grid-template-columns: 1fr; }
+    }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: #94a3b8; font-size: 14px; cursor: pointer; margin-bottom: 4px; transition: all 0.2s; }
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: white; }
+    .nav-item.active { background: rgba(59,130,246,0.2); color: white; }
+    .nav-item svg { width: 20px; height: 20px; }
+    .nav-badge { margin-left: auto; background: var(--red); color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+    .sidebar-footer { margin-top: auto; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
+    .user-info { display: flex; align-items: center; gap: 10px; padding: 10px; }
+    .user-avatar { width: 32px; height: 32px; background: var(--blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: 600; }
+    .user-name { color: white; font-size: 13px; font-weight: 500; }
+    .user-role { color: #64748b; font-size: 11px; }
+
+    /* Main */
+    .main { flex: 1; padding: 28px; overflow-x: auto; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
+    .header h1 { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 400; }
+    .header-date { color: var(--text-secondary); font-size: 13px; margin-top: 4px; }
+    .btn { padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; display: flex; align-items: center; gap: 6px; transition: all 0.2s; }
+    .btn svg { width: 16px; height: 16px; }
+    .btn-primary { background: var(--blue); color: white; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-secondary { background: white; color: var(--text); border: 1px solid var(--border); }
+    .header-actions { display: flex; gap: 10px; }
+
+    /* Stats */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+    .stat-card { background: var(--card); border-radius: var(--radius); padding: 18px; border: 1px solid var(--border); }
+    .stat-card.alert { border-left: 4px solid var(--red); }
+    .stat-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+    .stat-value { font-family: 'Fraunces', serif; font-size: 28px; }
+    .stat-value.red { color: var(--red); }
+    .stat-value.yellow { color: var(--yellow); }
+    .stat-value.green { color: var(--green); }
+    .stat-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+    /* Filters */
+    .filter-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .filter-tabs { display: flex; gap: 6px; }
+    .filter-tab { padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; background: transparent; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+    .filter-tab:hover { background: var(--border); }
+    .filter-tab.active { background: var(--text); color: white; }
+    .filter-count { font-size: 11px; padding: 2px 7px; border-radius: 10px; background: rgba(0,0,0,0.1); }
+    .filter-tab.active .filter-count { background: rgba(255,255,255,0.2); }
+    .filter-tab.red-tab .filter-count { background: var(--red); color: white; }
+    .filter-tab.yellow-tab .filter-count { background: var(--yellow); color: white; }
+    .filter-tab.green-tab .filter-count { background: var(--green); color: white; }
+    .search-box { display: flex; align-items: center; gap: 8px; padding: 9px 14px; background: white; border: 1px solid var(--border); border-radius: 8px; width: 240px; }
+    .search-box input { border: none; outline: none; font-size: 13px; width: 100%; }
+    .search-box svg { width: 16px; height: 16px; color: var(--text-muted); }
+
+    /* Table */
+    .patient-table { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
+    .table-header { display: grid; grid-template-columns: 36px 2fr 80px 80px 80px 120px 70px; padding: 12px 18px; background: #f8fafc; border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+    .patient-row { display: grid; grid-template-columns: 36px 2fr 80px 80px 80px 120px 70px; padding: 14px 18px; border-bottom: 1px solid var(--border); align-items: center; cursor: pointer; transition: background 0.2s; }
+    .patient-row:hover { background: #f8fafc; }
+    .patient-row:last-child { border-bottom: none; }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .status-dot.red { background: var(--red); }
+    .status-dot.yellow { background: var(--yellow); }
+    .status-dot.green { background: var(--green); }
+    .patient-name { font-weight: 500; font-size: 14px; }
+    .patient-procedure { font-size: 12px; color: var(--text-secondary); }
+    .patient-cell { font-size: 13px; }
+    .patient-cell.muted { color: var(--text-muted); }
+    .trend-up { color: var(--red); }
+    .trend-down { color: var(--green); }
+    .view-btn { padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; background: var(--bg); border: 1px solid var(--border); cursor: pointer; }
+    .view-btn:hover { background: var(--text); color: white; border-color: var(--text); }
+
+    /* Modal */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: flex-start; padding: 40px; overflow-y: auto; }
+    .modal-overlay.active { display: flex; }
+    .modal { background: white; border-radius: var(--radius); width: 100%; max-width: 720px; }
+    .modal-header { display: flex; justify-content: space-between; padding: 20px; border-bottom: 1px solid var(--border); }
+    .modal-header h2 { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 400; }
+    .modal-meta { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+    .modal-close { background: none; border: none; cursor: pointer; padding: 6px; color: var(--text-muted); border-radius: 6px; }
+    .modal-close:hover { background: var(--bg); }
+    .modal-body { padding: 20px; }
+    .modal-section { margin-bottom: 24px; }
+    .modal-section-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+    
+    .concern-box { background: var(--red-bg); border: 1px solid var(--red); border-radius: 8px; padding: 14px; }
+    .concern-header { display: flex; align-items: center; gap: 8px; font-weight: 500; color: var(--red); margin-bottom: 8px; font-size: 14px; }
+    .concern-header svg { width: 18px; height: 18px; }
+    .concern-text { font-size: 14px; line-height: 1.5; }
+    .concern-time { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+
+    .detail-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .detail-card { background: var(--bg); border-radius: 8px; padding: 14px; }
+    .detail-card.alert { background: var(--red-bg); border: 1px solid var(--red); }
+    .detail-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
+    .detail-value { font-family: 'Fraunces', serif; font-size: 22px; }
+    .detail-card.alert .detail-value { color: var(--red); }
+    .detail-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    .chart-box { background: var(--bg); border-radius: 8px; padding: 14px; }
+    .mini-chart { display: flex; align-items: flex-end; gap: 6px; height: 80px; margin-bottom: 8px; }
+    .mini-bar { flex: 1; background: var(--green); border-radius: 3px 3px 0 0; min-height: 6px; }
+    .mini-bar.medium { background: var(--yellow); }
+    .mini-bar.high { background: var(--red); }
+    .chart-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); }
+
+    .timeline { border-left: 2px solid var(--border); margin-left: 6px; padding-left: 20px; }
+    .timeline-item { position: relative; padding-bottom: 16px; }
+    .timeline-item:last-child { padding-bottom: 0; }
+    .timeline-dot { position: absolute; left: -27px; top: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
+    .timeline-dot.red { background: var(--red); }
+    .timeline-dot.yellow { background: var(--yellow); }
+    .timeline-dot.green { background: var(--green); }
+    .timeline-date { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
+    .timeline-content { font-size: 13px; }
+    .timeline-detail { font-size: 12px; color: var(--text-secondary); }
+
+    .modal-actions { display: flex; gap: 10px; padding: 16px 20px; border-top: 1px solid var(--border); background: #f8fafc; }
+    .modal-actions .btn { flex: 1; justify-content: center; }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="logo">SRO Intelligence</div>
+      <nav>
+        <a class="nav-item active">
+          <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+          Patients
+        </a>
+        <a class="nav-item">
+          <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/></svg>
+          Alerts
+          <span class="nav-badge">3</span>
+        </a>
+        <a class="nav-item">
+          <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
+          Analytics
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <div class="user-avatar">DR</div>
+          <div>
+            <div class="user-name">Dr. Roberts</div>
+            <div class="user-role">Orthopedic Surgery</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="header">
+        <div>
+          <h1>Patient Recovery</h1>
+          <p class="header-date">Sunday, January 4, 2026</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-secondary"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg> Export</button>
+          <button class="btn btn-primary"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg> Add Patient</button>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card alert">
+          <div class="stat-label">Needs Attention</div>
+          <div class="stat-value red">3</div>
+          <div class="stat-sub">Red flags today</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Watch List</div>
+          <div class="stat-value yellow">5</div>
+          <div class="stat-sub">Yellow flags</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">On Track</div>
+          <div class="stat-value green">18</div>
+          <div class="stat-sub">Recovering well</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Active</div>
+          <div class="stat-value">26</div>
+          <div class="stat-sub">In recovery</div>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <div class="filter-tabs">
+          <button class="filter-tab active" onclick="filterPatients('all', this)">All <span class="filter-count">26</span></button>
+          <button class="filter-tab red-tab" onclick="filterPatients('red', this)">Red <span class="filter-count">3</span></button>
+          <button class="filter-tab yellow-tab" onclick="filterPatients('yellow', this)">Yellow <span class="filter-count">5</span></button>
+          <button class="filter-tab green-tab" onclick="filterPatients('green', this)">Green <span class="filter-count">18</span></button>
+        </div>
+        <div class="search-box">
+          <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+          <input type="text" placeholder="Search patients..." oninput="searchPatients(this.value)">
+        </div>
+      </div>
+
+      <div class="patient-table">
+        <div class="table-header">
+          <div></div><div>Patient</div><div>Day</div><div>Pain</div><div>ROM</div><div>Last Check-in</div><div></div>
+        </div>
+        <div class="patient-row" data-status="red" onclick="openModal('margaret')">
+          <div><span class="status-dot red"></span></div>
+          <div><div class="patient-name">Margaret Thompson</div><div class="patient-procedure">R TKA</div></div>
+          <div class="patient-cell">Day 8</div>
+          <div class="patient-cell trend-up">7/10 ↑</div>
+          <div class="patient-cell">68°</div>
+          <div class="patient-cell">2 hours ago</div>
+          <div><button class="view-btn" onclick="event.stopPropagation(); openModal('margaret')">View</button></div>
+        </div>
+        <div class="patient-row" data-status="red" onclick="openModal('robert')">
+          <div><span class="status-dot red"></span></div>
+          <div><div class="patient-name">Robert Chen</div><div class="patient-procedure">L TKA</div></div>
+          <div class="patient-cell">Day 5</div>
+          <div class="patient-cell trend-up">8/10 ↑</div>
+          <div class="patient-cell">52°</div>
+          <div class="patient-cell">5 hours ago</div>
+          <div><button class="view-btn" onclick="event.stopPropagation(); openModal('robert')">View</button></div>
+        </div>
+        <div class="patient-row" data-status="red" onclick="openModal('susan')">
+          <div><span class="status-dot red"></span></div>
+          <div><div class="patient-name">Susan Williams</div><div class="patient-procedure">R THA</div></div>
+          <div class="patient-cell">Day 3</div>
+          <div class="patient-cell">—</div>
+          <div class="patient-cell">—</div>
+          <div class="patient-cell muted">No check-in</div>
+          <div><button class="view-btn" onclick="event.stopPropagation(); openModal('susan')">View</button></div>
+        </div>
+        <div class="patient-row" data-status="yellow" onclick="openModal('james')">
+          <div><span class="status-dot yellow"></span></div>
+          <div><div class="patient-name">James Martinez</div><div class="patient-procedure">R TKA</div></div>
+          <div class="patient-cell">Day 12</div>
+          <div class="patient-cell">5/10</div>
+          <div class="patient-cell">78°</div>
+          <div class="patient-cell">Yesterday</div>
+          <div><button class="view-btn" onclick="event.stopPropagation(); openModal('james')">View</button></div>
+        </div>
+        <div class="patient-row" data-status="yellow" onclick="openModal('patricia')">
+          <div><span class="status-dot yellow"></span></div>
+          <div><div class="patient-name">Patricia Davis</div><div class="patient-procedure">L THA</div></div>
+          <div class="patient-cell">Day 10</div>
+          <div class="patient-cell">4/10</div>
+          <div class="patient-cell">25°</div>
+          <div class="patient-cell">6 hours ago</div>
+          <div><button class="view-btn" onclick="event.stopPropagation(); openModal('patricia')">View</button></div>
+        </div>
+        <div class="patient-row" data-status="green" onclick="openModal('michael')">
+          <div><span class="status-dot green"></span></div>
+          <div><div class="patient-name">Michael Brown</div><div class="patient-procedure">R TKA</div></div>
+          <div class="patient-cell">Day 14</div>
+          <div class="patient-cell trend-down">2/10 ↓</div>
+          <div class="patient-cell">95°</div>
+          <div class="patient-cell">1 hour ago</div>
+          <div><button class="view-btn" onclick="event.stopPropagation(); openModal('michael')">View</button></div>
+        </div>
+        <div class="patient-row" data-status="green" onclick="openModal('linda')">
+          <div><span class="status-dot green"></span></div>
+          <div><div class="patient-name">Linda Johnson</div><div class="patient-procedure">R TKA</div></div>
+          <div class="patient-cell">Day 21</div>
+          <div class="patient-cell trend-down">1/10 ↓</div>
+          <div class="patient-cell">112°</div>
+          <div class="patient-cell">3 hours ago</div>
+          <div><button class="view-btn" onclick="event.stopPropagation(); openModal('linda')">View</button></div>
+        </div>
+        <div class="patient-row" data-status="green" onclick="openModal('david')">
+          <div><span class="status-dot green"></span></div>
+          <div><div class="patient-name">David Wilson</div><div class="patient-procedure">L TKA</div></div>
+          <div class="patient-cell">Day 18</div>
+          <div class="patient-cell">3/10</div>
+          <div class="patient-cell">102°</div>
+          <div class="patient-cell">Today 8am</div>
+          <div><button class="view-btn" onclick="event.stopPropagation(); openModal('david')">View</button></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modal" onclick="closeModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <h2 id="modal-name">Margaret Thompson</h2>
+          <p class="modal-meta" id="modal-meta">R TKA • Day 8 Post-Op • DOB: 03/15/1958</p>
+        </div>
+        <button class="modal-close" onclick="closeModal()">
+          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-section" id="concern-section">
+          <div class="concern-box">
+            <div class="concern-header">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+              Patient Reported Concern
+            </div>
+            <div class="concern-text" id="concern-text">My knee is very swollen and warm to touch. More pain than yesterday even with medication.</div>
+            <div class="concern-time">Reported 2 hours ago</div>
+          </div>
+        </div>
+        <div class="modal-section">
+          <div class="modal-section-title">Current Status</div>
+          <div class="detail-grid">
+            <div class="detail-card alert" id="pain-card">
+              <div class="detail-label">Pain Level</div>
+              <div class="detail-value" id="modal-pain">7/10</div>
+              <div class="detail-sub" id="pain-sub">↑ from 4/10 yesterday</div>
+            </div>
+            <div class="detail-card">
+              <div class="detail-label">Knee Flexion</div>
+              <div class="detail-value" id="modal-rom">68°</div>
+              <div class="detail-sub">Target: 90° by Day 14</div>
+            </div>
+            <div class="detail-card">
+              <div class="detail-label">PT Adherence</div>
+              <div class="detail-value" id="modal-pt">75%</div>
+              <div class="detail-sub">6 of 8 sessions</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-section">
+          <div class="modal-section-title">Pain Trend (7 Days)</div>
+          <div class="chart-box">
+            <div class="mini-chart" id="pain-chart">
+              <div class="mini-bar" style="height:30%"></div>
+              <div class="mini-bar" style="height:35%"></div>
+              <div class="mini-bar" style="height:40%"></div>
+              <div class="mini-bar medium" style="height:50%"></div>
+              <div class="mini-bar medium" style="height:55%"></div>
+              <div class="mini-bar high" style="height:65%"></div>
+              <div class="mini-bar high" style="height:70%"></div>
+            </div>
+            <div class="chart-labels"><span>Dec 29</span><span>Today</span></div>
+          </div>
+        </div>
+        <div class="modal-section">
+          <div class="modal-section-title">Recent Activity</div>
+          <div class="timeline">
+            <div class="timeline-item"><div class="timeline-dot red"></div><div class="timeline-date">Today, 10:23 AM</div><div class="timeline-content">Check-in: Pain 7/10, reported swelling</div></div>
+            <div class="timeline-item"><div class="timeline-dot yellow"></div><div class="timeline-date">Yesterday, 9:15 AM</div><div class="timeline-content">Check-in: Pain 4/10, ROM 65°</div><div class="timeline-detail">Completed PT exercises</div></div>
+            <div class="timeline-item"><div class="timeline-dot green"></div><div class="timeline-date">Jan 2, 8:45 AM</div><div class="timeline-content">PT Visit #3 completed</div><div class="timeline-detail">ROM improved to 62°</div></div>
+            <div class="timeline-item"><div class="timeline-dot green"></div><div class="timeline-date">Jan 1, 10:00 AM</div><div class="timeline-content">Check-in: Pain 3/10, no concerns</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"/></svg> Call Patient</button>
+        <button class="btn btn-primary"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Mark Reviewed</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var patients = {
+      margaret: { name: 'Margaret Thompson', meta: 'R TKA • Day 8 Post-Op • DOB: 03/15/1958', pain: '7/10', painSub: '↑ from 4/10 yesterday', rom: '68°', pt: '75%', concern: 'My knee is very swollen and warm to touch. More pain than yesterday even with medication.', hasConcern: true, isAlert: true },
+      robert: { name: 'Robert Chen', meta: 'L TKA • Day 5 Post-Op • DOB: 07/22/1962', pain: '8/10', painSub: '↑ from 5/10 yesterday', rom: '52°', pt: '50%', concern: 'Sharp pain when bending. Medication not helping.', hasConcern: true, isAlert: true },
+      susan: { name: 'Susan Williams', meta: 'R THA • Day 3 Post-Op • DOB: 11/08/1955', pain: '—', painSub: 'No data', rom: '—', pt: '0%', concern: null, hasConcern: false, isAlert: false },
+      james: { name: 'James Martinez', meta: 'R TKA • Day 12 Post-Op • DOB: 04/12/1970', pain: '5/10', painSub: 'Stable', rom: '78°', pt: '88%', concern: null, hasConcern: false, isAlert: false },
+      patricia: { name: 'Patricia Davis', meta: 'L THA • Day 10 Post-Op • DOB: 06/30/1968', pain: '4/10', painSub: 'Stable', rom: '25°', pt: '80%', concern: null, hasConcern: false, isAlert: false },
+      michael: { name: 'Michael Brown', meta: 'R TKA • Day 14 Post-Op • DOB: 09/30/1965', pain: '2/10', painSub: '↓ improving', rom: '95°', pt: '100%', concern: null, hasConcern: false, isAlert: false },
+      linda: { name: 'Linda Johnson', meta: 'R TKA • Day 21 Post-Op • DOB: 02/14/1960', pain: '1/10', painSub: '↓ excellent', rom: '112°', pt: '100%', concern: null, hasConcern: false, isAlert: false },
+      david: { name: 'David Wilson', meta: 'L TKA • Day 18 Post-Op • DOB: 08/22/1963', pain: '3/10', painSub: 'On track', rom: '102°', pt: '94%', concern: null, hasConcern: false, isAlert: false }
+    };
+
+    function filterPatients(status, btn) {
+      document.querySelectorAll('.filter-tab').forEach(function(t) { t.classList.remove('active'); });
+      btn.classList.add('active');
+      document.querySelectorAll('.patient-row').forEach(function(row) {
+        row.style.display = (status === 'all' || row.dataset.status === status) ? 'grid' : 'none';
+      });
+    }
+
+    function searchPatients(q) {
+      q = q.toLowerCase();
+      document.querySelectorAll('.patient-row').forEach(function(row) {
+        var name = row.querySelector('.patient-name').textContent.toLowerCase();
+        row.style.display = name.includes(q) ? 'grid' : 'none';
+      });
+    }
+
+    function openModal(id) {
+      var p = patients[id] || patients.margaret;
+      document.getElementById('modal-name').textContent = p.name;
+      document.getElementById('modal-meta').textContent = p.meta;
+      document.getElementById('modal-pain').textContent = p.pain;
+      document.getElementById('pain-sub').textContent = p.painSub;
+      document.getElementById('modal-rom').textContent = p.rom;
+      document.getElementById('modal-pt').textContent = p.pt;
+      document.getElementById('pain-card').className = p.isAlert ? 'detail-card alert' : 'detail-card';
+      document.getElementById('concern-section').style.display = p.hasConcern ? 'block' : 'none';
+      if (p.concern) document.getElementById('concern-text').textContent = p.concern;
+      document.getElementById('modal').classList.add('active');
+    }
+
+    function closeModal(e) {
+      if (!e || e.target.id === 'modal') document.getElementById('modal').classList.remove('active');
+    }
+
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
+  </script>
+</body>
+</html>
