@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0a0f1c">
+  <title>SRO Assessment</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Fraunces:opsz,wght@9..144,300;9..144,500&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :root {
+      --bg-deep: #0a0f1c;
+      --bg-card: #111827;
+      --bg-elevated: #1a2235;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-green: #10b981;
+      --accent-green-glow: rgba(16, 185, 129, 0.3);
+      --accent-amber: #f59e0b;
+      --accent-blue: #3b82f6;
+      --accent-blue-glow: rgba(59, 130, 246, 0.2);
+      --accent-purple: #8b5cf6;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --safe-top: env(safe-area-inset-top, 20px);
+      --safe-bottom: env(safe-area-inset-bottom, 20px);
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: 'DM Sans', -apple-system, sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      line-height: 1.5;
+    }
+
+    .app {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding-top: var(--safe-top);
+      padding-bottom: var(--safe-bottom);
+    }
+
+    /* Header */
+    .header {
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px solid var(--bg-elevated);
+    }
+
+    .back-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 8px;
+      margin: -8px;
+    }
+
+    .header-content {
+      flex: 1;
+    }
+
+    .header-title {
+      font-family: 'Fraunces', serif;
+      font-size: 18px;
+      font-weight: 500;
+      color: #ffffff;
+    }
+
+    .header-subtitle {
+      font-size: 13px;
+      color: #94a3b8;
+    }
+
+    /* Progress */
+    .progress-container {
+      padding: 12px 20px;
+      background: var(--bg-card);
+    }
+
+    .progress-bar {
+      height: 4px;
+      background: var(--bg-elevated);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent-blue);
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+
+    .progress-text {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Content */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      padding-bottom: 60px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Screens */
+    .screen {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    /* Welcome Screen */
+    .welcome-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 40px 20px;
+      text-align: center;
+    }
+
+    .welcome-icon {
+      width: 80px;
+      height: 80px;
+      background: var(--accent-blue-glow);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+    }
+
+    .welcome-icon svg {
+      width: 40px;
+      height: 40px;
+      color: var(--accent-blue);
+    }
+
+    .welcome-title {
+      font-family: 'Fraunces', serif;
+      font-size: 28px;
+      font-weight: 300;
+      margin-bottom: 12px;
+    }
+
+    .welcome-desc {
+      color: var(--text-secondary);
+      font-size: 15px;
+      margin-bottom: 32px;
+      max-width: 300px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .assessment-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .assessment-card {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      text-align: left;
+      border: 2px solid var(--bg-elevated);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      width: 100%;
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text-primary);
+    }
+
+    .assessment-card:active {
+      transform: scale(0.98);
+      border-color: var(--accent-blue);
+    }
+
+    .assessment-card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .assessment-card-content {
+      flex: 1;
+    }
+    
+    .assessment-card-content h3 {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+
+    .assessment-card-content p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .time-estimate {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    .time-estimate svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* Question Styles */
+    .question-section {
+      margin-bottom: 32px;
+    }
+
+    .question-card {
+      background: #ffffff;
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .question-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+
+    .section-badge {
+      display: inline-block;
+      background: #f1f5f9;
+      color: #64748b;
+      font-size: 14px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 8px 14px;
+      border-radius: 20px;
+    }
+
+    .audio-btn {
+      background: #3b82f6;
+      border: none;
+      border-radius: 50%;
+      width: 52px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .audio-btn:active {
+      transform: scale(0.95);
+    }
+
+    .audio-btn.speaking {
+      background: #10b981;
+      animation: pulse-audio 1s ease-in-out infinite;
+    }
+
+    @keyframes pulse-audio {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .audio-btn svg {
+      width: 26px;
+      height: 26px;
+      color: white;
+    }
+
+    .question-text {
+      font-size: 26px;
+      font-weight: 500;
+      margin: 0;
+      line-height: 1.4;
+      color: #0f172a;
+    }
+
+    .question-context {
+      font-size: 18px;
+      color: #64748b;
+      margin-top: 16px;
+      padding: 16px;
+      background: #f8fafc;
+      border-radius: var(--radius-sm);
+      border-left: 3px solid var(--accent-blue);
+      line-height: 1.5;
+    }
+
+    /* Answer Options */
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .option-btn {
+      background: var(--bg-card);
+      border: 2px solid var(--bg-elevated);
+      border-radius: var(--radius);
+      padding: 22px 24px;
+      color: var(--text-primary);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 20px;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .option-btn:active {
+      transform: scale(0.98);
+    }
+
+    .option-btn.selected {
+      background: var(--accent-blue);
+      border-color: var(--accent-blue);
+      color: white;
+    }
+
+    /* Scale Options (horizontal) */
+    .scale-options {
+      display: flex;
+      gap: 8px;
+    }
+
+    .scale-btn {
+      flex: 1;
+      background: var(--bg-card);
+      border: 2px solid var(--bg-elevated);
+      border-radius: var(--radius-sm);
+      padding: 20px 8px;
+      color: var(--text-primary);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .scale-btn:active {
+      transform: scale(0.96);
+    }
+
+    .scale-btn.selected {
+      background: var(--accent-blue);
+      border-color: var(--accent-blue);
+      color: white;
+    }
+
+    .scale-btn .scale-value {
+      font-family: 'Fraunces', serif;
+      font-size: 24px;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .scale-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Number Scale (0-10) */
+    .number-scale {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .number-btn {
+      width: 60px;
+      height: 60px;
+      background: var(--bg-card);
+      border: 2px solid var(--bg-elevated);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: 'Fraunces', serif;
+      font-size: 24px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .number-btn:active {
+      transform: scale(0.94);
+    }
+
+    .number-btn.selected {
+      background: var(--accent-blue);
+      border-color: var(--accent-blue);
+      color: white;
+    }
+
+    /* Yes/No */
+    .yesno-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .yesno-btn {
+      background: var(--bg-card);
+      border: 2px solid var(--bg-elevated);
+      border-radius: var(--radius);
+      padding: 32px;
+      color: var(--text-primary);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 22px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .yesno-btn:active {
+      transform: scale(0.96);
+    }
+
+    .yesno-btn.selected {
+      background: var(--accent-blue);
+      border-color: var(--accent-blue);
+      color: white;
+    }
+
+    .scale-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 12px;
+      font-size: 16px;
+      color: var(--text-muted);
+    }
+
+    /* Buttons */
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-blue) 0%, #2563eb 100%);
+      border: none;
+      border-radius: var(--radius);
+      padding: 18px 32px;
+      color: white;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      width: 100%;
+      transition: transform 0.2s, opacity 0.2s;
+    }
+
+    .btn-primary:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: var(--bg-card);
+      border: 1px solid var(--bg-elevated);
+      border-radius: var(--radius);
+      padding: 16px 32px;
+      color: var(--text-primary);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 12px;
+    }
+
+    /* Footer */
+    .footer {
+      padding: 16px 20px;
+      background: var(--bg-card);
+      border-top: 1px solid var(--bg-elevated);
+    }
+
+    .footer-nav {
+      display: flex;
+      gap: 12px;
+    }
+
+    .footer-nav .btn-primary {
+      flex: 1;
+    }
+
+    .btn-back {
+      background: var(--bg-elevated);
+      border: none;
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      color: var(--text-secondary);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    /* Complete Screen */
+    .complete-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 40px 20px;
+      text-align: center;
+    }
+
+    .complete-icon {
+      width: 100px;
+      height: 100px;
+      background: rgba(16, 185, 129, 0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+
+    .complete-icon svg {
+      width: 50px;
+      height: 50px;
+      color: #10b981;
+    }
+
+    .complete-title {
+      font-family: 'Fraunces', serif;
+      font-size: 28px;
+      font-weight: 400;
+      margin-bottom: 12px;
+      color: #ffffff;
+    }
+
+    .complete-desc {
+      color: #94a3b8;
+      font-size: 16px;
+      margin-bottom: 32px;
+    }
+
+    .score-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+      max-width: 320px;
+      margin-bottom: 32px;
+    }
+
+    .score-card {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .score-label {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .score-value {
+      font-family: 'Fraunces', serif;
+      font-size: 24px;
+      color: var(--accent-blue);
+    }
+
+    /* Animation */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-in {
+      animation: fadeIn 0.4s ease forwards;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Welcome Screen -->
+    <div class="screen active" id="welcome-screen">
+      <div class="welcome-content">
+        <div class="welcome-icon">
+          <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/>
+          </svg>
+        </div>
+        <h1 class="welcome-title">Outcome Assessment</h1>
+        <p class="welcome-desc">These questions help us measure your joint function and overall health.</p>
+        
+        <div class="assessment-cards">
+          <button class="assessment-card" onclick="startAssessment('knee')">
+            <div class="assessment-card-icon" style="background: rgba(59, 130, 246, 0.15);">🦵</div>
+            <div class="assessment-card-content">
+              <h3>Start Knee Assessment</h3>
+              <p>KOOS Jr. + PROMIS-10 + Risk Variables</p>
+            </div>
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color: var(--text-muted);">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+            </svg>
+          </button>
+          <button class="assessment-card" onclick="startAssessment('hip')">
+            <div class="assessment-card-icon" style="background: rgba(139, 92, 246, 0.15);">🦴</div>
+            <div class="assessment-card-content">
+              <h3>Start Hip Assessment</h3>
+              <p>HOOS Jr. + PROMIS-10 + Risk Variables</p>
+            </div>
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color: var(--text-muted);">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="time-estimate">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          About 5-7 minutes to complete
+        </div>
+      </div>
+    </div>
+
+    <!-- Assessment Screen -->
+    <div class="screen" id="assessment-screen">
+      <div class="content" id="question-container" style="padding-top: 20px;">
+        <!-- Questions loaded dynamically -->
+      </div>
+    </div>
+
+    <!-- Complete Screen -->
+    <div class="screen" id="complete-screen">
+      <div class="complete-content">
+        <div class="complete-icon">
+          <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <h1 class="complete-title">Assessment Complete</h1>
+        <p class="complete-desc">Your responses have been recorded. Here are your scores:</p>
+
+        <div class="score-cards" id="score-cards">
+          <!-- Scores loaded dynamically -->
+        </div>
+
+        <button class="btn-primary" onclick="finishAssessment()">
+          Done
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Assessment Configuration
+    const assessments = {
+      knee: {
+        title: 'KOOS Jr.',
+        subtitle: 'Knee Function Assessment',
+        badge: 'knee',
+        questions: [
+          // KOOS Jr. (7 questions)
+          {
+            id: 'koos1',
+            section: 'KOOS Jr.',
+            badge: 'knee',
+            text: 'How often are you aware of problems with your knee?',
+            type: 'options',
+            options: [
+              { value: 0, label: 'Never' },
+              { value: 1, label: 'Monthly' },
+              { value: 2, label: 'Weekly' },
+              { value: 3, label: 'Daily' },
+              { value: 4, label: 'Always' }
+            ]
+          },
+          {
+            id: 'koos2',
+            section: 'KOOS Jr.',
+            badge: 'knee',
+            text: 'Have you modified your lifestyle to avoid activities potentially damaging to your knee?',
+            type: 'options',
+            options: [
+              { value: 0, label: 'Not at all' },
+              { value: 1, label: 'Mildly' },
+              { value: 2, label: 'Moderately' },
+              { value: 3, label: 'Severely' },
+              { value: 4, label: 'Totally' }
+            ]
+          },
+          {
+            id: 'koos3',
+            section: 'KOOS Jr.',
+            badge: 'knee',
+            text: 'How much are you troubled by lack of confidence in your knee?',
+            type: 'options',
+            options: [
+              { value: 0, label: 'Not at all' },
+              { value: 1, label: 'Mildly' },
+              { value: 2, label: 'Moderately' },
+              { value: 3, label: 'Severely' },
+              { value: 4, label: 'Extremely' }
+            ]
+          },
+          {
+            id: 'koos4',
+            section: 'KOOS Jr.',
+            badge: 'knee',
+            text: 'What difficulty do you have when rising from sitting?',
+            type: 'options',
+            options: [
+              { value: 0, label: 'None' },
+              { value: 1, label: 'Mild' },
+              { value: 2, label: 'Moderate' },
+              { value: 3, label: 'Severe' },
+              { value: 4, label: 'Extreme' }
+            ]
+          },
+          {
+            id: 'koos5',
+            section: 'KOOS Jr.',
+            badge: 'knee',
+            text: 'What difficulty do you have bending to the floor or picking up an object?',
+            type: 'options',
+            options: [
+              { value: 0, label: 'None' },
+              { value: 1, label: 'Mild' },
+              { value: 2, label: 'Moderate' },
+              { value: 3, label: 'Severe' },
+              { value: 4, label: 'Extreme' }
+            ]
+          },
+          {
+            id: 'koos6',
+            section: 'KOOS Jr.',
+            badge: 'knee',
+            text: 'What difficulty do you have twisting or pivoting on your knee?',
+            type: 'options',
+            options: [
+              { value: 0, label: 'None' },
+              { value: 1, label: 'Mild' },
+              { value: 2, label: 'Moderate' },
+              { value: 3, label: 'Severe' },
+              { value: 4, label: 'Extreme' }
+            ]
+          },
+          {
+            id: 'koos7',
+            section: 'KOOS Jr.',
+            badge: 'knee',
+            text: 'What difficulty do you have kneeling?',
+            type: 'options',
+            options: [
+              { value: 0, label: 'None' },
+              { value: 1, label: 'Mild' },
+              { value: 2, label: 'Moderate' },
+              { value: 3, label: 'Severe' },
+              { value: 4, label: 'Extreme' }
+            ]
+          }
+        ]
+      },
+      hip: {
+        title: 'HOOS Jr.',
+        subtitle: 'Hip Function Assessment',
+        badge: 'hip',
+        questions: [
+          // HOOS Jr. (6 questions)
+          {
+            id: 'hoos1',
+            section: 'HOOS Jr.',
+            badge: 'hip',
+            text: 'What difficulty do you have going down stairs?',
+            type: 'options',
+            options: [
+              { value: 0, label: 'None' },
+              { value: 1, label: 'Mild' },
+              { value: 2, label: 'Moderate' },
+              { value: 3, label: 'Severe' },
+              { value: 4, label: 'Extreme' }
+            ]
+          },
+          {
+            id: 'hoos2',
+            section: 'HOOS Jr.',
+            badge: 'hip',
+            text: 'What difficulty do you have getting in or out of the bath or shower?',
+            type: 'options',
+            options: [
+              { value: 0, label: 'None' },
+              { value: 1, label: 'Mild' },
+              { value: 2, label: 'Moderate' },
+              { value: 3, label: 'Severe' },
+              { value: 4, label: 'Extreme' }
+            ]
+          },
+          {
+            id: 'hoos3',
+            section: 'HOOS Jr.',
+            badge: 'hip',
+            text: 'What difficulty do you have sitting?',
+            type: 'options',
+            options: [
+              { value: 0, label: 'None' },
+              { value: 1, label: 'Mild' },
+              { value: 2, label: 'Moderate' },
+              { value: 3, label: 'Severe' },
+              { value: 4, label: 'Extreme' }
+            ]
+          },
+          {
+            id: 'hoos4',
+            section: 'HOOS Jr.',
+            badge: 'hip',
+            text: 'What difficulty do you have running?',
+            type: 'options',
+            options: [
+              { value: 0, label: 'None' },
+              { value: 1, label: 'Mild' },
+              { value: 2, label: 'Moderate' },
+              { value: 3, label: 'Severe' },
+              { value: 4, label: 'Extreme' }
+            ]
+          },
+          {
+            id: 'hoos5',
+            section: 'HOOS Jr.',
+            badge: 'hip',
+            text: 'What difficulty do you have twisting or pivoting on your leg?',
+            type: 'options',
+            options: [
+              { value: 0, label: 'None' },
+              { value: 1, label: 'Mild' },
+              { value: 2, label: 'Moderate' },
+              { value: 3, label: 'Severe' },
+              { value: 4, label: 'Extreme' }
+            ]
+          },
+          {
+            id: 'hoos6',
+            section: 'HOOS Jr.',
+            badge: 'hip',
+            text: 'How much are you troubled by lack of confidence in your hip?',
+            type: 'options',
+            options: [
+              { value: 0, label: 'Not at all' },
+              { value: 1, label: 'Mildly' },
+              { value: 2, label: 'Moderately' },
+              { value: 3, label: 'Severely' },
+              { value: 4, label: 'Extremely' }
+            ]
+          }
+        ]
+      },
+      promis: {
+        title: 'PROMIS-10',
+        subtitle: 'Global Health Assessment',
+        badge: 'health',
+        questions: [
+          {
+            id: 'promis1',
+            section: 'PROMIS-10',
+            badge: 'health',
+            text: 'In general, would you say your health is:',
+            type: 'options',
+            options: [
+              { value: 5, label: 'Excellent' },
+              { value: 4, label: 'Very good' },
+              { value: 3, label: 'Good' },
+              { value: 2, label: 'Fair' },
+              { value: 1, label: 'Poor' }
+            ]
+          },
+          {
+            id: 'promis2',
+            section: 'PROMIS-10',
+            badge: 'health',
+            text: 'In general, would you say your quality of life is:',
+            type: 'options',
+            options: [
+              { value: 5, label: 'Excellent' },
+              { value: 4, label: 'Very good' },
+              { value: 3, label: 'Good' },
+              { value: 2, label: 'Fair' },
+              { value: 1, label: 'Poor' }
+            ]
+          },
+          {
+            id: 'promis3',
+            section: 'PROMIS-10',
+            badge: 'health',
+            text: 'In general, how would you rate your physical health?',
+            type: 'options',
+            options: [
+              { value: 5, label: 'Excellent' },
+              { value: 4, label: 'Very good' },
+              { value: 3, label: 'Good' },
+              { value: 2, label: 'Fair' },
+              { value: 1, label: 'Poor' }
+            ]
+          },
+          {
+            id: 'promis4',
+            section: 'PROMIS-10',
+            badge: 'health',
+            text: 'In general, how would you rate your mental health, including your mood and your ability to think?',
+            type: 'options',
+            options: [
+              { value: 5, label: 'Excellent' },
+              { value: 4, label: 'Very good' },
+              { value: 3, label: 'Good' },
+              { value: 2, label: 'Fair' },
+              { value: 1, label: 'Poor' }
+            ]
+          },
+          {
+            id: 'promis5',
+            section: 'PROMIS-10',
+            badge: 'health',
+            text: 'In general, how would you rate your satisfaction with your social activities and relationships?',
+            type: 'options',
+            options: [
+              { value: 5, label: 'Excellent' },
+              { value: 4, label: 'Very good' },
+              { value: 3, label: 'Good' },
+              { value: 2, label: 'Fair' },
+              { value: 1, label: 'Poor' }
+            ]
+          },
+          {
+            id: 'promis6',
+            section: 'PROMIS-10',
+            badge: 'health',
+            text: 'To what extent are you able to carry out your everyday physical activities such as walking, climbing stairs, carrying groceries, or moving a chair?',
+            type: 'options',
+            options: [
+              { value: 5, label: 'Completely' },
+              { value: 4, label: 'Mostly' },
+              { value: 3, label: 'Moderately' },
+              { value: 2, label: 'A little' },
+              { value: 1, label: 'Not at all' }
+            ]
+          },
+          {
+            id: 'promis7',
+            section: 'PROMIS-10',
+            badge: 'health',
+            text: 'In the past 7 days, how often have you been bothered by emotional problems such as feeling anxious, depressed or irritable?',
+            type: 'options',
+            options: [
+              { value: 5, label: 'Never' },
+              { value: 4, label: 'Rarely' },
+              { value: 3, label: 'Sometimes' },
+              { value: 2, label: 'Often' },
+              { value: 1, label: 'Always' }
+            ]
+          },
+          {
+            id: 'promis8',
+            section: 'PROMIS-10',
+            badge: 'health',
+            text: 'In the past 7 days, how would you rate your fatigue on average?',
+            type: 'scale',
+            labels: ['None', 'Mild', 'Moderate', 'Severe', 'Very Severe']
+          },
+          {
+            id: 'promis9',
+            section: 'PROMIS-10',
+            badge: 'health',
+            text: 'In the past 7 days, how would you rate your pain on average?',
+            context: 'On a scale of 0 to 10, where 0 is no pain and 10 is the worst pain imaginable.',
+            type: 'number',
+            min: 0,
+            max: 10
+          },
+          {
+            id: 'promis10',
+            section: 'PROMIS-10',
+            badge: 'health',
+            text: 'In general, please rate how well you carry out your usual social activities and roles.',
+            context: 'This includes activities at home, at work and in your community, and responsibilities as a parent, child, spouse, employee, friend, etc.',
+            type: 'options',
+            options: [
+              { value: 5, label: 'Excellent' },
+              { value: 4, label: 'Very good' },
+              { value: 3, label: 'Good' },
+              { value: 2, label: 'Fair' },
+              { value: 1, label: 'Poor' }
+            ]
+          }
+        ]
+      },
+      risk: {
+        title: 'Risk Variables',
+        subtitle: 'Additional CMS Questions',
+        badge: 'risk',
+        questions: [
+          {
+            id: 'risk1',
+            section: 'Risk Variables',
+            badge: 'risk',
+            text: 'Have you had low back pain in the past month?',
+            type: 'yesno'
+          },
+          {
+            id: 'risk2',
+            section: 'Risk Variables',
+            badge: 'risk',
+            text: 'How comfortable are you filling out medical forms by yourself?',
+            context: 'This is a standard health literacy question.',
+            type: 'options',
+            options: [
+              { value: 0, label: 'Not at all' },
+              { value: 1, label: 'A little bit' },
+              { value: 2, label: 'Somewhat' },
+              { value: 3, label: 'Quite a bit' },
+              { value: 4, label: 'Extremely' }
+            ]
+          },
+          {
+            id: 'risk3',
+            section: 'Risk Variables',
+            badge: 'risk',
+            text: 'What amount of pain have you experienced in the last week in your OTHER knee?',
+            context: 'Not the knee being treated.',
+            type: 'options',
+            options: [
+              { value: 0, label: 'None' },
+              { value: 1, label: 'Mild' },
+              { value: 2, label: 'Moderate' },
+              { value: 3, label: 'Severe' },
+              { value: 4, label: 'Extreme' }
+            ]
+          },
+          {
+            id: 'risk4',
+            section: 'Risk Variables',
+            badge: 'risk',
+            text: 'What amount of pain have you experienced in the last week in your OTHER hip?',
+            context: 'Not the hip being treated.',
+            type: 'options',
+            options: [
+              { value: 0, label: 'None' },
+              { value: 1, label: 'Mild' },
+              { value: 2, label: 'Moderate' },
+              { value: 3, label: 'Severe' },
+              { value: 4, label: 'Extreme' }
+            ]
+          }
+        ]
+      }
+    };
+
+    // Text-to-Speech
+    let speechSynth = window.speechSynthesis;
+    let isSpeaking = false;
+    let selectedVoice = null;
+
+    // Preload voices on page load
+    function loadVoices() {
+      const voices = speechSynth.getVoices();
+      if (voices.length > 0) {
+        // Prefer natural/enhanced voices
+        selectedVoice = voices.find(v => 
+          v.name.includes('Samantha') ||
+          v.name.includes('Karen') ||
+          v.name.includes('Moira') ||
+          v.name.includes('Tessa') ||
+          v.name.includes('Google UK English Female') ||
+          v.name.includes('Google US English')
+        ) || voices.find(v => v.lang.startsWith('en') && !v.name.includes('Compact'));
+      }
+    }
+    
+    // Load voices immediately and on change
+    loadVoices();
+    speechSynth.onvoiceschanged = loadVoices;
+
+    function speakQuestion() {
+      const btn = document.getElementById('audio-btn');
+      
+      // Stop if already speaking
+      if (isSpeaking) {
+        speechSynth.cancel();
+        isSpeaking = false;
+        btn.classList.remove('speaking');
+        return;
+      }
+
+      // Cancel any pending speech
+      speechSynth.cancel();
+
+      // Get question text only
+      const questionText = document.getElementById('question-text').textContent;
+
+      // Create utterance
+      const utterance = new SpeechSynthesisUtterance(questionText);
+      utterance.rate = 0.82;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+      
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+      }
+
+      utterance.onstart = () => {
+        isSpeaking = true;
+        btn.classList.add('speaking');
+      };
+
+      utterance.onend = () => {
+        isSpeaking = false;
+        btn.classList.remove('speaking');
+      };
+
+      utterance.onerror = () => {
+        isSpeaking = false;
+        btn.classList.remove('speaking');
+      };
+
+      // Delay helps prevent choppy start
+      setTimeout(() => {
+        speechSynth.speak(utterance);
+      }, 150);
+    }
+
+    // State
+    let currentAssessment = null;
+    let allQuestions = [];
+    let currentQuestionIndex = 0;
+    let answers = {};
+
+    function startAssessment(type) {
+      currentAssessment = type;
+      
+      // Build question list based on type
+      if (type === 'knee') {
+        allQuestions = [
+          ...assessments.knee.questions,
+          ...assessments.promis.questions,
+          ...assessments.risk.questions
+        ];
+      } else {
+        allQuestions = [
+          ...assessments.hip.questions,
+          ...assessments.promis.questions,
+          ...assessments.risk.questions
+        ];
+      }
+      
+      currentQuestionIndex = 0;
+      answers = {};
+      
+      document.getElementById('welcome-screen').classList.remove('active');
+      document.getElementById('assessment-screen').classList.add('active');
+      
+      renderQuestion();
+    }
+
+    function renderQuestion() {
+      const q = allQuestions[currentQuestionIndex];
+      const container = document.getElementById('question-container');
+      
+      // Build question HTML
+      let html = `
+        <div class="question-section animate-in">
+          <div class="question-card">
+            <div class="question-header">
+              <span class="section-badge">${currentQuestionIndex + 1} of ${allQuestions.length}</span>
+              <button class="audio-btn" id="audio-btn" onclick="speakQuestion()">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"/>
+                </svg>
+              </button>
+            </div>
+            <p class="question-text" id="question-text">${q.text}</p>
+            ${q.context ? `<p class="question-context" id="question-context">${q.context}</p>` : ''}
+          </div>
+      `;
+      
+      if (q.type === 'options') {
+        html += '<div class="options">';
+        q.options.forEach((opt, i) => {
+          const selected = answers[q.id] === opt.value ? 'selected' : '';
+          html += `
+            <button class="option-btn ${selected}" onclick="selectOption('${q.id}', ${opt.value}, this)">
+              ${opt.label}
+            </button>
+          `;
+        });
+        html += '</div>';
+      } else if (q.type === 'scale') {
+        html += '<div class="scale-options">';
+        q.labels.forEach((label, i) => {
+          const value = 5 - i;
+          const selected = answers[q.id] === value ? 'selected' : '';
+          html += `
+            <button class="scale-btn ${selected}" onclick="selectOption('${q.id}', ${value}, this)">
+              <span class="scale-value">${value}</span>
+              ${label}
+            </button>
+          `;
+        });
+        html += '</div>';
+      } else if (q.type === 'number') {
+        html += `
+          <div class="number-scale">
+            ${Array.from({length: 11}, (_, i) => {
+              const selected = answers[q.id] === i ? 'selected' : '';
+              return `<button class="number-btn ${selected}" onclick="selectOption('${q.id}', ${i}, this)">${i}</button>`;
+            }).join('')}
+          </div>
+          <div class="scale-labels">
+            <span>No pain</span>
+            <span>Worst imaginable</span>
+          </div>
+        `;
+      } else if (q.type === 'yesno') {
+        html += `
+          <div class="yesno-options">
+            <button class="yesno-btn ${answers[q.id] === 1 ? 'selected' : ''}" onclick="selectOption('${q.id}', 1, this)">Yes</button>
+            <button class="yesno-btn ${answers[q.id] === 0 ? 'selected' : ''}" onclick="selectOption('${q.id}', 0, this)">No</button>
+          </div>
+        `;
+      }
+      
+      html += '</div>';
+      container.innerHTML = html;
+    }
+
+    function selectOption(questionId, value, btn) {
+      answers[questionId] = value;
+      
+      // Update visual selection
+      const container = btn.parentElement;
+      container.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      
+      // Auto-advance after short delay
+      setTimeout(() => {
+        if (currentQuestionIndex < allQuestions.length - 1) {
+          nextQuestion();
+        } else {
+          // Last question - auto complete
+          completeAssessment();
+        }
+      }, 400);
+    }
+
+    function nextQuestion() {
+      if (currentQuestionIndex < allQuestions.length - 1) {
+        currentQuestionIndex++;
+        renderQuestion();
+      } else {
+        completeAssessment();
+      }
+    }
+
+    function previousQuestion() {
+      if (currentQuestionIndex > 0) {
+        currentQuestionIndex--;
+        renderQuestion();
+      } else {
+        // Go back to welcome
+        document.getElementById('assessment-screen').classList.remove('active');
+        document.getElementById('welcome-screen').classList.add('active');
+      }
+    }
+
+    function completeAssessment() {
+      // Calculate scores
+      const scores = calculateScores();
+      
+      // Show complete screen
+      document.getElementById('assessment-screen').classList.remove('active');
+      document.getElementById('complete-screen').classList.add('active');
+      
+      // Display scores
+      const scoreCards = document.getElementById('score-cards');
+      let html = '';
+      
+      if (currentAssessment === 'knee') {
+        html += `
+          <div class="score-card">
+            <span class="score-label">KOOS Jr. Score</span>
+            <span class="score-value">${scores.jointScore.toFixed(1)}</span>
+          </div>
+        `;
+      } else {
+        html += `
+          <div class="score-card">
+            <span class="score-label">HOOS Jr. Score</span>
+            <span class="score-value">${scores.jointScore.toFixed(1)}</span>
+          </div>
+        `;
+      }
+      
+      html += `
+        <div class="score-card">
+          <span class="score-label">PROMIS Physical</span>
+          <span class="score-value">${scores.promisPhysical.toFixed(1)}</span>
+        </div>
+        <div class="score-card">
+          <span class="score-label">PROMIS Mental</span>
+          <span class="score-value">${scores.promisMental.toFixed(1)}</span>
+        </div>
+      `;
+      
+      scoreCards.innerHTML = html;
+      
+      // Data ready for API submission
+      // POST to your backend here
+    }
+
+    function calculateScores() {
+      // KOOS Jr. / HOOS Jr. scoring (0-100 interval scale)
+      // Raw score is sum of items (0-4 each), then converted
+      let jointRaw = 0;
+      let jointCount = 0;
+      
+      const jointPrefix = currentAssessment === 'knee' ? 'koos' : 'hoos';
+      const jointQuestions = currentAssessment === 'knee' ? 7 : 6;
+      
+      for (let i = 1; i <= jointQuestions; i++) {
+        const key = jointPrefix + i;
+        if (answers[key] !== undefined) {
+          jointRaw += answers[key];
+          jointCount++;
+        }
+      }
+      
+      // Convert to 0-100 scale (higher = better function)
+      // Formula: 100 - (raw / (count * 4)) * 100
+      const jointScore = jointCount > 0 ? 100 - (jointRaw / (jointCount * 4)) * 100 : 0;
+      
+      // PROMIS-10 scoring (T-score, mean 50, SD 10)
+      // Simplified calculation - actual uses lookup tables
+      let physicalItems = ['promis1', 'promis3', 'promis6', 'promis8', 'promis9'];
+      let mentalItems = ['promis2', 'promis4', 'promis5', 'promis7', 'promis10'];
+      
+      let physicalRaw = 0;
+      let mentalRaw = 0;
+      
+      physicalItems.forEach(key => {
+        if (answers[key] !== undefined) {
+          // Pain (promis9) is reverse scored
+          if (key === 'promis9') {
+            physicalRaw += (10 - answers[key]);
+          } else {
+            physicalRaw += answers[key];
+          }
+        }
+      });
+      
+      mentalItems.forEach(key => {
+        if (answers[key] !== undefined) {
+          mentalRaw += answers[key];
+        }
+      });
+      
+      // Simplified T-score conversion
+      const promisPhysical = 30 + (physicalRaw / 25) * 40;
+      const promisMental = 30 + (mentalRaw / 25) * 40;
+      
+      return {
+        jointScore,
+        promisPhysical,
+        promisMental,
+        raw: {
+          joint: jointRaw,
+          physical: physicalRaw,
+          mental: mentalRaw
+        }
+      };
+    }
+
+    function finishAssessment() {
+      // Reset and go back to welcome
+      document.getElementById('complete-screen').classList.remove('active');
+      document.getElementById('welcome-screen').classList.add('active');
+      currentQuestionIndex = 0;
+      answers = {};
+    }
+  </script>
+</body>
+</html>

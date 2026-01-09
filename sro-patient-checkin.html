@@ -743,11 +743,94 @@
     }
 
     /* Exercise Screen */
-    .exercise-subtitle {
-      color: #666666;
+    .exercise-subtitle, .meds-subtitle {
+      color: var(--text-secondary);
       font-size: 14px;
       margin-top: -20px;
       margin-bottom: 20px;
+      text-align: center;
+    }
+
+    /* Medication Pill Counter */
+    .pill-counter {
+      margin: 20px 0 32px;
+    }
+
+    .pill-buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .pill-btn {
+      background: var(--bg-card);
+      border: 2px solid var(--bg-elevated);
+      border-radius: var(--radius);
+      padding: 24px 16px;
+      color: var(--text-primary);
+      font-family: 'Fraunces', serif;
+      font-size: 32px;
+      font-weight: 400;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .pill-btn:active {
+      transform: scale(0.96);
+    }
+
+    .pill-btn.selected {
+      background: var(--accent-blue);
+      border-color: var(--accent-blue);
+      color: white;
+      box-shadow: 0 4px 20px var(--accent-blue-glow);
+    }
+
+    .pill-btn.selected.low {
+      background: var(--accent-green);
+      border-color: var(--accent-green);
+      box-shadow: 0 4px 20px var(--accent-green-glow);
+    }
+
+    .pill-btn.selected.medium {
+      background: var(--accent-amber);
+      border-color: var(--accent-amber);
+      box-shadow: 0 4px 20px var(--accent-amber-glow);
+    }
+
+    .pill-btn.selected.high {
+      background: var(--accent-red);
+      border-color: var(--accent-red);
+      box-shadow: 0 4px 20px var(--accent-red-glow);
+    }
+
+    .pill-btn-wide {
+      grid-column: span 3;
+      padding: 20px 16px;
+      font-size: 24px;
+    }
+
+    .pill-feedback {
+      text-align: center;
+      font-size: 14px;
+      color: var(--text-secondary);
+      min-height: 20px;
+    }
+
+    .pill-feedback.good {
+      color: var(--accent-green);
+    }
+
+    .pill-feedback.warning {
+      color: var(--accent-amber);
+    }
+
+    .pill-feedback.concern {
+      color: var(--accent-red);
+    }
+
+    /* Exercise Screen */
     }
 
     .exercise-list {
@@ -1168,10 +1251,31 @@
           </div>
         </div>
 
-        <button type="button" class="continue-btn" onclick="nextStep('step-exercises')">Continue</button>
+        <button type="button" class="continue-btn" onclick="nextStep('step-meds')">Continue</button>
       </div>
 
-      <!-- Step 2: Exercises -->
+      <!-- Step 2: Medication -->
+      <div class="checkin-step" id="step-meds" style="display: none;">
+        <h2 class="step-question">Pain medication<br>in last 24 hours?</h2>
+        <p class="meds-subtitle">Count all prescription pain pills</p>
+        
+        <div class="pill-counter">
+          <div class="pill-buttons">
+            <button type="button" class="pill-btn" onclick="selectPillCount(0, this)">0</button>
+            <button type="button" class="pill-btn" onclick="selectPillCount(1, this)">1</button>
+            <button type="button" class="pill-btn" onclick="selectPillCount(2, this)">2</button>
+            <button type="button" class="pill-btn" onclick="selectPillCount(3, this)">3</button>
+            <button type="button" class="pill-btn" onclick="selectPillCount(4, this)">4</button>
+            <button type="button" class="pill-btn" onclick="selectPillCount(5, this)">5</button>
+            <button type="button" class="pill-btn pill-btn-wide" onclick="selectPillCount(6, this)">6+</button>
+          </div>
+          <div class="pill-feedback" id="pill-feedback"></div>
+        </div>
+
+        <button type="button" class="continue-btn" id="meds-continue-btn" onclick="nextStep('step-exercises')" disabled>Select to continue</button>
+      </div>
+
+      <!-- Step 3: Exercises -->
       <div class="checkin-step" id="step-exercises" style="display: none;">
         <h2 class="step-question">Today's Knee Exercises</h2>
         <p class="exercise-subtitle">4 quick movements • ~3 min</p>
@@ -1411,7 +1515,18 @@
   <script>
     // State
     let currentStep = 0;
-    const steps = ['step-pain', 'step-exercises', 'step-rom', 'step-pt', 'step-concern', 'step-concern-detail'];
+    const steps = ['step-pain', 'step-meds', 'step-exercises', 'step-rom', 'step-pt', 'step-concern', 'step-concern-detail'];
+    
+    // Checkin data
+    let checkinData = {
+      pain: 3,
+      pillCount: null,
+      kneeFlexion: 85,
+      hipAbduction: 25,
+      exercisesDone: false,
+      ptCompleted: false,
+      concern: ''
+    };
     
     // ROM state
     let romValues = {
@@ -1541,6 +1656,7 @@
       
       number.textContent = value;
       label.textContent = painLabels[value];
+      checkinData.pain = parseInt(value);
       
       // Color based on severity
       if (value <= 3) {
@@ -1550,6 +1666,49 @@
       } else {
         number.style.color = 'var(--accent-red)';
       }
+    }
+
+    function selectPillCount(count, btn) {
+      // Remove selected from all buttons
+      document.querySelectorAll('.pill-btn').forEach(b => {
+        b.classList.remove('selected', 'low', 'medium', 'high');
+      });
+      
+      // Add selected to clicked button with appropriate color
+      btn.classList.add('selected');
+      if (count <= 2) {
+        btn.classList.add('low');
+      } else if (count <= 4) {
+        btn.classList.add('medium');
+      } else {
+        btn.classList.add('high');
+      }
+      
+      // Store value
+      checkinData.pillCount = count;
+      
+      // Update feedback message
+      const feedback = document.getElementById('pill-feedback');
+      const surgeryDay = 12; // Would come from patient data
+      
+      if (count === 0) {
+        feedback.textContent = "Great! No pain medication needed.";
+        feedback.className = 'pill-feedback good';
+      } else if (count <= 2) {
+        feedback.textContent = "Good progress on reducing medication.";
+        feedback.className = 'pill-feedback good';
+      } else if (count <= 4) {
+        feedback.textContent = "This is typical for your recovery stage.";
+        feedback.className = 'pill-feedback';
+      } else {
+        feedback.textContent = "We'll keep an eye on this.";
+        feedback.className = 'pill-feedback warning';
+      }
+      
+      // Enable continue button
+      const continueBtn = document.getElementById('meds-continue-btn');
+      continueBtn.disabled = false;
+      continueBtn.textContent = 'Continue';
     }
 
     function adjustROM(type, delta) {
@@ -1563,13 +1722,11 @@
       const painValue = document.getElementById('pain-slider').value;
       
       // In production, this would POST to your API
-      const checkinData = {
-        pain: parseInt(painValue),
-        kneeFlexion: romValues.knee,
-        hipAbduction: romValues.hip,
-        concern: concern,
-        timestamp: new Date().toISOString()
-      };
+      checkinData.pain = parseInt(painValue);
+      checkinData.kneeFlexion = romValues.knee;
+      checkinData.hipAbduction = romValues.hip;
+      checkinData.concern = concern;
+      checkinData.timestamp = new Date().toISOString();
       
       console.log('Submitting check-in:', checkinData);
       showScreen('complete-screen');
