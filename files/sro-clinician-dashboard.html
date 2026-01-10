@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0f1c">
+  <title>SRO Clinician Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Fraunces:wght@300;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg-deep: #0a0f1c; --bg-card: #111827; --bg-elevated: #1a2235;
+      --text-primary: #f1f5f9; --text-secondary: #94a3b8; --text-muted: #64748b;
+      --accent-green: #10b981; --accent-green-glow: rgba(16, 185, 129, 0.15);
+      --accent-amber: #f59e0b; --accent-amber-glow: rgba(245, 158, 11, 0.15);
+      --accent-red: #ef4444; --accent-red-glow: rgba(239, 68, 68, 0.15);
+      --radius: 16px; --radius-sm: 10px;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg-deep); color: var(--text-primary); line-height: 1.5; min-height: 100vh; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+    /* Header */
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; flex-wrap: wrap; gap: 16px; }
+    .logo { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 500; }
+    .logo span { color: var(--accent-green); }
+    .header-info { display: flex; align-items: center; gap: 16px; }
+    .clinic-name { font-size: 14px; color: var(--text-secondary); }
+    .refresh-btn { background: var(--bg-card); border: none; color: var(--text-secondary); padding: 10px 16px; border-radius: var(--radius-sm); font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+    .refresh-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+
+    /* Stats */
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .stat-card { background: var(--bg-card); border-radius: var(--radius); padding: 20px; }
+    .stat-label { font-size: 13px; color: var(--text-muted); margin-bottom: 4px; }
+    .stat-value { font-family: 'Fraunces', serif; font-size: 36px; font-weight: 500; }
+    .stat-value.green { color: var(--accent-green); }
+    .stat-value.amber { color: var(--accent-amber); }
+    .stat-value.red { color: var(--accent-red); }
+
+    /* Section */
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .section-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 500; }
+
+    /* Patient List */
+    .patient-list { display: flex; flex-direction: column; gap: 12px; }
+    .patient-card { background: var(--bg-card); border-radius: var(--radius); padding: 20px; display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; cursor: pointer; }
+    .patient-card:hover { background: var(--bg-elevated); }
+    .patient-info { display: flex; flex-direction: column; gap: 4px; }
+    .patient-name { font-size: 17px; font-weight: 500; }
+    .patient-procedure { font-size: 14px; color: var(--text-secondary); }
+    .patient-day { font-size: 13px; color: var(--text-muted); }
+    .patient-stats { display: flex; gap: 16px; align-items: center; }
+    .pain-indicator { display: flex; flex-direction: column; align-items: center; min-width: 50px; }
+    .pain-value { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 500; line-height: 1; }
+    .pain-value.low { color: var(--accent-green); }
+    .pain-value.medium { color: var(--accent-amber); }
+    .pain-value.high { color: var(--accent-red); }
+    .pain-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .status-badge { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+    .status-badge.good { background: var(--accent-green-glow); color: var(--accent-green); }
+    .status-badge.warning { background: var(--accent-amber-glow); color: var(--accent-amber); }
+    .status-badge.alert { background: var(--accent-red-glow); color: var(--accent-red); }
+    .status-badge.no-checkin { background: var(--bg-elevated); color: var(--text-muted); }
+
+    /* Checkins */
+    .checkin-list { margin-top: 32px; }
+    .checkin-card { background: var(--bg-card); border-radius: var(--radius); padding: 20px; margin-bottom: 12px; }
+    .checkin-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .checkin-patient { font-weight: 500; }
+    .checkin-time { font-size: 13px; color: var(--text-muted); }
+    .checkin-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 16px; }
+    .checkin-item { display: flex; flex-direction: column; gap: 2px; }
+    .checkin-item-label { font-size: 12px; color: var(--text-muted); }
+    .checkin-item-value { font-size: 15px; }
+    .concern-text { margin-top: 12px; padding: 12px; background: var(--accent-amber-glow); border-radius: var(--radius-sm); font-size: 14px; color: var(--accent-amber); }
+
+    /* Empty & Loading */
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+    .loading { display: flex; justify-content: center; padding: 60px; }
+    .spinner { width: 40px; height: 40px; border: 3px solid var(--bg-elevated); border-top-color: var(--accent-green); border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 600px) {
+      .patient-card { grid-template-columns: 1fr; }
+      .patient-stats { justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="logo">SRO<span>.</span>Intelligence</div>
+      <div class="header-info">
+        <span class="clinic-name" id="clinic-name">Loading...</span>
+        <button class="refresh-btn" onclick="loadData()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          Refresh
+        </button>
+      </div>
+    </header>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <p class="stat-label">Active Patients</p>
+        <p class="stat-value" id="stat-patients">-</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">Today's Check-ins</p>
+        <p class="stat-value green" id="stat-checkins">-</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">Needs Attention</p>
+        <p class="stat-value amber" id="stat-alerts">-</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">Avg Pain Level</p>
+        <p class="stat-value" id="stat-pain">-</p>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <h2 class="section-title">Active Patients</h2>
+    </div>
+    <div class="patient-list" id="patient-list">
+      <div class="loading"><div class="spinner"></div></div>
+    </div>
+
+    <div class="checkin-list">
+      <div class="section-header">
+        <h2 class="section-title">Recent Check-ins</h2>
+      </div>
+      <div id="checkin-list">
+        <div class="loading"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://kutnednztssloqluygse.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_Bs41LPV6lzVSk3RvdNGnOg_Io1z1m-o';
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const CLINIC_ID = '11111111-1111-1111-1111-111111111111';
+
+    async function loadData() {
+      try {
+        // Clinic
+        const { data: clinic } = await db.from('clinics').select('name').eq('id', CLINIC_ID).single();
+        if (clinic) document.getElementById('clinic-name').textContent = clinic.name;
+
+        // Episodes with patients
+        const { data: episodes, error: epErr } = await db
+          .from('episodes')
+          .select('*, patients(id, first_name, last_name)')
+          .eq('clinic_id', CLINIC_ID)
+          .eq('status', 'active');
+        if (epErr) throw epErr;
+
+        // Checkins
+        const { data: checkins, error: chErr } = await db
+          .from('checkins')
+          .select('*, patients(first_name, last_name)')
+          .eq('clinic_id', CLINIC_ID)
+          .order('created_at', { ascending: false })
+          .limit(10);
+        if (chErr) throw chErr;
+
+        // Stats
+        const today = new Date().toISOString().split('T')[0];
+        const todayCheckins = (checkins || []).filter(c => c.created_at?.split('T')[0] === today);
+        const alertCount = (checkins || []).filter(c => c.pain_level >= 7 || c.concerns).length;
+        const avgPain = checkins?.length ? (checkins.reduce((s, c) => s + (c.pain_level || 0), 0) / checkins.length).toFixed(1) : '-';
+
+        document.getElementById('stat-patients').textContent = episodes?.length || 0;
+        document.getElementById('stat-checkins').textContent = todayCheckins.length;
+        document.getElementById('stat-alerts').textContent = alertCount;
+        const painEl = document.getElementById('stat-pain');
+        painEl.textContent = avgPain;
+        if (avgPain !== '-') painEl.classList.add(avgPain <= 3 ? 'green' : avgPain <= 6 ? 'amber' : 'red');
+
+        renderPatients(episodes, checkins);
+        renderCheckins(checkins);
+      } catch (e) {
+        console.error(e);
+        document.getElementById('patient-list').innerHTML = `<div class="empty-state">Error: ${e.message}</div>`;
+      }
+    }
+
+    function renderPatients(episodes, checkins) {
+      const container = document.getElementById('patient-list');
+      if (!episodes?.length) {
+        container.innerHTML = '<div class="empty-state">No active patients</div>';
+        return;
+      }
+
+      const latestCheckins = {};
+      (checkins || []).forEach(c => {
+        if (!latestCheckins[c.episode_id] || new Date(c.created_at) > new Date(latestCheckins[c.episode_id].created_at)) {
+          latestCheckins[c.episode_id] = c;
+        }
+      });
+
+      container.innerHTML = episodes.map(ep => {
+        const p = ep.patients;
+        const lc = latestCheckins[ep.id];
+        const days = Math.floor((new Date() - new Date(ep.procedure_date)) / 86400000);
+        const procNames = { TKA: 'Total Knee', THA: 'Total Hip', PKA: 'Partial Knee' };
+        const procDisplay = `${ep.procedure_side || ''} ${procNames[ep.procedure_type] || ep.procedure_type}`.trim();
+
+        let painHtml = '<span class="pain-value" style="color:var(--text-muted)">-</span>';
+        let statusHtml = '<span class="status-badge no-checkin">No check-in</span>';
+
+        if (lc) {
+          const pain = lc.pain_level;
+          const cls = pain <= 3 ? 'low' : pain <= 6 ? 'medium' : 'high';
+          painHtml = `<span class="pain-value ${cls}">${pain}</span>`;
+          statusHtml = lc.concerns ? '<span class="status-badge alert">Has concern</span>' :
+                       pain >= 7 || lc.pill_count >= 5 ? '<span class="status-badge warning">Needs review</span>' :
+                       '<span class="status-badge good">On track</span>';
+        }
+
+        return `
+          <div class="patient-card">
+            <div class="patient-info">
+              <span class="patient-name">${p.first_name} ${p.last_name}</span>
+              <span class="patient-procedure">${procDisplay}</span>
+              <span class="patient-day">Day ${days} post-op</span>
+            </div>
+            <div class="patient-stats">
+              <div class="pain-indicator">${painHtml}<span class="pain-label">Pain</span></div>
+              ${statusHtml}
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function renderCheckins(checkins) {
+      const container = document.getElementById('checkin-list');
+      if (!checkins?.length) {
+        container.innerHTML = '<div class="empty-state">No check-ins yet</div>';
+        return;
+      }
+
+      container.innerHTML = checkins.map(c => {
+        const p = c.patients;
+        const time = new Date(c.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+        const cls = c.pain_level <= 3 ? 'low' : c.pain_level <= 6 ? 'medium' : 'high';
+        const concernHtml = c.concerns ? `<div class="concern-text">⚠️ ${c.concerns}</div>` : '';
+
+        return `
+          <div class="checkin-card">
+            <div class="checkin-header">
+              <span class="checkin-patient">${p?.first_name || 'Unknown'} ${p?.last_name || ''}</span>
+              <span class="checkin-time">${time}</span>
+            </div>
+            <div class="checkin-details">
+              <div class="checkin-item"><span class="checkin-item-label">Pain Level</span><span class="checkin-item-value pain-value ${cls}">${c.pain_level}/10</span></div>
+              <div class="checkin-item"><span class="checkin-item-label">Pain Meds</span><span class="checkin-item-value">${c.pill_count ?? '-'} pills</span></div>
+              <div class="checkin-item"><span class="checkin-item-label">PT Exercises</span><span class="checkin-item-value">${c.did_pt ? '✓ Yes' : '✗ No'}</span></div>
+            </div>
+            ${concernHtml}
+          </div>`;
+      }).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', loadData);
+  </script>
+</body>
+</html>
