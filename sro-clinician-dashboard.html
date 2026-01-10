@@ -3,625 +3,267 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SRO Intelligence - Clinician Dashboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Fraunces:opsz,wght@9..144,300;9..144,500&display=swap" rel="stylesheet">
+  <meta name="theme-color" content="#0a0f1c">
+  <title>SRO Clinician Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Fraunces:wght@300;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
-      --bg-deep: #0a0f1c;
-      --bg-card: #111827;
-      --bg-elevated: #1a2235;
-      --text-primary: #f1f5f9;
-      --text-secondary: #94a3b8;
-      --text-muted: #64748b;
-      --accent-blue: #3b82f6;
-      --accent-green: #10b981;
-      --accent-amber: #f59e0b;
-      --accent-red: #ef4444;
-      --radius: 16px;
-      --radius-sm: 10px;
+      --bg-deep: #0a0f1c; --bg-card: #111827; --bg-elevated: #1a2235;
+      --text-primary: #f1f5f9; --text-secondary: #94a3b8; --text-muted: #64748b;
+      --accent-green: #10b981; --accent-green-glow: rgba(16, 185, 129, 0.15);
+      --accent-amber: #f59e0b; --accent-amber-glow: rgba(245, 158, 11, 0.15);
+      --accent-red: #ef4444; --accent-red-glow: rgba(239, 68, 68, 0.15);
+      --radius: 16px; --radius-sm: 10px;
     }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg-deep); color: var(--text-primary); line-height: 1.5; min-height: 100vh; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
 
-    body {
-      font-family: 'DM Sans', -apple-system, sans-serif;
-      background: var(--bg-deep);
-      color: var(--text-primary);
-      min-height: 100vh;
-    }
+    /* Header */
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; flex-wrap: wrap; gap: 16px; }
+    .logo { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 500; }
+    .logo span { color: var(--accent-green); }
+    .header-info { display: flex; align-items: center; gap: 16px; }
+    .clinic-name { font-size: 14px; color: var(--text-secondary); }
+    .refresh-btn { background: var(--bg-card); border: none; color: var(--text-secondary); padding: 10px 16px; border-radius: var(--radius-sm); font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+    .refresh-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
 
-    .header {
-      background: var(--bg-card);
-      border-bottom: 1px solid var(--bg-elevated);
-      padding: 16px 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .logo {
-      font-family: 'Fraunces', serif;
-      font-size: 24px;
-      font-weight: 500;
-      color: var(--text-primary);
-    }
-
-    .logo span {
-      color: var(--accent-blue);
-    }
-
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-
-    .header-date {
-      color: var(--text-secondary);
-      font-size: 14px;
-    }
-
-    .user-badge {
-      background: var(--bg-elevated);
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 14px;
-      color: var(--text-secondary);
-    }
-
-    .main {
-      display: flex;
-      min-height: calc(100vh - 65px);
-    }
-
-    .sidebar {
-      width: 240px;
-      background: var(--bg-card);
-      border-right: 1px solid var(--bg-elevated);
-      padding: 24px 16px;
-    }
-
-    .nav-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 16px;
-      border-radius: var(--radius-sm);
-      color: var(--text-secondary);
-      cursor: pointer;
-      transition: all 0.2s;
-      margin-bottom: 4px;
-    }
-
-    .nav-item:hover {
-      background: var(--bg-elevated);
-      color: var(--text-primary);
-    }
-
-    .nav-item.active {
-      background: var(--accent-blue);
-      color: white;
-    }
-
-    .nav-item svg {
-      width: 20px;
-      height: 20px;
-    }
-
-    .content {
-      flex: 1;
-      padding: 24px;
-      overflow-y: auto;
-    }
-
-    .page-title {
-      font-family: 'Fraunces', serif;
-      font-size: 28px;
-      font-weight: 400;
-      margin-bottom: 24px;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-
-    .stat-card {
-      background: var(--bg-card);
-      border-radius: var(--radius);
-      padding: 20px;
-    }
-
-    .stat-label {
-      font-size: 13px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 8px;
-    }
-
-    .stat-value {
-      font-family: 'Fraunces', serif;
-      font-size: 36px;
-      font-weight: 500;
-    }
-
+    /* Stats */
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .stat-card { background: var(--bg-card); border-radius: var(--radius); padding: 20px; }
+    .stat-label { font-size: 13px; color: var(--text-muted); margin-bottom: 4px; }
+    .stat-value { font-family: 'Fraunces', serif; font-size: 36px; font-weight: 500; }
     .stat-value.green { color: var(--accent-green); }
     .stat-value.amber { color: var(--accent-amber); }
     .stat-value.red { color: var(--accent-red); }
-    .stat-value.blue { color: var(--accent-blue); }
 
-    .stat-change {
-      font-size: 13px;
-      color: var(--text-secondary);
-      margin-top: 4px;
-    }
+    /* Section */
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .section-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 500; }
 
-    .card {
-      background: var(--bg-card);
-      border-radius: var(--radius);
-      overflow: hidden;
-    }
+    /* Patient List */
+    .patient-list { display: flex; flex-direction: column; gap: 12px; }
+    .patient-card { background: var(--bg-card); border-radius: var(--radius); padding: 20px; display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; cursor: pointer; }
+    .patient-card:hover { background: var(--bg-elevated); }
+    .patient-info { display: flex; flex-direction: column; gap: 4px; }
+    .patient-name { font-size: 17px; font-weight: 500; }
+    .patient-procedure { font-size: 14px; color: var(--text-secondary); }
+    .patient-day { font-size: 13px; color: var(--text-muted); }
+    .patient-stats { display: flex; gap: 16px; align-items: center; }
+    .pain-indicator { display: flex; flex-direction: column; align-items: center; min-width: 50px; }
+    .pain-value { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 500; line-height: 1; }
+    .pain-value.low { color: var(--accent-green); }
+    .pain-value.medium { color: var(--accent-amber); }
+    .pain-value.high { color: var(--accent-red); }
+    .pain-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .status-badge { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+    .status-badge.good { background: var(--accent-green-glow); color: var(--accent-green); }
+    .status-badge.warning { background: var(--accent-amber-glow); color: var(--accent-amber); }
+    .status-badge.alert { background: var(--accent-red-glow); color: var(--accent-red); }
+    .status-badge.no-checkin { background: var(--bg-elevated); color: var(--text-muted); }
 
-    .card-header {
-      padding: 20px;
-      border-bottom: 1px solid var(--bg-elevated);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+    /* Checkins */
+    .checkin-list { margin-top: 32px; }
+    .checkin-card { background: var(--bg-card); border-radius: var(--radius); padding: 20px; margin-bottom: 12px; }
+    .checkin-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .checkin-patient { font-weight: 500; }
+    .checkin-time { font-size: 13px; color: var(--text-muted); }
+    .checkin-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 16px; }
+    .checkin-item { display: flex; flex-direction: column; gap: 2px; }
+    .checkin-item-label { font-size: 12px; color: var(--text-muted); }
+    .checkin-item-value { font-size: 15px; }
+    .concern-text { margin-top: 12px; padding: 12px; background: var(--accent-amber-glow); border-radius: var(--radius-sm); font-size: 14px; color: var(--accent-amber); }
 
-    .card-title {
-      font-size: 18px;
-      font-weight: 500;
-    }
+    /* Empty & Loading */
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+    .loading { display: flex; justify-content: center; padding: 60px; }
+    .spinner { width: 40px; height: 40px; border: 3px solid var(--bg-elevated); border-top-color: var(--accent-green); border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    .search-input {
-      background: var(--bg-elevated);
-      border: 1px solid var(--bg-elevated);
-      border-radius: var(--radius-sm);
-      padding: 10px 16px;
-      color: var(--text-primary);
-      font-size: 14px;
-      width: 250px;
-    }
-
-    .search-input::placeholder {
-      color: var(--text-muted);
-    }
-
-    .btn {
-      background: var(--accent-blue);
-      border: none;
-      border-radius: var(--radius-sm);
-      padding: 10px 20px;
-      color: white;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-    }
-
-    .table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    .table th {
-      text-align: left;
-      padding: 14px 20px;
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      background: var(--bg-elevated);
-    }
-
-    .table td {
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--bg-elevated);
-      font-size: 14px;
-    }
-
-    .table tr:hover {
-      background: var(--bg-elevated);
-    }
-
-    .patient-name {
-      font-weight: 500;
-      color: var(--text-primary);
-    }
-
-    .patient-mrn {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-
-    .status-badge {
-      display: inline-block;
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 500;
-    }
-
-    .status-badge.on-track {
-      background: rgba(16, 185, 129, 0.15);
-      color: var(--accent-green);
-    }
-
-    .status-badge.needs-attention {
-      background: rgba(245, 158, 11, 0.15);
-      color: var(--accent-amber);
-    }
-
-    .status-badge.at-risk {
-      background: rgba(239, 68, 68, 0.15);
-      color: var(--accent-red);
-    }
-
-    .status-badge.pre-op {
-      background: rgba(59, 130, 246, 0.15);
-      color: var(--accent-blue);
-    }
-
-    .compliance-bar {
-      width: 100px;
-      height: 6px;
-      background: var(--bg-elevated);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-
-    .compliance-fill {
-      height: 100%;
-      border-radius: 3px;
-    }
-
-    .compliance-fill.high { background: var(--accent-green); }
-    .compliance-fill.medium { background: var(--accent-amber); }
-    .compliance-fill.low { background: var(--accent-red); }
-
-    .action-btn {
-      background: var(--bg-elevated);
-      border: none;
-      border-radius: 6px;
-      padding: 8px 12px;
-      color: var(--text-secondary);
-      font-size: 13px;
-      cursor: pointer;
-    }
-
-    .action-btn:hover {
-      background: var(--accent-blue);
-      color: white;
-    }
-
-    .alerts-panel {
-      background: var(--bg-card);
-      border-radius: var(--radius);
-      padding: 20px;
-      margin-bottom: 24px;
-    }
-
-    .alert-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      padding: 12px 0;
-      border-bottom: 1px solid var(--bg-elevated);
-    }
-
-    .alert-item:last-child {
-      border-bottom: none;
-    }
-
-    .alert-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .alert-icon.warning {
-      background: rgba(245, 158, 11, 0.15);
-      color: var(--accent-amber);
-    }
-
-    .alert-icon.danger {
-      background: rgba(239, 68, 68, 0.15);
-      color: var(--accent-red);
-    }
-
-    .alert-icon.info {
-      background: rgba(59, 130, 246, 0.15);
-      color: var(--accent-blue);
-    }
-
-    .alert-content h4 {
-      font-size: 14px;
-      font-weight: 500;
-      margin-bottom: 4px;
-    }
-
-    .alert-content p {
-      font-size: 13px;
-      color: var(--text-secondary);
-    }
-
-    .alert-time {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-left: auto;
-    }
-
-    @media (max-width: 1200px) {
-      .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    @media (max-width: 768px) {
-      .sidebar {
-        display: none;
-      }
-      .stats-grid {
-        grid-template-columns: 1fr;
-      }
-      .card-header {
-        flex-direction: column;
-        gap: 12px;
-      }
-      .search-input {
-        width: 100%;
-      }
+    @media (max-width: 600px) {
+      .patient-card { grid-template-columns: 1fr; }
+      .patient-stats { justify-content: flex-start; }
     }
   </style>
 </head>
 <body>
-  <header class="header">
-    <div class="logo">SRO <span>Intelligence</span></div>
-    <div class="header-right">
-      <span class="header-date" id="current-date"></span>
-      <span class="user-badge">Dr. Demo</span>
+  <div class="container">
+    <header class="header">
+      <div class="logo">SRO<span>.</span>Intelligence</div>
+      <div class="header-info">
+        <span class="clinic-name" id="clinic-name">Loading...</span>
+        <button class="refresh-btn" onclick="loadData()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          Refresh
+        </button>
+      </div>
+    </header>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <p class="stat-label">Active Patients</p>
+        <p class="stat-value" id="stat-patients">-</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">Today's Check-ins</p>
+        <p class="stat-value green" id="stat-checkins">-</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">Needs Attention</p>
+        <p class="stat-value amber" id="stat-alerts">-</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">Avg Pain Level</p>
+        <p class="stat-value" id="stat-pain">-</p>
+      </div>
     </div>
-  </header>
 
-  <div class="main">
-    <nav class="sidebar">
-      <div class="nav-item active">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-        </svg>
-        Dashboard
-      </div>
-      <div class="nav-item">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
-        </svg>
-        Patients
-      </div>
-      <div class="nav-item">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-        </svg>
-        Analytics
-      </div>
-      <div class="nav-item">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-        </svg>
-        Reports
-      </div>
-      <div class="nav-item">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-        </svg>
-        Settings
-      </div>
-    </nav>
+    <div class="section-header">
+      <h2 class="section-title">Active Patients</h2>
+    </div>
+    <div class="patient-list" id="patient-list">
+      <div class="loading"><div class="spinner"></div></div>
+    </div>
 
-    <main class="content">
-      <h1 class="page-title">Dashboard</h1>
-
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-label">Active Patients</div>
-          <div class="stat-value blue">5</div>
-          <div class="stat-change">Total enrolled</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">On Track</div>
-          <div class="stat-value green">2</div>
-          <div class="stat-change">Recovery progressing well</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Needs Attention</div>
-          <div class="stat-value amber">1</div>
-          <div class="stat-change">Review recommended</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">At Risk</div>
-          <div class="stat-value red">1</div>
-          <div class="stat-change">Immediate action needed</div>
-        </div>
+    <div class="checkin-list">
+      <div class="section-header">
+        <h2 class="section-title">Recent Check-ins</h2>
       </div>
-
-      <div class="alerts-panel">
-        <h3 class="card-title" style="margin-bottom: 16px;">Recent Alerts</h3>
-        <div class="alert-item">
-          <div class="alert-icon danger">⚠️</div>
-          <div class="alert-content">
-            <h4>Missed Check-ins</h4>
-            <p>James Anderson has not checked in for 3 days</p>
-          </div>
-          <span class="alert-time">2 hours ago</span>
-        </div>
-        <div class="alert-item">
-          <div class="alert-icon warning">⚡</div>
-          <div class="alert-content">
-            <h4>Pain Score Elevated</h4>
-            <p>Robert Williams reported pain 8/10 yesterday</p>
-          </div>
-          <span class="alert-time">5 hours ago</span>
-        </div>
-        <div class="alert-item">
-          <div class="alert-icon info">ℹ️</div>
-          <div class="alert-content">
-            <h4>Assessment Due</h4>
-            <p>Patricia Davis - 3 week KOOS Jr. due tomorrow</p>
-          </div>
-          <span class="alert-time">1 day ago</span>
-        </div>
+      <div id="checkin-list">
+        <div class="loading"><div class="spinner"></div></div>
       </div>
-
-      <div class="card">
-        <div class="card-header">
-          <h3 class="card-title">Patients</h3>
-          <div style="display: flex; gap: 12px;">
-            <input type="text" class="search-input" placeholder="Search patients..." id="search-input">
-            <button class="btn">+ Add Patient</button>
-          </div>
-        </div>
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Patient</th>
-              <th>Procedure</th>
-              <th>Surgery Date</th>
-              <th>Day</th>
-              <th>Status</th>
-              <th>Compliance</th>
-              <th>Last Check-in</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <div class="patient-name">Margaret Johnson</div>
-                <div class="patient-mrn">MRN-2024-001</div>
-              </td>
-              <td>Right TKA</td>
-              <td>Jan 2, 2025</td>
-              <td>Day 7</td>
-              <td><span class="status-badge on-track">On Track</span></td>
-              <td>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <div class="compliance-bar">
-                    <div class="compliance-fill high" style="width: 95%"></div>
-                  </div>
-                  <span style="font-size: 13px; color: var(--text-secondary)">95%</span>
-                </div>
-              </td>
-              <td style="color: var(--text-secondary)">2 hours ago</td>
-              <td><button class="action-btn">View</button></td>
-            </tr>
-            <tr>
-              <td>
-                <div class="patient-name">Robert Williams</div>
-                <div class="patient-mrn">MRN-2024-002</div>
-              </td>
-              <td>Left THA</td>
-              <td>Dec 28, 2024</td>
-              <td>Day 12</td>
-              <td><span class="status-badge needs-attention">Needs Attention</span></td>
-              <td>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <div class="compliance-bar">
-                    <div class="compliance-fill medium" style="width: 72%"></div>
-                  </div>
-                  <span style="font-size: 13px; color: var(--text-secondary)">72%</span>
-                </div>
-              </td>
-              <td style="color: var(--text-secondary)">1 day ago</td>
-              <td><button class="action-btn">View</button></td>
-            </tr>
-            <tr>
-              <td>
-                <div class="patient-name">Patricia Davis</div>
-                <div class="patient-mrn">MRN-2024-003</div>
-              </td>
-              <td>Right TKA</td>
-              <td>Dec 20, 2024</td>
-              <td>Day 20</td>
-              <td><span class="status-badge on-track">On Track</span></td>
-              <td>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <div class="compliance-bar">
-                    <div class="compliance-fill high" style="width: 88%"></div>
-                  </div>
-                  <span style="font-size: 13px; color: var(--text-secondary)">88%</span>
-                </div>
-              </td>
-              <td style="color: var(--text-secondary)">5 hours ago</td>
-              <td><button class="action-btn">View</button></td>
-            </tr>
-            <tr>
-              <td>
-                <div class="patient-name">James Anderson</div>
-                <div class="patient-mrn">MRN-2024-004</div>
-              </td>
-              <td>Left TKA</td>
-              <td>Jan 5, 2025</td>
-              <td>Day 4</td>
-              <td><span class="status-badge at-risk">At Risk</span></td>
-              <td>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <div class="compliance-bar">
-                    <div class="compliance-fill low" style="width: 45%"></div>
-                  </div>
-                  <span style="font-size: 13px; color: var(--text-secondary)">45%</span>
-                </div>
-              </td>
-              <td style="color: var(--text-secondary)">3 days ago</td>
-              <td><button class="action-btn">View</button></td>
-            </tr>
-            <tr>
-              <td>
-                <div class="patient-name">Linda Martinez</div>
-                <div class="patient-mrn">MRN-2024-005</div>
-              </td>
-              <td>Right THA</td>
-              <td>Jan 15, 2025</td>
-              <td>Pre-op (6 days)</td>
-              <td><span class="status-badge pre-op">Pre-Op</span></td>
-              <td>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <div class="compliance-bar">
-                    <div class="compliance-fill high" style="width: 100%"></div>
-                  </div>
-                  <span style="font-size: 13px; color: var(--text-secondary)">100%</span>
-                </div>
-              </td>
-              <td style="color: var(--text-secondary)">Pre-op assessment</td>
-              <td><button class="action-btn">View</button></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </main>
+    </div>
   </div>
 
   <script>
-    document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    const SUPABASE_URL = 'https://kutnednztssloqluygse.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_Bs41LPV6lzVSk3RvdNGnOg_Io1z1m-o';
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const CLINIC_ID = '11111111-1111-1111-1111-111111111111';
+
+    async function loadData() {
+      try {
+        // Clinic
+        const { data: clinic } = await db.from('clinics').select('name').eq('id', CLINIC_ID).single();
+        if (clinic) document.getElementById('clinic-name').textContent = clinic.name;
+
+        // Episodes with patients
+        const { data: episodes, error: epErr } = await db
+          .from('episodes')
+          .select('*, patients(id, first_name, last_name)')
+          .eq('clinic_id', CLINIC_ID)
+          .eq('status', 'active');
+        if (epErr) throw epErr;
+
+        // Checkins
+        const { data: checkins, error: chErr } = await db
+          .from('checkins')
+          .select('*, patients(first_name, last_name)')
+          .eq('clinic_id', CLINIC_ID)
+          .order('created_at', { ascending: false })
+          .limit(10);
+        if (chErr) throw chErr;
+
+        // Stats
+        const today = new Date().toISOString().split('T')[0];
+        const todayCheckins = (checkins || []).filter(c => c.created_at?.split('T')[0] === today);
+        const alertCount = (checkins || []).filter(c => c.pain_level >= 7 || c.concerns).length;
+        const avgPain = checkins?.length ? (checkins.reduce((s, c) => s + (c.pain_level || 0), 0) / checkins.length).toFixed(1) : '-';
+
+        document.getElementById('stat-patients').textContent = episodes?.length || 0;
+        document.getElementById('stat-checkins').textContent = todayCheckins.length;
+        document.getElementById('stat-alerts').textContent = alertCount;
+        const painEl = document.getElementById('stat-pain');
+        painEl.textContent = avgPain;
+        if (avgPain !== '-') painEl.classList.add(avgPain <= 3 ? 'green' : avgPain <= 6 ? 'amber' : 'red');
+
+        renderPatients(episodes, checkins);
+        renderCheckins(checkins);
+      } catch (e) {
+        console.error(e);
+        document.getElementById('patient-list').innerHTML = `<div class="empty-state">Error: ${e.message}</div>`;
+      }
+    }
+
+    function renderPatients(episodes, checkins) {
+      const container = document.getElementById('patient-list');
+      if (!episodes?.length) {
+        container.innerHTML = '<div class="empty-state">No active patients</div>';
+        return;
+      }
+
+      const latestCheckins = {};
+      (checkins || []).forEach(c => {
+        if (!latestCheckins[c.episode_id] || new Date(c.created_at) > new Date(latestCheckins[c.episode_id].created_at)) {
+          latestCheckins[c.episode_id] = c;
+        }
+      });
+
+      container.innerHTML = episodes.map(ep => {
+        const p = ep.patients;
+        const lc = latestCheckins[ep.id];
+        const days = Math.floor((new Date() - new Date(ep.procedure_date)) / 86400000);
+        const procNames = { TKA: 'Total Knee', THA: 'Total Hip', PKA: 'Partial Knee' };
+        const procDisplay = `${ep.procedure_side || ''} ${procNames[ep.procedure_type] || ep.procedure_type}`.trim();
+
+        let painHtml = '<span class="pain-value" style="color:var(--text-muted)">-</span>';
+        let statusHtml = '<span class="status-badge no-checkin">No check-in</span>';
+
+        if (lc) {
+          const pain = lc.pain_level;
+          const cls = pain <= 3 ? 'low' : pain <= 6 ? 'medium' : 'high';
+          painHtml = `<span class="pain-value ${cls}">${pain}</span>`;
+          statusHtml = lc.concerns ? '<span class="status-badge alert">Has concern</span>' :
+                       pain >= 7 || lc.pill_count >= 5 ? '<span class="status-badge warning">Needs review</span>' :
+                       '<span class="status-badge good">On track</span>';
+        }
+
+        return `
+          <div class="patient-card">
+            <div class="patient-info">
+              <span class="patient-name">${p.first_name} ${p.last_name}</span>
+              <span class="patient-procedure">${procDisplay}</span>
+              <span class="patient-day">Day ${days} post-op</span>
+            </div>
+            <div class="patient-stats">
+              <div class="pain-indicator">${painHtml}<span class="pain-label">Pain</span></div>
+              ${statusHtml}
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function renderCheckins(checkins) {
+      const container = document.getElementById('checkin-list');
+      if (!checkins?.length) {
+        container.innerHTML = '<div class="empty-state">No check-ins yet</div>';
+        return;
+      }
+
+      container.innerHTML = checkins.map(c => {
+        const p = c.patients;
+        const time = new Date(c.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+        const cls = c.pain_level <= 3 ? 'low' : c.pain_level <= 6 ? 'medium' : 'high';
+        const concernHtml = c.concerns ? `<div class="concern-text">⚠️ ${c.concerns}</div>` : '';
+
+        return `
+          <div class="checkin-card">
+            <div class="checkin-header">
+              <span class="checkin-patient">${p?.first_name || 'Unknown'} ${p?.last_name || ''}</span>
+              <span class="checkin-time">${time}</span>
+            </div>
+            <div class="checkin-details">
+              <div class="checkin-item"><span class="checkin-item-label">Pain Level</span><span class="checkin-item-value pain-value ${cls}">${c.pain_level}/10</span></div>
+              <div class="checkin-item"><span class="checkin-item-label">Pain Meds</span><span class="checkin-item-value">${c.pill_count ?? '-'} pills</span></div>
+              <div class="checkin-item"><span class="checkin-item-label">PT Exercises</span><span class="checkin-item-value">${c.did_pt ? '✓ Yes' : '✗ No'}</span></div>
+            </div>
+            ${concernHtml}
+          </div>`;
+      }).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', loadData);
   </script>
 </body>
 </html>
