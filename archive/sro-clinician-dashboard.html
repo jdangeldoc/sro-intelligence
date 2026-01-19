@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SRO Intelligence - Clinician Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Fraunces:wght@300;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg-deep: #0a0f1c;
+      --bg-card: #111827;
+      --bg-elevated: #1a2235;
+      --bg-hover: #232d42;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-green: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --accent-blue: #3b82f6;
+      --border: rgba(255,255,255,0.08);
+      --radius: 12px;
+    }
+    body {
+      font-family: 'DM Sans', -apple-system, sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 240px;
+      background: var(--bg-card);
+      border-right: 1px solid var(--border);
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+    }
+    .logo {
+      font-family: 'Fraunces', serif;
+      font-size: 22px;
+      font-weight: 500;
+      margin-bottom: 32px;
+      padding: 0 12px;
+    }
+    .logo span { color: var(--accent-green); }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 14px;
+      margin-bottom: 4px;
+      transition: all 0.15s;
+    }
+    .nav-item:hover { background: var(--bg-elevated); color: var(--text-primary); }
+    .nav-item.active { background: var(--bg-elevated); color: var(--accent-green); }
+    .nav-item svg { width: 20px; height: 20px; }
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 16px 12px;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .clinic-name { color: var(--text-primary); font-weight: 500; }
+
+    /* Main */
+    .main {
+      margin-left: 240px;
+      padding: 24px 32px;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .header-title {
+      font-family: 'Fraunces', serif;
+      font-size: 28px;
+      font-weight: 500;
+    }
+    .header-date {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
+    .btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { background: var(--bg-elevated); }
+    .btn-primary {
+      background: var(--accent-green);
+      color: white;
+    }
+    .btn-primary:hover { opacity: 0.9; }
+
+    /* Stats Cards */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      padding: 20px;
+      border: 1px solid var(--border);
+    }
+    .stat-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .stat-value {
+      font-family: 'Fraunces', serif;
+      font-size: 32px;
+      font-weight: 500;
+    }
+
+    /* Flag indicators */
+    .flag-row {
+      display: flex;
+      gap: 24px;
+      margin-top: 12px;
+    }
+    .flag-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+    }
+    .flag-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .flag-dot.green { background: var(--accent-green); }
+    .flag-dot.yellow { background: var(--accent-amber); }
+    .flag-dot.red { background: var(--accent-red); }
+
+    /* Patient Table */
+    .table-container {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .table-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .table-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .table-filters {
+      display: flex;
+      gap: 8px;
+    }
+    .filter-btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+    .filter-btn.active {
+      background: var(--accent-green);
+      border-color: var(--accent-green);
+      color: white;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th {
+      text-align: left;
+      padding: 12px 16px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+    tr:hover { background: var(--bg-hover); }
+    tr:last-child td { border-bottom: none; }
+
+    .patient-name {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+    .patient-mrn {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Status badges */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .status-badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+    .status-badge.on-track {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--accent-green);
+    }
+    .status-badge.on-track::before { background: var(--accent-green); }
+    .status-badge.needs-attention {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--accent-amber);
+    }
+    .status-badge.needs-attention::before { background: var(--accent-amber); }
+    .status-badge.at-risk {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--accent-red);
+    }
+    .status-badge.at-risk::before { background: var(--accent-red); }
+
+    /* Compliance bar */
+    .compliance-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .compliance-bar {
+      width: 60px;
+      height: 6px;
+      background: var(--bg-elevated);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .compliance-fill {
+      height: 100%;
+      border-radius: 3px;
+    }
+    .compliance-fill.high { background: var(--accent-green); }
+    .compliance-fill.medium { background: var(--accent-amber); }
+    .compliance-fill.low { background: var(--accent-red); }
+    .compliance-pct {
+      font-size: 13px;
+      color: var(--text-secondary);
+      min-width: 36px;
+    }
+
+    /* Pain cell */
+    .pain-value {
+      font-weight: 600;
+    }
+    .pain-value.low { color: var(--accent-green); }
+    .pain-value.medium { color: var(--accent-amber); }
+    .pain-value.high { color: var(--accent-red); }
+
+    /* Action button */
+    .action-btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      background: var(--bg-elevated);
+      border: none;
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+    .action-btn:hover { background: var(--bg-hover); }
+
+    /* Loading */
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 60px;
+    }
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--bg-elevated);
+      border-top-color: var(--accent-green);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 60px;
+      color: var(--text-muted);
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">SRO<span>.</span>Intelligence</div>
+    
+    <a href="sro-clinician-dashboard.html" class="nav-item active">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      Dashboard
+    </a>
+    <a href="sro-analytics.html" class="nav-item">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      Analytics
+    </a>
+    <a href="#" class="nav-item">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+      Patients
+    </a>
+    <a href="#" class="nav-item">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      Settings
+    </a>
+    
+    <div class="sidebar-footer">
+      <div class="clinic-name" id="clinic-name">Loading...</div>
+      <div style="margin-top: 4px;" id="current-date"></div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main">
+    <div class="header">
+      <div>
+        <h1 class="header-title">Patient Dashboard</h1>
+        <p class="header-date" id="header-date"></p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-secondary" onclick="loadData()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          Refresh
+        </button>
+        <a href="sro-analytics.html" class="btn btn-primary">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          Analytics & Export
+        </a>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Active Patients</div>
+        <div class="stat-value" id="stat-patients">-</div>
+        <div class="flag-row">
+          <div class="flag-item"><div class="flag-dot green"></div><span id="flag-green">0</span></div>
+          <div class="flag-item"><div class="flag-dot yellow"></div><span id="flag-yellow">0</span></div>
+          <div class="flag-item"><div class="flag-dot red"></div><span id="flag-red">0</span></div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Today's Check-ins</div>
+        <div class="stat-value" id="stat-checkins">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg Pain Level</div>
+        <div class="stat-value" id="stat-pain">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">PT Compliance</div>
+        <div class="stat-value" id="stat-compliance">-</div>
+      </div>
+    </div>
+
+    <!-- Patient Table -->
+    <div class="table-container">
+      <div class="table-header">
+        <div class="table-title">All Patients</div>
+        <div class="table-filters">
+          <button class="filter-btn active" onclick="filterPatients('all', this)">All</button>
+          <button class="filter-btn" onclick="filterPatients('red', this)">At Risk</button>
+          <button class="filter-btn" onclick="filterPatients('yellow', this)">Attention</button>
+          <button class="filter-btn" onclick="filterPatients('green', this)">On Track</button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Patient</th>
+            <th>Procedure</th>
+            <th>Surgery Date</th>
+            <th>Day</th>
+            <th>Status</th>
+            <th>Pain</th>
+            <th>PT Compliance</th>
+            <th>Last Check-in</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="patient-table">
+          <tr><td colspan="9"><div class="loading"><div class="spinner"></div></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    // Supabase config
+    const SUPABASE_URL = 'https://kutnednztssloqluygse.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_Bs41LPV6lzVSk3RvdNGnOg_Io1z1m-o';
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const CLINIC_ID = '11111111-1111-1111-1111-111111111111';
+
+    let allPatients = [];
+    let currentFilter = 'all';
+
+    // Set dates
+    document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    document.getElementById('header-date').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+    async function loadData() {
+      try {
+        // Load clinic
+        const { data: clinic } = await db.from('clinics').select('name').eq('id', CLINIC_ID).single();
+        if (clinic) document.getElementById('clinic-name').textContent = clinic.name;
+
+        // Load episodes with patients
+        const { data: episodes, error: epErr } = await db
+          .from('episodes')
+          .select('*, patients(id, first_name, last_name, mrn)')
+          .eq('clinic_id', CLINIC_ID)
+          .eq('status', 'active');
+        if (epErr) throw epErr;
+
+        // Load all checkins
+        const { data: checkins, error: chErr } = await db
+          .from('checkins')
+          .select('*')
+          .eq('clinic_id', CLINIC_ID)
+          .order('created_at', { ascending: false });
+        if (chErr) throw chErr;
+
+        // Process data
+        const today = new Date().toISOString().split('T')[0];
+        const todayCheckins = (checkins || []).filter(c => c.created_at?.split('T')[0] === today);
+
+        // Build patient data with stats
+        allPatients = (episodes || []).map(ep => {
+          const patientCheckins = (checkins || []).filter(c => c.episode_id === ep.id);
+          const latestCheckin = patientCheckins[0];
+          
+          const totalPT = patientCheckins.length;
+          const completedPT = patientCheckins.filter(c => c.did_pt).length;
+          const ptCompliance = totalPT > 0 ? Math.round((completedPT / totalPT) * 100) : 0;
+          
+          const avgPain = patientCheckins.length > 0 
+            ? (patientCheckins.reduce((s, c) => s + (c.pain_level || 0), 0) / patientCheckins.length).toFixed(1)
+            : null;
+
+          const daysSince = Math.floor((new Date() - new Date(ep.procedure_date)) / 86400000);
+
+          // Determine flag
+          let flag = 'green';
+          if (latestCheckin?.pain_level >= 7 || latestCheckin?.concerns) flag = 'red';
+          else if (latestCheckin?.pill_count >= 5 || ptCompliance < 70) flag = 'yellow';
+
+          return {
+            ...ep,
+            patient: ep.patients,
+            latestCheckin,
+            ptCompliance,
+            avgPain,
+            daysSince,
+            flag,
+            totalCheckins: patientCheckins.length
+          };
+        });
+
+        // Calculate stats
+        const greenCount = allPatients.filter(p => p.flag === 'green').length;
+        const yellowCount = allPatients.filter(p => p.flag === 'yellow').length;
+        const redCount = allPatients.filter(p => p.flag === 'red').length;
+
+        const allPains = allPatients.filter(p => p.latestCheckin?.pain_level != null).map(p => p.latestCheckin.pain_level);
+        const avgPainAll = allPains.length > 0 ? (allPains.reduce((a, b) => a + b, 0) / allPains.length).toFixed(1) : '-';
+
+        const allCompliance = allPatients.filter(p => p.totalCheckins > 0).map(p => p.ptCompliance);
+        const avgCompliance = allCompliance.length > 0 ? Math.round(allCompliance.reduce((a, b) => a + b, 0) / allCompliance.length) : '-';
+
+        // Update UI
+        document.getElementById('stat-patients').textContent = allPatients.length;
+        document.getElementById('stat-checkins').textContent = todayCheckins.length;
+        document.getElementById('stat-pain').textContent = avgPainAll;
+        document.getElementById('stat-compliance').textContent = avgCompliance !== '-' ? avgCompliance + '%' : '-';
+        document.getElementById('flag-green').textContent = greenCount;
+        document.getElementById('flag-yellow').textContent = yellowCount;
+        document.getElementById('flag-red').textContent = redCount;
+
+        renderTable();
+
+      } catch (e) {
+        console.error(e);
+        document.getElementById('patient-table').innerHTML = `<tr><td colspan="9" class="empty-state">Error: ${e.message}</td></tr>`;
+      }
+    }
+
+    function filterPatients(filter, btn) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderTable();
+    }
+
+    function renderTable() {
+      const filtered = currentFilter === 'all' 
+        ? allPatients 
+        : allPatients.filter(p => p.flag === currentFilter);
+
+      if (filtered.length === 0) {
+        document.getElementById('patient-table').innerHTML = `<tr><td colspan="9" class="empty-state">No patients found</td></tr>`;
+        return;
+      }
+
+      const procNames = { TKA: 'Total Knee', THA: 'Total Hip', PKA: 'Partial Knee' };
+
+      document.getElementById('patient-table').innerHTML = filtered.map(p => {
+        const statusClass = p.flag === 'green' ? 'on-track' : p.flag === 'yellow' ? 'needs-attention' : 'at-risk';
+        const statusText = p.flag === 'green' ? 'On Track' : p.flag === 'yellow' ? 'Needs Attention' : 'At Risk';
+        
+        const painClass = !p.latestCheckin?.pain_level ? '' : p.latestCheckin.pain_level <= 3 ? 'low' : p.latestCheckin.pain_level <= 6 ? 'medium' : 'high';
+        const painText = p.latestCheckin?.pain_level != null ? p.latestCheckin.pain_level + '/10' : '-';
+
+        const complianceClass = p.ptCompliance >= 80 ? 'high' : p.ptCompliance >= 60 ? 'medium' : 'low';
+
+        const lastCheckin = p.latestCheckin 
+          ? new Date(p.latestCheckin.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          : 'No check-ins';
+
+        const surgeryDate = new Date(p.procedure_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+        return `
+          <tr>
+            <td>
+              <div class="patient-name">${p.patient.first_name} ${p.patient.last_name}</div>
+              <div class="patient-mrn">${p.patient.mrn || 'No MRN'}</div>
+            </td>
+            <td>${p.procedure_side || ''} ${procNames[p.procedure_type] || p.procedure_type}</td>
+            <td>${surgeryDate}</td>
+            <td>Day ${p.daysSince}</td>
+            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+            <td><span class="pain-value ${painClass}">${painText}</span></td>
+            <td>
+              <div class="compliance-cell">
+                <div class="compliance-bar">
+                  <div class="compliance-fill ${complianceClass}" style="width: ${p.ptCompliance}%"></div>
+                </div>
+                <span class="compliance-pct">${p.ptCompliance}%</span>
+              </div>
+            </td>
+            <td style="color: var(--text-secondary)">${lastCheckin}</td>
+            <td><button class="action-btn" onclick="viewPatient('${p.id}')">View</button></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function viewPatient(episodeId) {
+      console.log('View patient:', episodeId);
+      // Future: open patient detail modal
+    }
+
+    document.addEventListener('DOMContentLoaded', loadData);
+  </script>
+</body>
+</html>

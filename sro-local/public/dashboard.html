@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | SRO Intelligence</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="logo-icon">SRO</span>
+            <span class="nav-title">SRO Intelligence</span>
+        </div>
+        <div class="nav-links">
+            <a href="/dashboard.html" class="nav-link active">Dashboard</a>
+            <a href="/analytics.html" class="nav-link">Analytics</a>
+            <a href="/rpm-report.html" class="nav-link">RPM Billing</a>
+            <a href="/settings.html" class="nav-link">Settings</a>
+        </div>
+        <div class="nav-user">
+            <span id="userName">Loading...</span>
+            <button class="btn btn-sm" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="statActive">-</div>
+                <div class="stat-label">Active Patients</div>
+            </div>
+            <div class="stat-card stat-success">
+                <div class="stat-value" id="statOnTrack">-</div>
+                <div class="stat-label">On Track</div>
+            </div>
+            <div class="stat-card stat-warning">
+                <div class="stat-value" id="statAttention">-</div>
+                <div class="stat-label">Needs Attention</div>
+            </div>
+            <div class="stat-card stat-danger">
+                <div class="stat-value" id="statOverdue">-</div>
+                <div class="stat-label">Overdue</div>
+            </div>
+        </div>
+
+        <!-- Filters and Actions -->
+        <div class="toolbar">
+            <div class="filters">
+                <select id="filterStatus" onchange="filterPatients()">
+                    <option value="all">All Status</option>
+                    <option value="on-track">On Track</option>
+                    <option value="attention">Needs Attention</option>
+                    <option value="overdue">Overdue</option>
+                </select>
+                <select id="filterSurgeon" onchange="filterPatients()">
+                    <option value="all">All Surgeons</option>
+                </select>
+            </div>
+            <div class="actions">
+                <button class="btn btn-secondary" onclick="exportPatients()">Export CSV</button>
+                <button class="btn btn-primary" onclick="openAddPatientModal()">+ Add Patient</button>
+            </div>
+        </div>
+
+        <!-- Patient Table -->
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Patient</th>
+                        <th>Surgery</th>
+                        <th>Day</th>
+                        <th>Surgeon</th>
+                        <th>Last Check-in</th>
+                        <th>Pain</th>
+                        <th>PT</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="patientTableBody">
+                    <tr>
+                        <td colspan="9" class="loading">Loading patients...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Patient Detail Modal -->
+    <div id="patientModal" class="modal" style="display: none;">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 id="modalPatientName">Patient Details</h2>
+                <div class="modal-header-actions">
+                    <div id="rpmTimer" class="rpm-timer" style="display: none;">
+                        <span class="timer-icon">⏱️</span>
+                        <span id="timerDisplay">00:00</span>
+                        <button class="btn btn-sm btn-warning" onclick="endReview()">End Review</button>
+                    </div>
+                    <button id="startReviewBtn" class="btn btn-primary" onclick="startReview()">
+                        Start Review ⏱️
+                    </button>
+                    <button class="btn btn-close" onclick="closePatientModal()">×</button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="patient-detail-grid">
+                    <!-- Patient Info -->
+                    <div class="detail-section">
+                        <h3>Patient Information</h3>
+                        <div id="patientInfo">Loading...</div>
+                    </div>
+                    
+                    <!-- Surgery Info -->
+                    <div class="detail-section">
+                        <h3>Surgery Details</h3>
+                        <div id="surgeryInfo">Loading...</div>
+                    </div>
+                    
+                    <!-- Check-in Link -->
+                    <div class="detail-section">
+                        <h3>Patient Check-in Link</h3>
+                        <div class="checkin-link-box">
+                            <input type="text" id="checkinLink" readonly>
+                            <button class="btn btn-sm" onclick="copyCheckinLink()">Copy</button>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" style="margin-top: 10px; width: 100%;" onclick="openManualCheckinModal()">
+                            📞 Log Phone/Manual Check-in
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Pain Trend Chart -->
+                <div class="chart-section">
+                    <h3>Pain Trend (Last 14 Days)</h3>
+                    <div id="painChart" class="chart-container">
+                        <canvas id="painChartCanvas"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Recent Check-ins -->
+                <div class="checkins-section">
+                    <h3>Recent Check-ins</h3>
+                    <div id="checkinsList" class="checkins-list">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Patient Modal -->
+    <div id="addPatientModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Patient</h2>
+                <button class="btn btn-close" onclick="closeAddPatientModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="addPatientForm" onsubmit="handleAddPatient(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>First Name *</label>
+                            <input type="text" id="newPatientFirst" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Last Name *</label>
+                            <input type="text" id="newPatientLast" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Date of Birth</label>
+                            <input type="date" id="newPatientDOB">
+                        </div>
+                        <div class="form-group">
+                            <label>MRN</label>
+                            <input type="text" id="newPatientMRN">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="newPatientEmail">
+                        </div>
+                        <div class="form-group">
+                            <label>Phone</label>
+                            <input type="tel" id="newPatientPhone">
+                        </div>
+                    </div>
+                    <hr>
+                    <h3>Surgery Information</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Surgery Type *</label>
+                            <select id="newSurgeryType" required>
+                                <option value="">Select...</option>
+                                <option value="TKA">Total Knee Arthroplasty (TKA)</option>
+                                <option value="THA">Total Hip Arthroplasty (THA)</option>
+                                <option value="PKA">Partial Knee Arthroplasty (PKA)</option>
+                                <option value="Revision TKA">Revision TKA</option>
+                                <option value="Revision THA">Revision THA</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Surgery Date *</label>
+                            <input type="date" id="newSurgeryDate" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Surgeon *</label>
+                        <select id="newSurgeon" required>
+                            <option value="">Select surgeon...</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeAddPatientModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add Patient</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- RPM Log Modal -->
+    <div id="rpmLogModal" class="modal" style="display: none;">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>Log Review Time</h2>
+                <button class="btn btn-close" onclick="closeRpmLogModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="rpm-summary">
+                    <p><strong>Duration:</strong> <span id="rpmDuration">0:00</span></p>
+                </div>
+                <form id="rpmLogForm" onsubmit="handleSaveRpmLog(event)">
+                    <div class="form-group">
+                        <label>Activity Type *</label>
+                        <select id="rpmActivityType" required>
+                            <option value="data_review">Data Review</option>
+                            <option value="care_management">Care Management</option>
+                            <option value="communication">Patient Communication</option>
+                            <option value="documentation">Documentation</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Notes (optional)</label>
+                        <textarea id="rpmNotes" rows="3" placeholder="Brief notes about this review..."></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="discardRpmLog()">Discard</button>
+                        <button type="submit" class="btn btn-primary">Save & Log Time</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual Check-in Modal -->
+    <div id="manualCheckinModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📞 Log Manual Check-in</h2>
+                <button class="btn btn-close" onclick="closeManualCheckinModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="background: #e8f4fd; padding: 10px; border-radius: 6px; margin-bottom: 20px;">
+                    Use this form to log check-ins from phone calls or in-person visits when the patient can't use the app.
+                </p>
+                <form id="manualCheckinForm" onsubmit="handleManualCheckin(event)">
+                    <div class="form-group">
+                        <label>Source *</label>
+                        <select id="manualSource" required>
+                            <option value="phone">Phone Call</option>
+                            <option value="in-person">In-Person Visit</option>
+                            <option value="voicemail">Voicemail</option>
+                            <option value="family">Family Member Report</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Pain Level (0-10) *</label>
+                        <select id="manualPain" required>
+                            <option value="">Select...</option>
+                            <option value="0">0 - No pain</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10 - Worst pain</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Did PT Exercises? *</label>
+                        <select id="manualPT" required>
+                            <option value="">Select...</option>
+                            <option value="1">Yes</option>
+                            <option value="0">No</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Took Medications? *</label>
+                        <select id="manualMed" required>
+                            <option value="">Select...</option>
+                            <option value="1">Yes</option>
+                            <option value="0">No</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Any Concerns?</label>
+                        <input type="text" id="manualConcerns" placeholder="Swelling, redness, fever, etc.">
+                    </div>
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea id="manualNotes" rows="2" placeholder="Additional notes from the call..."></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeManualCheckinModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Check-in</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick RPM Log Modal -->
+    <div id="quickRpmModal" class="modal" style="display: none;">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>⏱️ Log RPM Time</h2>
+                <button class="btn btn-close" onclick="closeQuickRpmModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 15px;">Patient: <strong id="quickRpmPatientName">-</strong></p>
+                <form id="quickRpmForm" onsubmit="handleQuickRpmLog(event)">
+                    <input type="hidden" id="quickRpmPatientId">
+                    <input type="hidden" id="quickRpmEpisodeId">
+                    <div class="form-group">
+                        <label>Time Spent (minutes) *</label>
+                        <input type="number" id="quickRpmMinutes" min="1" max="120" required placeholder="e.g., 5">
+                    </div>
+                    <div class="form-group">
+                        <label>Activity Type *</label>
+                        <select id="quickRpmActivity" required>
+                            <option value="data_review">Data Review</option>
+                            <option value="care_management">Care Management</option>
+                            <option value="communication">Patient Communication</option>
+                            <option value="documentation">Documentation</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Notes (optional)</label>
+                        <textarea id="quickRpmNotes" rows="2" placeholder="Brief notes..."></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeQuickRpmModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Time</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

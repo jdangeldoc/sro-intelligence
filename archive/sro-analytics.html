@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SRO Intelligence - Analytics</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Fraunces:wght@300;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg-deep: #0a0f1c;
+      --bg-card: #111827;
+      --bg-elevated: #1a2235;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-green: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --accent-blue: #3b82f6;
+      --border: rgba(255,255,255,0.08);
+      --radius: 12px;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg-deep); color: var(--text-primary); min-height: 100vh; }
+    .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 240px; background: var(--bg-card); border-right: 1px solid var(--border); padding: 24px 16px; display: flex; flex-direction: column; }
+    .logo { font-family: 'Fraunces', serif; font-size: 22px; margin-bottom: 32px; padding: 0 12px; }
+    .logo span { color: var(--accent-green); }
+    .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 8px; color: var(--text-secondary); text-decoration: none; font-size: 14px; margin-bottom: 4px; }
+    .nav-item:hover { background: var(--bg-elevated); color: var(--text-primary); }
+    .nav-item.active { background: var(--bg-elevated); color: var(--accent-green); }
+    .nav-item svg { width: 20px; height: 20px; }
+    .sidebar-footer { margin-top: auto; padding: 16px 12px; border-top: 1px solid var(--border); font-size: 13px; color: var(--text-muted); }
+    .main { margin-left: 240px; padding: 24px 32px; }
+    .header { margin-bottom: 24px; }
+    .header-title { font-family: 'Fraunces', serif; font-size: 28px; }
+    .header-sub { color: var(--text-secondary); font-size: 14px; margin-top: 4px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; }
+    .btn-primary { background: var(--accent-green); color: white; }
+    .btn-blue { background: var(--accent-blue); color: white; }
+    .btn-secondary { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border); }
+    .section { background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); padding: 24px; margin-bottom: 24px; }
+    .section-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+    .section-desc { color: var(--text-secondary); font-size: 14px; margin-bottom: 20px; }
+    .export-grid { display: flex; gap: 12px; flex-wrap: wrap; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: var(--bg-card); border-radius: var(--radius); padding: 20px; border: 1px solid var(--border); }
+    .stat-label { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
+    .stat-value { font-family: 'Fraunces', serif; font-size: 28px; }
+    .stat-detail { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+    .stat-value.green { color: var(--accent-green); }
+    .stat-value.amber { color: var(--accent-amber); }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; background: var(--bg-elevated); border-bottom: 1px solid var(--border); }
+    td { padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 14px; }
+    tr:last-child td { border-bottom: none; }
+    .numeric { text-align: right; font-variant-numeric: tabular-nums; }
+    .loading { display: flex; justify-content: center; padding: 40px; }
+    .spinner { width: 32px; height: 32px; border: 3px solid var(--bg-elevated); border-top-color: var(--accent-green); border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (max-width: 900px) { .sidebar { display: none; } .main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">SRO<span>.</span>Intelligence</div>
+    <a href="sro-clinician-dashboard.html" class="nav-item">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      Dashboard
+    </a>
+    <a href="sro-analytics.html" class="nav-item active">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      Analytics
+    </a>
+    <div class="sidebar-footer">
+      <div id="clinic-name">Loading...</div>
+      <div style="margin-top: 4px;" id="current-date"></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="header">
+      <h1 class="header-title">Analytics & Export</h1>
+      <p class="header-sub">Aggregate data for CMS TEAM Model reporting and payer submissions</p>
+    </div>
+
+    <!-- Export Section -->
+    <div class="section">
+      <div class="section-title">Export Data</div>
+      <div class="section-desc">Download CSV files for payer reports, CMS submissions, or external analysis</div>
+      <div class="export-grid">
+        <button class="btn btn-primary" onclick="exportPatientSummary()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a2 2 0 002 2h14a2 2 0 002-2v-3"/></svg>
+          Patient Summary CSV
+        </button>
+        <button class="btn btn-blue" onclick="exportCheckins()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a2 2 0 002 2h14a2 2 0 002-2v-3"/></svg>
+          All Check-ins CSV
+        </button>
+        <button class="btn btn-secondary" onclick="exportCMSReport()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          CMS TEAM Report
+        </button>
+      </div>
+    </div>
+
+    <!-- Clinic Summary Stats -->
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card"><div class="stat-label">Total Episodes</div><div class="stat-value" id="s-episodes">-</div></div>
+      <div class="stat-card"><div class="stat-label">Total Check-ins</div><div class="stat-value" id="s-checkins">-</div></div>
+      <div class="stat-card"><div class="stat-label">Avg Pain (All)</div><div class="stat-value" id="s-pain">-</div></div>
+      <div class="stat-card"><div class="stat-label">Total Pills</div><div class="stat-value" id="s-pills">-</div></div>
+      <div class="stat-card"><div class="stat-label">PT Sessions Done</div><div class="stat-value green" id="s-pt-done">-</div><div class="stat-detail" id="s-pt-detail">of 0 opportunities</div></div>
+      <div class="stat-card"><div class="stat-label">PT Compliance</div><div class="stat-value green" id="s-pt-pct">-</div></div>
+      <div class="stat-card"><div class="stat-label">Concerns Reported</div><div class="stat-value amber" id="s-concerns">-</div></div>
+      <div class="stat-card"><div class="stat-label">At-Risk Patients</div><div class="stat-value" id="s-risk">-</div></div>
+    </div>
+
+    <!-- Patient Detail Table -->
+    <div class="section">
+      <div class="section-title">Patient Analytics</div>
+      <div class="section-desc">Numerators, denominators, and percentages for each patient</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Patient</th>
+            <th>Procedure</th>
+            <th>Days Post-Op</th>
+            <th class="numeric">Check-ins</th>
+            <th class="numeric">Avg Pain</th>
+            <th class="numeric">Total Pills</th>
+            <th class="numeric">PT Done</th>
+            <th class="numeric">PT Total</th>
+            <th class="numeric">PT %</th>
+            <th class="numeric">Concerns</th>
+          </tr>
+        </thead>
+        <tbody id="patient-table">
+          <tr><td colspan="10"><div class="loading"><div class="spinner"></div></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    const SUPABASE_URL = 'https://kutnednztssloqluygse.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_Bs41LPV6lzVSk3RvdNGnOg_Io1z1m-o';
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const CLINIC_ID = '11111111-1111-1111-1111-111111111111';
+
+    let analyticsData = [];
+    let allCheckins = [];
+
+    document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+    async function loadData() {
+      try {
+        const { data: clinic } = await db.from('clinics').select('name').eq('id', CLINIC_ID).single();
+        if (clinic) document.getElementById('clinic-name').textContent = clinic.name;
+
+        const { data: episodes } = await db.from('episodes').select('*, patients(first_name, last_name, mrn)').eq('clinic_id', CLINIC_ID).eq('status', 'active');
+        const { data: checkins } = await db.from('checkins').select('*').eq('clinic_id', CLINIC_ID).order('created_at', { ascending: false });
+
+        allCheckins = checkins || [];
+
+        // Build analytics per episode
+        analyticsData = (episodes || []).map(ep => {
+          const epCheckins = allCheckins.filter(c => c.episode_id === ep.id);
+          const ptDone = epCheckins.filter(c => c.did_pt).length;
+          const ptTotal = epCheckins.length;
+          const totalPills = epCheckins.reduce((s, c) => s + (c.pill_count || 0), 0);
+          const avgPain = epCheckins.length > 0 ? (epCheckins.reduce((s, c) => s + (c.pain_level || 0), 0) / epCheckins.length).toFixed(1) : '-';
+          const concerns = epCheckins.filter(c => c.concerns).length;
+          const daysSince = Math.floor((new Date() - new Date(ep.procedure_date)) / 86400000);
+
+          return {
+            patientName: `${ep.patients.first_name} ${ep.patients.last_name}`,
+            mrn: ep.patients.mrn || '-',
+            procedure: `${ep.procedure_side || ''} ${ep.procedure_type}`.trim(),
+            procedureDate: ep.procedure_date,
+            daysSince,
+            checkins: epCheckins.length,
+            avgPain,
+            totalPills,
+            ptDone,
+            ptTotal,
+            ptPct: ptTotal > 0 ? Math.round((ptDone / ptTotal) * 100) : 0,
+            concerns
+          };
+        });
+
+        // Clinic totals
+        const totals = {
+          episodes: analyticsData.length,
+          checkins: allCheckins.length,
+          pain: allCheckins.length > 0 ? (allCheckins.reduce((s, c) => s + (c.pain_level || 0), 0) / allCheckins.length).toFixed(1) : '-',
+          pills: allCheckins.reduce((s, c) => s + (c.pill_count || 0), 0),
+          ptDone: allCheckins.filter(c => c.did_pt).length,
+          ptTotal: allCheckins.length,
+          ptPct: allCheckins.length > 0 ? Math.round((allCheckins.filter(c => c.did_pt).length / allCheckins.length) * 100) : 0,
+          concerns: allCheckins.filter(c => c.concerns).length,
+          atRisk: analyticsData.filter(p => p.avgPain >= 7 || p.concerns > 0).length
+        };
+
+        document.getElementById('s-episodes').textContent = totals.episodes;
+        document.getElementById('s-checkins').textContent = totals.checkins;
+        document.getElementById('s-pain').textContent = totals.pain;
+        document.getElementById('s-pills').textContent = totals.pills;
+        document.getElementById('s-pt-done').textContent = totals.ptDone;
+        document.getElementById('s-pt-detail').textContent = `of ${totals.ptTotal} opportunities`;
+        document.getElementById('s-pt-pct').textContent = totals.ptPct + '%';
+        document.getElementById('s-concerns').textContent = totals.concerns;
+        document.getElementById('s-risk').textContent = totals.atRisk;
+
+        renderTable();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function renderTable() {
+      document.getElementById('patient-table').innerHTML = analyticsData.map(p => `
+        <tr>
+          <td>${p.patientName}</td>
+          <td>${p.procedure}</td>
+          <td class="numeric">Day ${p.daysSince}</td>
+          <td class="numeric">${p.checkins}</td>
+          <td class="numeric">${p.avgPain}</td>
+          <td class="numeric">${p.totalPills}</td>
+          <td class="numeric">${p.ptDone}</td>
+          <td class="numeric">${p.ptTotal}</td>
+          <td class="numeric">${p.ptPct}%</td>
+          <td class="numeric">${p.concerns}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="10" style="text-align:center;color:var(--text-muted)">No data</td></tr>';
+    }
+
+    function downloadCSV(filename, rows) {
+      const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportPatientSummary() {
+      const headers = ['Patient', 'MRN', 'Procedure', 'Surgery Date', 'Days Post-Op', 'Total Check-ins', 'Avg Pain', 'Total Pills', 'PT Done (Numerator)', 'PT Opportunities (Denominator)', 'PT Compliance %', 'Concerns'];
+      const rows = [headers, ...analyticsData.map(p => [p.patientName, p.mrn, p.procedure, p.procedureDate, p.daysSince, p.checkins, p.avgPain, p.totalPills, p.ptDone, p.ptTotal, p.ptPct, p.concerns])];
+      downloadCSV(`sro-patient-summary-${new Date().toISOString().split('T')[0]}.csv`, rows);
+    }
+
+    function exportCheckins() {
+      const headers = ['Date', 'Patient ID', 'Episode ID', 'Pain Level', 'Pill Count', 'PT Done', 'Concerns', 'ROM Knee', 'ROM Hip'];
+      const rows = [headers, ...allCheckins.map(c => [c.created_at, c.patient_id, c.episode_id, c.pain_level, c.pill_count, c.did_pt, c.concerns || '', c.rom_knee || '', c.rom_hip || ''])];
+      downloadCSV(`sro-checkins-${new Date().toISOString().split('T')[0]}.csv`, rows);
+    }
+
+    function exportCMSReport() {
+      const totals = {
+        totalPatients: analyticsData.length,
+        tkaCount: analyticsData.filter(p => p.procedure.includes('TKA')).length,
+        thaCount: analyticsData.filter(p => p.procedure.includes('THA')).length,
+        totalCheckins: allCheckins.length,
+        avgPain: allCheckins.length > 0 ? (allCheckins.reduce((s, c) => s + (c.pain_level || 0), 0) / allCheckins.length).toFixed(2) : 0,
+        ptNumerator: allCheckins.filter(c => c.did_pt).length,
+        ptDenominator: allCheckins.length,
+        ptCompliancePct: allCheckins.length > 0 ? ((allCheckins.filter(c => c.did_pt).length / allCheckins.length) * 100).toFixed(2) : 0,
+        totalPills: allCheckins.reduce((s, c) => s + (c.pill_count || 0), 0),
+        concernsReported: allCheckins.filter(c => c.concerns).length
+      };
+      const rows = [
+        ['CMS TEAM Model Report'],
+        ['Generated', new Date().toISOString()],
+        [''],
+        ['Metric', 'Value'],
+        ['Total Active Patients', totals.totalPatients],
+        ['TKA Procedures', totals.tkaCount],
+        ['THA Procedures', totals.thaCount],
+        ['Total Check-ins', totals.totalCheckins],
+        ['Average Pain Level', totals.avgPain],
+        ['PT Sessions Completed (Numerator)', totals.ptNumerator],
+        ['PT Opportunities (Denominator)', totals.ptDenominator],
+        ['PT Compliance Rate', totals.ptCompliancePct + '%'],
+        ['Total Pain Medication Pills', totals.totalPills],
+        ['Patient Concerns Reported', totals.concernsReported]
+      ];
+      downloadCSV(`sro-cms-report-${new Date().toISOString().split('T')[0]}.csv`, rows);
+    }
+
+    document.addEventListener('DOMContentLoaded', loadData);
+  </script>
+</body>
+</html>

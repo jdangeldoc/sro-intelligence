@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0a0f1c">
+  <title>SRO Patient Check-in</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Fraunces:wght@300;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    :root {
+      --bg-deep: #0a0f1c; --bg-card: #111827; --bg-elevated: #1a2235;
+      --text-primary: #f1f5f9; --text-secondary: #94a3b8; --text-muted: #64748b;
+      --accent-green: #10b981; --accent-green-glow: rgba(16, 185, 129, 0.3);
+      --accent-amber: #f59e0b; --accent-red: #ef4444;
+      --radius: 16px; --radius-sm: 10px;
+      --safe-top: env(safe-area-inset-top, 20px); --safe-bottom: env(safe-area-inset-bottom, 20px);
+    }
+    html, body { height: 100%; overflow: hidden; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg-deep); color: var(--text-primary); line-height: 1.5; }
+    .app { height: 100%; display: flex; flex-direction: column; padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); }
+    
+    .screen { display: none; flex-direction: column; flex: 1; }
+    .screen.visible { display: flex; }
+    
+    /* Loading */
+    .loading-screen { align-items: center; justify-content: center; gap: 20px; }
+    .spinner { width: 40px; height: 40px; border: 3px solid var(--bg-elevated); border-top-color: var(--accent-green); border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    /* Error */
+    .error-screen { align-items: center; justify-content: center; padding: 40px; text-align: center; }
+    .error-icon { width: 60px; height: 60px; background: rgba(239,68,68,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+    .error-title { font-family: 'Fraunces', serif; font-size: 22px; margin-bottom: 12px; }
+    .error-message { color: var(--text-secondary); font-size: 15px; }
+    
+    /* Welcome */
+    .welcome-screen { padding: 40px 24px; }
+    .welcome-greeting { font-size: 15px; color: var(--text-secondary); margin-bottom: 8px; }
+    .welcome-name { font-family: 'Fraunces', serif; font-size: 32px; font-weight: 500; line-height: 1.2; margin-bottom: 40px; }
+    .surgery-card { background: var(--bg-card); border-radius: var(--radius); padding: 20px; margin-bottom: 24px; }
+    .surgery-label { font-size: 13px; color: var(--text-muted); margin-bottom: 4px; }
+    .surgery-info { font-size: 18px; font-weight: 500; }
+    .surgery-date { font-size: 14px; color: var(--text-secondary); margin-top: 4px; }
+    .day-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--accent-green-glow); color: var(--accent-green); padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 500; margin-top: 16px; }
+    .start-btn { background: var(--accent-green); color: white; border: none; border-radius: var(--radius); padding: 18px; font-size: 17px; font-weight: 600; cursor: pointer; width: 100%; margin-top: auto; box-shadow: 0 4px 20px var(--accent-green-glow); }
+    
+    /* Check-in Flow */
+    .checkin-header { padding: 16px 20px; display: flex; align-items: center; gap: 16px; }
+    .back-btn { background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 8px; margin: -8px; }
+    .progress { flex: 1; height: 4px; background: var(--bg-elevated); border-radius: 2px; overflow: hidden; }
+    .progress-bar { height: 100%; background: var(--accent-green); transition: width 0.3s; }
+    
+    .step { display: none; flex-direction: column; flex: 1; padding: 24px; animation: fadeIn 0.3s; }
+    .step.visible { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .step-question { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 500; line-height: 1.3; margin-bottom: 32px; }
+    
+    /* Pain Scale */
+    .pain-scale { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+    .pain-display { text-align: center; margin-bottom: 40px; }
+    .pain-number { font-family: 'Fraunces', serif; font-size: 80px; font-weight: 300; line-height: 1; color: var(--accent-green); }
+    .pain-label { font-size: 16px; color: var(--text-secondary); margin-top: 8px; }
+    .slider-wrap { padding: 0 10px; }
+    .pain-slider { width: 100%; height: 8px; -webkit-appearance: none; background: var(--bg-elevated); border-radius: 4px; outline: none; }
+    .pain-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 32px; height: 32px; background: var(--accent-green); border-radius: 50%; cursor: pointer; }
+    .slider-labels { display: flex; justify-content: space-between; margin-top: 12px; font-size: 13px; color: var(--text-muted); }
+    
+    /* Pills */
+    .pill-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+    .pill-btn { background: var(--bg-card); border: 2px solid var(--bg-elevated); border-radius: var(--radius-sm); padding: 16px 8px; font-size: 20px; font-weight: 600; color: var(--text-primary); cursor: pointer; }
+    .pill-btn.selected { border-color: var(--accent-green); background: rgba(16,185,129,0.1); }
+    .pill-btn.warning { border-color: var(--accent-amber); background: rgba(245,158,11,0.1); }
+    .pill-btn.alert { border-color: var(--accent-red); background: rgba(239,68,68,0.1); }
+    .pill-feedback { text-align: center; font-size: 14px; color: var(--text-secondary); min-height: 40px; }
+    
+    /* Yes/No */
+    .yesno { display: flex; flex-direction: column; gap: 12px; }
+    .yesno-btn { background: var(--bg-card); border: 2px solid var(--bg-elevated); border-radius: var(--radius); padding: 20px; font-size: 17px; color: var(--text-primary); cursor: pointer; text-align: left; }
+    .yesno-btn.selected { border-color: var(--accent-green); background: rgba(16,185,129,0.1); }
+    
+    /* Textarea */
+    .concern-input { background: var(--bg-card); border: 2px solid var(--bg-elevated); border-radius: var(--radius); padding: 16px; font-family: inherit; font-size: 16px; color: var(--text-primary); resize: none; height: 150px; outline: none; }
+    .concern-input:focus { border-color: #3b82f6; }
+    .concern-input::placeholder { color: var(--text-muted); }
+    
+    /* Continue */
+    .continue-btn { background: var(--accent-green); color: white; border: none; border-radius: var(--radius); padding: 18px; font-size: 17px; font-weight: 600; cursor: pointer; margin-top: auto; box-shadow: 0 4px 20px var(--accent-green-glow); }
+    .continue-btn:disabled { background: var(--bg-elevated); color: var(--text-muted); cursor: not-allowed; box-shadow: none; }
+    
+    /* Complete */
+    .complete-screen { align-items: center; justify-content: center; padding: 40px; text-align: center; }
+    .complete-icon { width: 80px; height: 80px; background: var(--accent-green-glow); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; animation: scaleIn 0.4s; }
+    @keyframes scaleIn { from { transform: scale(0); } to { transform: scale(1); } }
+    .complete-title { font-family: 'Fraunces', serif; font-size: 28px; margin-bottom: 12px; }
+    .complete-message { color: var(--text-secondary); font-size: 16px; max-width: 280px; }
+    .done-btn { background: var(--bg-card); color: var(--text-primary); border: none; border-radius: var(--radius); padding: 16px 40px; font-size: 16px; cursor: pointer; margin-top: 40px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Loading -->
+    <div class="screen loading-screen visible" id="loading">
+      <div class="spinner"></div>
+      <p style="color: var(--text-secondary)">Loading your info...</p>
+    </div>
+
+    <!-- Error -->
+    <div class="screen error-screen" id="error">
+      <div class="error-icon">
+        <svg width="28" height="28" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+      </div>
+      <h2 class="error-title">Something went wrong</h2>
+      <p class="error-message" id="error-msg">Unable to load patient data.</p>
+    </div>
+
+    <!-- Welcome -->
+    <div class="screen welcome-screen" id="welcome">
+      <div>
+        <p class="welcome-greeting" id="greeting">Good morning,</p>
+        <h1 class="welcome-name" id="patient-name">Patient</h1>
+      </div>
+      <div class="surgery-card">
+        <p class="surgery-label">Your procedure</p>
+        <p class="surgery-info" id="procedure-info">-</p>
+        <p class="surgery-date" id="procedure-date"></p>
+        <div class="day-badge">
+          <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>
+          <span id="day-text">Recovery</span>
+        </div>
+      </div>
+      <button class="start-btn" onclick="startCheckin()">Start Daily Check-in</button>
+    </div>
+
+    <!-- Check-in -->
+    <div class="screen" id="checkin">
+      <div class="checkin-header">
+        <button class="back-btn" onclick="prevStep()">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
+        </button>
+        <div class="progress"><div class="progress-bar" id="progress-bar"></div></div>
+      </div>
+
+      <!-- Pain -->
+      <div class="step visible" id="step-pain">
+        <h2 class="step-question">How's your pain right now?</h2>
+        <div class="pain-scale">
+          <div class="pain-display">
+            <div class="pain-number" id="pain-number">3</div>
+            <div class="pain-label" id="pain-label">Mild discomfort</div>
+          </div>
+          <div class="slider-wrap">
+            <input type="range" class="pain-slider" id="pain-slider" min="0" max="10" value="3" oninput="updatePain(this.value)">
+            <div class="slider-labels"><span>None</span><span>Severe</span></div>
+          </div>
+        </div>
+        <button class="continue-btn" onclick="nextStep()">Continue</button>
+      </div>
+
+      <!-- Medication -->
+      <div class="step" id="step-meds">
+        <h2 class="step-question">Pain pills in the last 24 hours?</h2>
+        <div class="pill-grid">
+          <button class="pill-btn" onclick="selectPills(0)">0</button>
+          <button class="pill-btn" onclick="selectPills(1)">1</button>
+          <button class="pill-btn" onclick="selectPills(2)">2</button>
+          <button class="pill-btn" onclick="selectPills(3)">3</button>
+          <button class="pill-btn" onclick="selectPills(4)">4</button>
+          <button class="pill-btn" onclick="selectPills(5)">5</button>
+          <button class="pill-btn" onclick="selectPills(6)">6</button>
+          <button class="pill-btn" onclick="selectPills(7)">6+</button>
+        </div>
+        <p class="pill-feedback" id="pill-feedback"></p>
+        <button class="continue-btn" id="meds-continue" onclick="nextStep()" disabled>Continue</button>
+      </div>
+
+      <!-- PT -->
+      <div class="step" id="step-pt">
+        <h2 class="step-question">Did you do your PT exercises today?</h2>
+        <div class="yesno">
+          <button class="yesno-btn" onclick="selectPT(true)">Yes</button>
+          <button class="yesno-btn" onclick="selectPT(false)">Not yet</button>
+        </div>
+      </div>
+
+      <!-- Concern -->
+      <div class="step" id="step-concern">
+        <h2 class="step-question">Anything concerning you?</h2>
+        <div class="yesno">
+          <button class="yesno-btn" onclick="selectConcern(true)">Yes, I have a concern</button>
+          <button class="yesno-btn" onclick="selectConcern(false)">No, all good</button>
+        </div>
+      </div>
+
+      <!-- Concern Detail -->
+      <div class="step" id="step-detail">
+        <h2 class="step-question">Tell us more</h2>
+        <textarea class="concern-input" id="concern-text" placeholder="What's on your mind? Your care team will see this."></textarea>
+        <button class="continue-btn" onclick="submitCheckin()">Submit Check-in</button>
+      </div>
+    </div>
+
+    <!-- Complete -->
+    <div class="screen complete-screen" id="complete">
+      <div class="complete-icon">
+        <svg width="40" height="40" fill="none" stroke="#10b981" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+      </div>
+      <h2 class="complete-title">Check-in Complete!</h2>
+      <p class="complete-message">Your care team has been updated. Keep up the great work!</p>
+      <button class="done-btn" onclick="resetApp()">Done</button>
+    </div>
+  </div>
+
+  <script>
+    // Supabase config
+    const SUPABASE_URL = 'https://kutnednztssloqluygse.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_Bs41LPV6lzVSk3RvdNGnOg_Io1z1m-o';
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // State
+    let patient = null;
+    let episode = null;
+    let step = 0;
+    const steps = ['step-pain', 'step-meds', 'step-pt', 'step-concern', 'step-detail'];
+    const painLabels = ['No pain','Barely noticeable','Minor discomfort','Mild discomfort','Moderate pain','Distracting','Hard to ignore','Difficult to concentrate','Very intense','Overwhelming','Worst imaginable'];
+    
+    let checkinData = { pain: 3, pills: null, pt: null, hasConcern: false, concernText: '' };
+
+    // Init
+    async function init() {
+      const params = new URLSearchParams(window.location.search);
+      const episodeId = params.get('episode') || '33333333-3333-3333-3333-333333333333';
+
+      try {
+        const { data: ep, error } = await db
+          .from('episodes')
+          .select('*, patients(id, first_name, last_name)')
+          .eq('id', episodeId)
+          .single();
+
+        if (error) throw error;
+        episode = ep;
+        patient = ep.patients;
+        showWelcome();
+      } catch (e) {
+        console.error(e);
+        showError(e.message);
+      }
+    }
+
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('visible'));
+      document.getElementById(id).classList.add('visible');
+    }
+
+    function showError(msg) {
+      document.getElementById('error-msg').textContent = msg;
+      showScreen('error');
+    }
+
+    function showWelcome() {
+      const hour = new Date().getHours();
+      document.getElementById('greeting').textContent = 
+        hour < 12 ? 'Good morning,' : hour < 17 ? 'Good afternoon,' : 'Good evening,';
+      document.getElementById('patient-name').textContent = patient.first_name;
+
+      const procNames = { TKA: 'Total Knee Replacement', THA: 'Total Hip Replacement', PKA: 'Partial Knee' };
+      document.getElementById('procedure-info').textContent = 
+        (episode.procedure_side || '') + ' ' + (procNames[episode.procedure_type] || episode.procedure_type);
+
+      if (episode.procedure_date) {
+        const surgDate = new Date(episode.procedure_date);
+        document.getElementById('procedure-date').textContent = surgDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        const days = Math.floor((new Date() - surgDate) / 86400000);
+        document.getElementById('day-text').textContent = days < 0 ? `Surgery in ${-days} days` : days === 0 ? 'Surgery day' : `Day ${days} of recovery`;
+      }
+      showScreen('welcome');
+    }
+
+    function startCheckin() {
+      showScreen('checkin');
+      updateProgress();
+    }
+
+    function updateProgress() {
+      document.getElementById('progress-bar').style.width = ((step + 1) / steps.length * 100) + '%';
+    }
+
+    function showStep(id) {
+      document.querySelectorAll('.step').forEach(s => s.classList.remove('visible'));
+      document.getElementById(id).classList.add('visible');
+    }
+
+    function nextStep() {
+      if (step < steps.length - 1) { step++; showStep(steps[step]); updateProgress(); }
+    }
+
+    function prevStep() {
+      if (step > 0) { step--; showStep(steps[step]); updateProgress(); }
+      else showScreen('welcome');
+    }
+
+    function updatePain(val) {
+      checkinData.pain = parseInt(val);
+      document.getElementById('pain-number').textContent = val;
+      document.getElementById('pain-label').textContent = painLabels[val];
+      document.getElementById('pain-number').style.color = val <= 3 ? 'var(--accent-green)' : val <= 6 ? 'var(--accent-amber)' : 'var(--accent-red)';
+    }
+
+    function selectPills(n) {
+      checkinData.pills = n;
+      document.querySelectorAll('.pill-btn').forEach((b, i) => {
+        b.classList.remove('selected', 'warning', 'alert');
+        if (i === n) b.classList.add(n <= 2 ? 'selected' : n <= 4 ? 'warning' : 'alert');
+      });
+      const fb = document.getElementById('pill-feedback');
+      fb.textContent = n === 0 ? 'Great! Managing without medication.' : n <= 2 ? 'Good pain management.' : n <= 4 ? "We'll keep an eye on this." : 'Your care team will follow up.';
+      fb.style.color = n <= 2 ? 'var(--accent-green)' : n <= 4 ? 'var(--accent-amber)' : 'var(--accent-red)';
+      document.getElementById('meds-continue').disabled = false;
+    }
+
+    function selectPT(did) {
+      checkinData.pt = did;
+      const btns = document.querySelectorAll('#step-pt .yesno-btn');
+      btns[0].classList.toggle('selected', did);
+      btns[1].classList.toggle('selected', !did);
+      setTimeout(nextStep, 200);
+    }
+
+    function selectConcern(has) {
+      checkinData.hasConcern = has;
+      const btns = document.querySelectorAll('#step-concern .yesno-btn');
+      btns[0].classList.toggle('selected', has);
+      btns[1].classList.toggle('selected', !has);
+      setTimeout(has ? nextStep : submitCheckin, 200);
+    }
+
+    async function submitCheckin() {
+      checkinData.concernText = document.getElementById('concern-text')?.value || '';
+      
+      try {
+        const record = {
+          clinic_id: episode.clinic_id,
+          patient_id: patient.id,
+          episode_id: episode.id,
+          checkin_type: 'daily',
+          pain_level: checkinData.pain,
+          pill_count: checkinData.pills,
+          did_pt: checkinData.pt,
+          concerns: checkinData.hasConcern ? checkinData.concernText : null,
+          responses: checkinData
+        };
+
+        const { error } = await db.from('checkins').insert([record]);
+        if (error) throw error;
+        showScreen('complete');
+      } catch (e) {
+        console.error(e);
+        alert('Failed to save. Please try again.');
+      }
+    }
+
+    function resetApp() {
+      step = 0;
+      checkinData = { pain: 3, pills: null, pt: null, hasConcern: false, concernText: '' };
+      document.getElementById('pain-slider').value = 3;
+      updatePain(3);
+      document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('selected', 'warning', 'alert'));
+      document.getElementById('pill-feedback').textContent = '';
+      document.getElementById('meds-continue').disabled = true;
+      document.querySelectorAll('.yesno-btn').forEach(b => b.classList.remove('selected'));
+      document.getElementById('concern-text').value = '';
+      showStep('step-pain');
+      showScreen('welcome');
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

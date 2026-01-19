@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SRO Intelligence</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-box">
+            <div class="logo">
+                <span class="logo-icon">SRO</span>
+                <h1>SRO Intelligence</h1>
+                <p class="tagline">Post-Surgical Recovery Platform</p>
+            </div>
+            
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="clinicSelect">Select Clinic</label>
+                    <select id="clinicSelect" required>
+                        <option value="">Loading clinics...</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="userSelect">Select User</label>
+                    <select id="userSelect" required disabled>
+                        <option value="">Select a clinic first</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-block">
+                    Enter Dashboard
+                </button>
+            </form>
+            
+            <div class="demo-note">
+                <p><strong>Demo Mode:</strong> Select any clinic and user to explore the system.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '';
+        let clinics = [];
+        let users = [];
+
+        // Load clinics on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadClinics();
+        });
+
+        async function loadClinics() {
+            try {
+                const response = await fetch('/api/clinics');
+                clinics = await response.json();
+                
+                const select = document.getElementById('clinicSelect');
+                select.innerHTML = '<option value="">Select a clinic...</option>';
+                
+                clinics.forEach(clinic => {
+                    const option = document.createElement('option');
+                    option.value = clinic.id;
+                    option.textContent = clinic.name;
+                    select.appendChild(option);
+                });
+                
+                // Auto-select if only one clinic
+                if (clinics.length === 1) {
+                    select.value = clinics[0].id;
+                    await loadUsers(clinics[0].id);
+                }
+            } catch (error) {
+                console.error('Error loading clinics:', error);
+            }
+        }
+
+        async function loadUsers(clinicId) {
+            const userSelect = document.getElementById('userSelect');
+            
+            if (!clinicId) {
+                userSelect.innerHTML = '<option value="">Select a clinic first</option>';
+                userSelect.disabled = true;
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/users?clinic_id=${clinicId}`);
+                users = await response.json();
+                
+                userSelect.innerHTML = '<option value="">Select a user...</option>';
+                userSelect.disabled = false;
+                
+                users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = `${user.first_name} ${user.last_name} (${user.role})`;
+                    userSelect.appendChild(option);
+                });
+                
+                // Auto-select first surgeon if available
+                const surgeons = users.filter(u => u.role === 'surgeon');
+                if (surgeons.length > 0) {
+                    userSelect.value = surgeons[0].id;
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        // Handle clinic selection change
+        document.getElementById('clinicSelect').addEventListener('change', (e) => {
+            loadUsers(e.target.value);
+        });
+
+        function handleLogin(event) {
+            event.preventDefault();
+            
+            const clinicId = document.getElementById('clinicSelect').value;
+            const userId = document.getElementById('userSelect').value;
+            
+            if (!clinicId || !userId) {
+                alert('Please select a clinic and user');
+                return;
+            }
+            
+            // Store in sessionStorage
+            sessionStorage.setItem('clinicId', clinicId);
+            sessionStorage.setItem('userId', userId);
+            
+            const clinic = clinics.find(c => c.id === clinicId);
+            const user = users.find(u => u.id === userId);
+            
+            sessionStorage.setItem('clinicName', clinic?.name || 'Clinic');
+            sessionStorage.setItem('userName', `${user?.first_name || ''} ${user?.last_name || ''}`);
+            sessionStorage.setItem('userRole', user?.role || 'staff');
+            
+            // Redirect to dashboard
+            window.location.href = '/dashboard.html';
+        }
+    </script>
+</body>
+</html>

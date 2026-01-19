@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Check-in | SRO Intelligence</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        /* Patient check-in specific styles - larger for older patients */
+        .checkin-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .checkin-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .checkin-header h1 {
+            font-size: 28px;
+            color: #2c5aa0;
+            margin-bottom: 10px;
+        }
+        
+        .patient-greeting {
+            font-size: 20px;
+            color: #333;
+        }
+        
+        .days-post-op {
+            background: #e8f4fd;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .days-post-op .number {
+            font-size: 48px;
+            font-weight: bold;
+            color: #2c5aa0;
+        }
+        
+        .days-post-op .label {
+            font-size: 18px;
+            color: #666;
+        }
+        
+        .form-section {
+            margin-bottom: 30px;
+        }
+        
+        .form-section h2 {
+            font-size: 22px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        /* Large pain scale */
+        .pain-scale {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .pain-option {
+            width: 60px;
+            height: 60px;
+            border: 3px solid #ddd;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .pain-option:hover {
+            border-color: #2c5aa0;
+        }
+        
+        .pain-option.selected {
+            border-color: #2c5aa0;
+            background: #2c5aa0;
+            color: white;
+        }
+        
+        .pain-option.low { background: #d4edda; }
+        .pain-option.medium { background: #fff3cd; }
+        .pain-option.high { background: #f8d7da; }
+        .pain-option.selected.low,
+        .pain-option.selected.medium,
+        .pain-option.selected.high { background: #2c5aa0; }
+        
+        /* Large yes/no buttons */
+        .yes-no-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+        
+        .yes-no-btn {
+            padding: 20px 50px;
+            font-size: 24px;
+            border: 3px solid #ddd;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .yes-no-btn:hover {
+            border-color: #2c5aa0;
+        }
+        
+        .yes-no-btn.selected {
+            border-color: #2c5aa0;
+            background: #2c5aa0;
+            color: white;
+        }
+        
+        /* Concern checkboxes */
+        .concern-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .concern-option {
+            padding: 15px 20px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        
+        .concern-option:hover {
+            border-color: #2c5aa0;
+        }
+        
+        .concern-option.selected {
+            border-color: #e74c3c;
+            background: #fdf2f2;
+        }
+        
+        /* Submit button */
+        .submit-btn {
+            width: 100%;
+            padding: 20px;
+            font-size: 24px;
+            background: #2c5aa0;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        
+        .submit-btn:hover {
+            background: #1e4080;
+        }
+        
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        /* Voice button */
+        .voice-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #2c5aa0;
+            color: white;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        
+        /* Success screen */
+        .success-screen {
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .success-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+        
+        .success-screen h1 {
+            font-size: 32px;
+            color: #28a745;
+            margin-bottom: 20px;
+        }
+        
+        .success-message {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        /* Error screen */
+        .error-screen {
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .error-screen h1 {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="checkin-container">
+        <!-- Loading State -->
+        <div id="loadingScreen">
+            <div class="checkin-header">
+                <h1>Loading...</h1>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorScreen" class="error-screen" style="display: none;">
+            <h1>❌ Invalid Link</h1>
+            <p>This check-in link is not valid or has expired.</p>
+            <p>Please contact your care team for a new link.</p>
+        </div>
+
+        <!-- Check-in Form -->
+        <div id="checkinForm" style="display: none;">
+            <div class="checkin-header">
+                <div class="logo-icon">SRO</div>
+                <h1>Daily Check-in</h1>
+                <p class="patient-greeting">Hello, <span id="patientName">Patient</span>!</p>
+            </div>
+
+            <div class="days-post-op">
+                <div class="number" id="daysPostOp">-</div>
+                <div class="label">Days Since Surgery</div>
+            </div>
+
+            <form onsubmit="handleSubmit(event)">
+                <!-- Pain Level -->
+                <div class="form-section">
+                    <h2>🩹 How is your pain today?</h2>
+                    <p>0 = No pain, 10 = Worst pain</p>
+                    <div class="pain-scale" id="painScale">
+                        <div class="pain-option low" data-value="0" onclick="selectPain(0)">0</div>
+                        <div class="pain-option low" data-value="1" onclick="selectPain(1)">1</div>
+                        <div class="pain-option low" data-value="2" onclick="selectPain(2)">2</div>
+                        <div class="pain-option low" data-value="3" onclick="selectPain(3)">3</div>
+                        <div class="pain-option medium" data-value="4" onclick="selectPain(4)">4</div>
+                        <div class="pain-option medium" data-value="5" onclick="selectPain(5)">5</div>
+                        <div class="pain-option medium" data-value="6" onclick="selectPain(6)">6</div>
+                        <div class="pain-option high" data-value="7" onclick="selectPain(7)">7</div>
+                        <div class="pain-option high" data-value="8" onclick="selectPain(8)">8</div>
+                        <div class="pain-option high" data-value="9" onclick="selectPain(9)">9</div>
+                        <div class="pain-option high" data-value="10" onclick="selectPain(10)">10</div>
+                    </div>
+                </div>
+
+                <!-- PT Exercises -->
+                <div class="form-section">
+                    <h2>🏋️ Did you do your exercises today?</h2>
+                    <div class="yes-no-buttons">
+                        <button type="button" class="yes-no-btn" data-value="1" onclick="selectPT(1)">✅ Yes</button>
+                        <button type="button" class="yes-no-btn" data-value="0" onclick="selectPT(0)">❌ No</button>
+                    </div>
+                </div>
+
+                <!-- Medication -->
+                <div class="form-section">
+                    <h2>💊 Did you take your medications?</h2>
+                    <div class="yes-no-buttons">
+                        <button type="button" class="yes-no-btn" data-value="1" onclick="selectMed(1)">✅ Yes</button>
+                        <button type="button" class="yes-no-btn" data-value="0" onclick="selectMed(0)">❌ No</button>
+                    </div>
+                </div>
+
+                <!-- Concerns -->
+                <div class="form-section">
+                    <h2>⚠️ Any concerns? (Select all that apply)</h2>
+                    <div class="concern-options">
+                        <div class="concern-option" data-value="swelling" onclick="toggleConcern(this)">Swelling</div>
+                        <div class="concern-option" data-value="redness" onclick="toggleConcern(this)">Redness</div>
+                        <div class="concern-option" data-value="fever" onclick="toggleConcern(this)">Fever</div>
+                        <div class="concern-option" data-value="drainage" onclick="toggleConcern(this)">Drainage</div>
+                        <div class="concern-option" data-value="stiffness" onclick="toggleConcern(this)">Stiffness</div>
+                        <div class="concern-option" data-value="none" onclick="toggleConcern(this)">None</div>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="form-section">
+                    <h2>📝 Anything else to share? (Optional)</h2>
+                    <textarea id="notes" rows="3" style="width: 100%; font-size: 18px; padding: 15px; border-radius: 8px; border: 2px solid #ddd;" placeholder="Any additional notes..."></textarea>
+                </div>
+
+                <button type="submit" class="submit-btn" id="submitBtn" disabled>
+                    Submit Check-in
+                </button>
+            </form>
+        </div>
+
+        <!-- Success Screen -->
+        <div id="successScreen" class="success-screen" style="display: none;">
+            <div class="success-icon">✅</div>
+            <h1>Thank You!</h1>
+            <p class="success-message">Your check-in has been submitted successfully.</p>
+            <p>Your care team is monitoring your progress.</p>
+            <div id="progressMessage" style="margin-top: 30px; padding: 20px; background: #e8f4fd; border-radius: 10px;">
+                <!-- Dynamic encouragement message -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Voice Button -->
+    <button class="voice-btn" onclick="toggleVoice()" title="Read questions aloud">
+        🔊
+    </button>
+
+    <script>
+        // State
+        let patientData = null;
+        let formData = {
+            pain_level: null,
+            pt_exercises: null,
+            medication_taken: null,
+            concerns: []
+        };
+
+        // Get token from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('t');
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!token) {
+                showError();
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/patient-by-token/${token}`);
+                if (!response.ok) {
+                    showError();
+                    return;
+                }
+
+                patientData = await response.json();
+                showCheckinForm();
+            } catch (error) {
+                console.error('Error loading patient:', error);
+                showError();
+            }
+        });
+
+        function showError() {
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('errorScreen').style.display = 'block';
+        }
+
+        function showCheckinForm() {
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('checkinForm').style.display = 'block';
+            document.getElementById('patientName').textContent = patientData.first_name;
+            document.getElementById('daysPostOp').textContent = patientData.days_post_op || '-';
+        }
+
+        // Pain selection
+        function selectPain(value) {
+            formData.pain_level = value;
+            document.querySelectorAll('.pain-option').forEach(el => {
+                el.classList.toggle('selected', parseInt(el.dataset.value) === value);
+            });
+            validateForm();
+        }
+
+        // PT selection
+        function selectPT(value) {
+            formData.pt_exercises = value;
+            document.querySelectorAll('.yes-no-buttons')[0].querySelectorAll('.yes-no-btn').forEach(el => {
+                el.classList.toggle('selected', parseInt(el.dataset.value) === value);
+            });
+            validateForm();
+        }
+
+        // Medication selection
+        function selectMed(value) {
+            formData.medication_taken = value;
+            document.querySelectorAll('.yes-no-buttons')[1].querySelectorAll('.yes-no-btn').forEach(el => {
+                el.classList.toggle('selected', parseInt(el.dataset.value) === value);
+            });
+            validateForm();
+        }
+
+        // Concern toggle
+        function toggleConcern(element) {
+            const value = element.dataset.value;
+            
+            if (value === 'none') {
+                // Clear all other concerns
+                formData.concerns = ['none'];
+                document.querySelectorAll('.concern-option').forEach(el => {
+                    el.classList.remove('selected');
+                });
+                element.classList.add('selected');
+            } else {
+                // Remove 'none' if selecting other concerns
+                formData.concerns = formData.concerns.filter(c => c !== 'none');
+                document.querySelector('.concern-option[data-value="none"]').classList.remove('selected');
+                
+                if (element.classList.contains('selected')) {
+                    element.classList.remove('selected');
+                    formData.concerns = formData.concerns.filter(c => c !== value);
+                } else {
+                    element.classList.add('selected');
+                    formData.concerns.push(value);
+                }
+            }
+        }
+
+        // Validate form
+        function validateForm() {
+            const valid = formData.pain_level !== null && 
+                         formData.pt_exercises !== null && 
+                         formData.medication_taken !== null;
+            document.getElementById('submitBtn').disabled = !valid;
+        }
+
+        // Submit form
+        async function handleSubmit(event) {
+            event.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+
+            try {
+                const response = await fetch('/api/checkins', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        patient_id: patientData.patient_id,
+                        episode_id: patientData.episode_id,
+                        clinic_id: patientData.clinic_id,
+                        checkin_type: 'daily',
+                        checkin_date: new Date().toISOString().split('T')[0],
+                        pain_level: formData.pain_level,
+                        pt_exercises: formData.pt_exercises === 1,
+                        medication_taken: formData.medication_taken === 1,
+                        concerns: formData.concerns.filter(c => c !== 'none').join(', '),
+                        notes: document.getElementById('notes').value
+                    })
+                });
+
+                if (response.ok) {
+                    showSuccess();
+                } else {
+                    throw new Error('Submit failed');
+                }
+            } catch (error) {
+                console.error('Error submitting:', error);
+                alert('Error submitting check-in. Please try again.');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Check-in';
+            }
+        }
+
+        function showSuccess() {
+            document.getElementById('checkinForm').style.display = 'none';
+            document.getElementById('successScreen').style.display = 'block';
+            
+            // Show encouraging message based on data
+            let message = '';
+            if (formData.pain_level <= 3) {
+                message = '🎉 Great news! Your pain level is looking good!';
+            } else if (formData.pain_level <= 6) {
+                message = '👍 You\'re making progress. Keep up the good work!';
+            } else {
+                message = '💪 Hang in there. Your care team is monitoring your progress.';
+            }
+            
+            if (formData.pt_exercises === 1) {
+                message += '<br><br>✅ Excellent job doing your exercises today!';
+            }
+            
+            document.getElementById('progressMessage').innerHTML = message;
+        }
+
+        // Voice synthesis
+        let voiceEnabled = false;
+        function toggleVoice() {
+            voiceEnabled = !voiceEnabled;
+            if (voiceEnabled) {
+                speak('Voice assistance is now on. I will read questions aloud.');
+            }
+        }
+
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 0.9;
+                speechSynthesis.speak(utterance);
+            }
+        }
+    </script>
+</body>
+</html>
