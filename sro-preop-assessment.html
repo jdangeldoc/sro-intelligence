@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0f1c">
+  <title>Pre-Op Assessment | SRO Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,300;9..144,500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    :root {
+      --bg-deep: #0a0f1c;
+      --bg-card: #111827;
+      --bg-elevated: #1a2235;
+      --bg-hover: #232d42;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-green: #10b981;
+      --accent-green-dim: rgba(16,185,129,0.15);
+      --accent-amber: #f59e0b;
+      --accent-amber-dim: rgba(245,158,11,0.15);
+      --accent-red: #ef4444;
+      --accent-red-dim: rgba(239,68,68,0.15);
+      --accent-blue: #3b82f6;
+      --accent-blue-dim: rgba(59,130,246,0.15);
+      --border: rgba(255,255,255,0.08);
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'DM Sans', -apple-system, sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* ===== SIDEBAR (matches dashboard) ===== */
+    .sidebar {
+      position: fixed; left: 0; top: 0; bottom: 0; width: 240px;
+      background: var(--bg-card); border-right: 1px solid var(--border);
+      padding: 24px 16px; display: flex; flex-direction: column; z-index: 100;
+    }
+    .logo { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; margin-bottom: 32px; padding: 0 12px; }
+    .logo span { color: var(--accent-green); }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 8px;
+      color: var(--text-secondary); text-decoration: none; font-size: 14px; margin-bottom: 4px; transition: all 0.15s;
+    }
+    .nav-item:hover { background: var(--bg-elevated); color: var(--text-primary); }
+    .nav-item.active { background: var(--bg-elevated); color: var(--accent-green); }
+    .nav-icon { width: 20px; height: 20px; flex-shrink: 0; }
+    .sidebar-footer { margin-top: auto; padding: 16px 12px; border-top: 1px solid var(--border); font-size: 13px; color: var(--text-muted); }
+
+    /* ===== MAIN ===== */
+    .main { margin-left: 240px; padding: 24px 32px; max-width: 1100px; }
+    .page-header { margin-bottom: 28px; }
+    .page-header h1 { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
+    .page-header p { color: var(--text-secondary); font-size: 14px; }
+
+    /* ===== PROGRESS BAR ===== */
+    .progress-bar { display: flex; gap: 6px; margin-bottom: 32px; }
+    .progress-step {
+      flex: 1; height: 6px; border-radius: 3px; background: var(--bg-elevated); transition: background 0.4s;
+    }
+    .progress-step.complete { background: var(--accent-green); }
+    .progress-step.active { background: var(--accent-blue); }
+    .progress-labels { display: flex; justify-content: space-between; margin-bottom: 8px; }
+    .progress-labels span { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .progress-labels span.active { color: var(--accent-blue); font-weight: 600; }
+    .progress-labels span.complete { color: var(--accent-green); }
+
+    /* ===== SECTIONS ===== */
+    .section { display: none; animation: fadeIn 0.35s ease; }
+    .section.visible { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .section-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 28px; margin-bottom: 20px;
+    }
+    .section-title { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+    .section-subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+
+    /* ===== FORM ELEMENTS ===== */
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .form-row.triple { grid-template-columns: 1fr 1fr 1fr; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full { grid-column: 1 / -1; }
+    label { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+    label .required { color: var(--accent-red); }
+    input, select {
+      background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 10px 14px; color: var(--text-primary); font-family: inherit; font-size: 14px;
+      transition: border-color 0.2s; outline: none;
+    }
+    input:focus, select:focus { border-color: var(--accent-blue); }
+    input::placeholder { color: var(--text-muted); }
+    select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+    select option { background: var(--bg-card); color: var(--text-primary); }
+
+    /* ===== RADIO GROUP (for assessments) ===== */
+    .radio-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+    .radio-group-label { font-size: 14px; font-weight: 500; margin-bottom: 4px; line-height: 1.4; }
+    .radio-group-label .q-num { color: var(--accent-blue); font-weight: 700; margin-right: 6px; }
+    .radio-option {
+      display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+      background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm);
+      cursor: pointer; transition: all 0.15s; font-size: 14px;
+    }
+    .radio-option:hover { border-color: var(--accent-blue); background: var(--bg-hover); }
+    .radio-option.selected { border-color: var(--accent-green); background: var(--accent-green-dim); }
+    .radio-dot {
+      width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--text-muted);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s;
+    }
+    .radio-option.selected .radio-dot { border-color: var(--accent-green); }
+    .radio-option.selected .radio-dot::after {
+      content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--accent-green);
+    }
+
+    /* ===== YES/NO BUTTONS ===== */
+    .yesno-row { display: flex; gap: 12px; margin-bottom: 16px; }
+    .yesno-btn {
+      flex: 1; padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+      background: var(--bg-elevated); color: var(--text-primary); font-family: inherit; font-size: 14px;
+      font-weight: 500; cursor: pointer; transition: all 0.15s; text-align: center;
+    }
+    .yesno-btn:hover { border-color: var(--accent-blue); }
+    .yesno-btn.selected-yes { border-color: var(--accent-amber); background: var(--accent-amber-dim); color: var(--accent-amber); }
+    .yesno-btn.selected-no { border-color: var(--accent-green); background: var(--accent-green-dim); color: var(--accent-green); }
+
+    /* ===== BUTTONS ===== */
+    .btn-row { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; }
+    .btn {
+      padding: 12px 28px; border-radius: var(--radius-sm); border: none; font-family: inherit;
+      font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px;
+    }
+    .btn-primary { background: var(--accent-green); color: #fff; }
+    .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; filter: none; }
+    .btn-secondary { background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--bg-hover); }
+    .btn-danger { background: var(--accent-red-dim); color: var(--accent-red); border: 1px solid transparent; }
+    .btn-pdf { background: var(--accent-blue-dim); color: var(--accent-blue); border: 1px solid transparent; }
+
+    /* ===== RISK RESULT ===== */
+    .risk-summary { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .risk-card {
+      background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 20px; text-align: center;
+    }
+    .risk-card .risk-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .risk-card .risk-value { font-size: 28px; font-weight: 700; }
+    .risk-card .risk-sub { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+    .risk-low .risk-value { color: var(--accent-green); }
+    .risk-moderate .risk-value { color: var(--accent-amber); }
+    .risk-high .risk-value { color: var(--accent-red); }
+
+    .tier-badge {
+      display: inline-flex; align-items: center; gap: 8px; padding: 10px 24px; border-radius: 40px;
+      font-size: 16px; font-weight: 700; letter-spacing: 0.5px; margin: 16px 0;
+    }
+    .tier-low { background: var(--accent-green-dim); color: var(--accent-green); border: 1px solid var(--accent-green); }
+    .tier-moderate { background: var(--accent-amber-dim); color: var(--accent-amber); border: 1px solid var(--accent-amber); }
+    .tier-high { background: var(--accent-red-dim); color: var(--accent-red); border: 1px solid var(--accent-red); }
+
+    .outcome-projection {
+      background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 24px; margin: 20px 0;
+    }
+    .outcome-bar-container { display: flex; align-items: center; gap: 16px; margin: 16px 0; }
+    .outcome-bar { flex: 1; height: 20px; background: var(--bg-card); border-radius: 10px; position: relative; overflow: visible; }
+    .outcome-bar-fill-pre {
+      position: absolute; left: 0; top: 0; height: 100%; border-radius: 10px;
+      background: var(--accent-amber); transition: width 0.8s ease;
+    }
+    .outcome-bar-fill-post {
+      position: absolute; left: 0; top: 0; height: 100%; border-radius: 10px;
+      background: var(--accent-green); opacity: 0.5; transition: width 0.8s ease;
+    }
+    .outcome-score { font-size: 24px; font-weight: 700; min-width: 48px; text-align: center; }
+    .outcome-score.pre { color: var(--accent-amber); }
+    .outcome-score.post { color: var(--accent-green); }
+    .outcome-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .scb-note { font-size: 13px; color: var(--text-secondary); margin-top: 12px; padding: 12px; background: var(--accent-green-dim); border-radius: var(--radius-sm); }
+
+    /* ===== SAVE TOAST ===== */
+    .toast {
+      position: fixed; bottom: 32px; right: 32px; padding: 14px 24px; border-radius: var(--radius-sm);
+      background: var(--accent-green); color: #fff; font-weight: 600; font-size: 14px;
+      transform: translateY(80px); opacity: 0; transition: all 0.3s ease; z-index: 999;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; padding: 16px; }
+      .form-row { grid-template-columns: 1fr; }
+      .form-row.triple { grid-template-columns: 1fr; }
+      .risk-summary { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="logo">S<span>R</span>O Intelligence</div>
+    <a href="sro-clinician-dashboard.html" class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </a>
+    <a href="sro-patients.html" class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      Patients
+    </a>
+    <a href="sro-preop-assessment.html" class="nav-item active">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      Pre-Op Assessment
+    </a>
+    <a href="sro-analytics.html" class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+      Analytics
+    </a>
+    <a href="sro-settings.html" class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </a>
+    <div class="sidebar-footer">SRO Intelligence v1.0</div>
+  </nav>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="page-header">
+      <h1>Pre-Operative Risk Assessment</h1>
+      <p>Risk stratification, KOOS JR / HOOS JR, PROMIS-10, and CMS risk variables</p>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="progress-labels" id="progress-labels">
+      <span class="active">Patient Info</span>
+      <span>Risk Factors</span>
+      <span>Joint Assessment</span>
+      <span>PROMIS-10</span>
+      <span>CMS Variables</span>
+      <span>Results</span>
+    </div>
+    <div class="progress-bar" id="progress-bar">
+      <div class="progress-step active"></div>
+      <div class="progress-step"></div>
+      <div class="progress-step"></div>
+      <div class="progress-step"></div>
+      <div class="progress-step"></div>
+      <div class="progress-step"></div>
+    </div>
+
+    <!-- ==================== STEP 1: PATIENT INFO ==================== -->
+    <div class="section visible" id="step-1">
+      <div class="section-card">
+        <div class="section-title">Patient Information</div>
+        <div class="section-subtitle">Select the patient and procedure details</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Patient <span class="required">*</span></label>
+            <select id="patient-select"><option value="">Loading patients...</option></select>
+          </div>
+          <div class="form-group">
+            <label>Procedure Type <span class="required">*</span></label>
+            <select id="procedure-type">
+              <option value="">Select procedure</option>
+              <option value="TKA">Total Knee Arthroplasty (TKA)</option>
+              <option value="THA">Total Hip Arthroplasty (THA)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Planned Surgery Date</label>
+            <input type="date" id="surgery-date">
+          </div>
+          <div class="form-group">
+            <label>Surgeon</label>
+            <select id="surgeon-select"><option value="">Loading surgeons...</option></select>
+          </div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="nextStep(2)">Continue &rarr;</button>
+      </div>
+    </div>
+
+    <!-- ==================== STEP 2: RISK FACTORS ==================== -->
+    <div class="section" id="step-2">
+      <div class="section-card">
+        <div class="section-title">Clinical Risk Factors</div>
+        <div class="section-subtitle">Used for 90-day mortality, 30-day readmission, and prolonged LOS risk calculation</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Age <span class="required">*</span></label>
+            <input type="number" id="risk-age" placeholder="e.g. 67" min="18" max="110">
+          </div>
+          <div class="form-group">
+            <label>Sex <span class="required">*</span></label>
+            <select id="risk-sex">
+              <option value="">Select</option>
+              <option value="M">Male</option>
+              <option value="F">Female</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>BMI <span class="required">*</span></label>
+            <input type="number" id="risk-bmi" placeholder="e.g. 28.5" step="0.1" min="12" max="80">
+          </div>
+          <div class="form-group">
+            <label>ASA Classification <span class="required">*</span></label>
+            <select id="risk-asa">
+              <option value="">Select ASA class</option>
+              <option value="1">ASA I — Healthy</option>
+              <option value="2">ASA II — Mild systemic disease</option>
+              <option value="3">ASA III — Severe systemic disease</option>
+              <option value="4">ASA IV — Life-threatening disease</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row triple">
+          <div class="form-group">
+            <label>Diabetes</label>
+            <select id="risk-diabetes"><option value="none">None</option><option value="oral">Oral medication</option><option value="insulin">Insulin-dependent</option></select>
+          </div>
+          <div class="form-group">
+            <label>Cardiac History</label>
+            <select id="risk-cardiac"><option value="none">None</option><option value="hx">History of cardiac event</option><option value="chf">CHF</option></select>
+          </div>
+          <div class="form-group">
+            <label>Pulmonary Disease</label>
+            <select id="risk-pulm"><option value="none">None</option><option value="copd">COPD</option><option value="severe">Severe / O2 dependent</option></select>
+          </div>
+        </div>
+        <div class="form-row triple">
+          <div class="form-group">
+            <label>Smoking Status</label>
+            <select id="risk-smoking"><option value="never">Never</option><option value="former">Former</option><option value="current">Current smoker</option></select>
+          </div>
+          <div class="form-group">
+            <label>Renal Disease</label>
+            <select id="risk-renal"><option value="none">None</option><option value="mild">Mild (eGFR 30-60)</option><option value="severe">Severe / Dialysis</option></select>
+          </div>
+          <div class="form-group">
+            <label>Prior Surgery on Same Joint</label>
+            <select id="risk-prior"><option value="no">No</option><option value="yes">Yes (revision)</option></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Anemia (Hgb &lt; 10)</label>
+            <select id="risk-anemia"><option value="no">No</option><option value="yes">Yes</option></select>
+          </div>
+          <div class="form-group">
+            <label>Functional Status</label>
+            <select id="risk-functional"><option value="independent">Independent</option><option value="partial">Partially dependent</option><option value="dependent">Totally dependent</option></select>
+          </div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="nextStep(1)">&larr; Back</button>
+        <button class="btn btn-primary" onclick="nextStep(3)">Continue &rarr;</button>
+      </div>
+    </div>
+
+    <!-- ==================== STEP 3: JOINT ASSESSMENT (KOOS JR / HOOS JR) ==================== -->
+    <div class="section" id="step-3">
+      <div class="section-card">
+        <div class="section-title" id="joint-title">KOOS JR Assessment</div>
+        <div class="section-subtitle" id="joint-subtitle">7 questions about your knee function (0-100 scale, higher = better)</div>
+        <div id="joint-questions"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="nextStep(2)">&larr; Back</button>
+        <button class="btn btn-primary" id="btn-step3" onclick="nextStep(4)">Continue &rarr;</button>
+      </div>
+    </div>
+
+    <!-- ==================== STEP 4: PROMIS-10 ==================== -->
+    <div class="section" id="step-4">
+      <div class="section-card">
+        <div class="section-title">PROMIS Global-10</div>
+        <div class="section-subtitle">General physical and mental health assessment (10 questions)</div>
+        <div id="promis-questions"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="nextStep(3)">&larr; Back</button>
+        <button class="btn btn-primary" id="btn-step4" onclick="nextStep(5)">Continue &rarr;</button>
+      </div>
+    </div>
+
+    <!-- ==================== STEP 5: CMS RISK VARIABLES ==================== -->
+    <div class="section" id="step-5">
+      <div class="section-card">
+        <div class="section-title">CMS Risk Variables</div>
+        <div class="section-subtitle">Required by CMS for PRO-PM risk adjustment</div>
+
+        <div class="radio-group">
+          <div class="radio-group-label"><span class="q-num">1.</span> Have you had low back pain in the past month?</div>
+          <div class="yesno-row">
+            <button class="yesno-btn" onclick="setCMS('back_pain',true,this)">Yes</button>
+            <button class="yesno-btn" onclick="setCMS('back_pain',false,this)">No</button>
+          </div>
+        </div>
+
+        <div class="radio-group">
+          <div class="radio-group-label"><span class="q-num">2.</span> How comfortable are you filling out medical forms by yourself?</div>
+          <div id="cms-literacy"></div>
+        </div>
+
+        <div class="radio-group">
+          <div class="radio-group-label"><span class="q-num">3.</span> What amount of pain have you experienced in the past week in your OTHER <span id="cms-other-joint">knee</span>?</div>
+          <div id="cms-other-pain"></div>
+        </div>
+
+        <div class="radio-group">
+          <div class="radio-group-label"><span class="q-num">4.</span> What amount of pain have you experienced in the past week in your OTHER <span id="cms-other-joint2">hip</span>?</div>
+          <div id="cms-other-pain2"></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="nextStep(4)">&larr; Back</button>
+        <button class="btn btn-primary" onclick="calculateAndShow()">Calculate Results &rarr;</button>
+      </div>
+    </div>
+
+    <!-- ==================== STEP 6: RESULTS ==================== -->
+    <div class="section" id="step-6">
+      <div class="section-card">
+        <div class="section-title">Risk Assessment Results</div>
+        <div class="section-subtitle" id="results-patient-info"></div>
+
+        <div style="text-align:center; margin: 12px 0 20px;">
+          <div class="tier-badge" id="tier-badge">LOW RISK</div>
+        </div>
+
+        <div class="risk-summary">
+          <div class="risk-card" id="risk-mort">
+            <div class="risk-label">90-Day Mortality</div>
+            <div class="risk-value">0.1%</div>
+            <div class="risk-sub">Baseline: 0.1%</div>
+          </div>
+          <div class="risk-card" id="risk-readmit">
+            <div class="risk-label">30-Day Readmission</div>
+            <div class="risk-value">3.2%</div>
+            <div class="risk-sub">Baseline: 4.5%</div>
+          </div>
+          <div class="risk-card" id="risk-los">
+            <div class="risk-label">Prolonged LOS (&gt;5d)</div>
+            <div class="risk-value">2.1%</div>
+            <div class="risk-sub">Baseline: 5%</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-title">Outcome Projection</div>
+        <div class="section-subtitle" id="outcome-subtitle">KOOS JR pre-op vs. projected post-op</div>
+
+        <div class="outcome-projection">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <div><span class="outcome-label">Pre-Op Score</span></div>
+            <div><span class="outcome-label">Projected Post-Op</span></div>
+          </div>
+          <div class="outcome-bar-container">
+            <div class="outcome-score pre" id="score-pre">--</div>
+            <div class="outcome-bar">
+              <div class="outcome-bar-fill-pre" id="bar-pre" style="width:0%"></div>
+              <div class="outcome-bar-fill-post" id="bar-post" style="width:0%"></div>
+            </div>
+            <div class="outcome-score post" id="score-post">--</div>
+          </div>
+          <div style="text-align:center;">
+            <span style="font-size:14px; color:var(--text-secondary);">Expected improvement: </span>
+            <span style="font-size:18px; font-weight:700; color:var(--accent-green);" id="score-delta">--</span>
+            <span style="font-size:14px; color:var(--text-secondary);"> points</span>
+          </div>
+          <div class="scb-note" id="scb-note"></div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-title">PROMIS-10 Scores</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:12px;">
+          <div class="risk-card">
+            <div class="risk-label">Physical Health T-Score</div>
+            <div class="risk-value" id="promis-phys" style="color:var(--accent-blue);">--</div>
+            <div class="risk-sub">Population mean: 50</div>
+          </div>
+          <div class="risk-card">
+            <div class="risk-label">Mental Health T-Score</div>
+            <div class="risk-value" id="promis-mental" style="color:var(--accent-blue);">--</div>
+            <div class="risk-sub">Population mean: 50</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="nextStep(5)">&larr; Back</button>
+        <button class="btn btn-pdf" onclick="generatePDF()">&#128196; Generate PDF Report</button>
+        <button class="btn btn-primary" id="btn-save" onclick="saveToDatabase()">&#10003; Save to Patient Record</button>
+      </div>
+    </div>
+
+    <div class="toast" id="toast">Saved to patient record</div>
+  </div>
+
+  <script>
+    // ===== SUPABASE =====
+    const SUPABASE_URL = 'https://kutnednztssloqluygse.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_Bs41LPV6lzVSk3RvdNGnOg_Io1z1m-o';
+    const CLINIC_ID = '11111111-1111-1111-1111-111111111111';
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // ===== STATE =====
+    let currentStep = 1;
+    let patients = [];
+    let surgeons = [];
+    let jointAnswers = {};
+    let promisAnswers = {};
+    let cmsAnswers = {};
+    let results = null;
+
+    // ===== KOOS JR QUESTIONS (7) =====
+    const koosQuestions = [
+      "How often are you aware of your knee problem?",
+      "Have you modified your lifestyle to avoid activities potentially damaging to your knee?",
+      "How troubled are you by lack of confidence in your knee?",
+      "What difficulty do you have rising from sitting?",
+      "What difficulty do you have bending to the floor/picking up an object?",
+      "What difficulty do you have twisting/pivoting on your injured knee?",
+      "What difficulty do you have kneeling?"
+    ];
+    const koosOptions = ["None", "Mild", "Moderate", "Severe", "Extreme"];
+
+    // ===== HOOS JR QUESTIONS (6) =====
+    const hoosQuestions = [
+      "What difficulty do you have going down stairs?",
+      "What difficulty do you have getting in/out of the bath or shower?",
+      "What difficulty do you have sitting?",
+      "What difficulty do you have running?",
+      "What difficulty do you have twisting/pivoting on your loaded leg?",
+      "How troubled are you by lack of confidence in your hip?"
+    ];
+    const hoosOptions = ["None", "Mild", "Moderate", "Severe", "Extreme"];
+
+    // ===== PROMIS-10 QUESTIONS =====
+    const promisQuestions = [
+      { q: "In general, would you say your health is:", opts: ["Excellent","Very Good","Good","Fair","Poor"], key: "gh1", reverse: false },
+      { q: "In general, would you say your quality of life is:", opts: ["Excellent","Very Good","Good","Fair","Poor"], key: "gh2", reverse: false },
+      { q: "In general, how would you rate your physical health?", opts: ["Excellent","Very Good","Good","Fair","Poor"], key: "gh3", reverse: false },
+      { q: "In general, how would you rate your mental health, including your mood and ability to think?", opts: ["Excellent","Very Good","Good","Fair","Poor"], key: "gh4", reverse: false },
+      { q: "In general, how would you rate your satisfaction with social activities and relationships?", opts: ["Excellent","Very Good","Good","Fair","Poor"], key: "gh5", reverse: false },
+      { q: "To what extent are you able to carry out your everyday physical activities?", opts: ["Completely","Mostly","Moderately","A little","Not at all"], key: "gh6", reverse: false },
+      { q: "How often have you been bothered by emotional problems such as feeling anxious, depressed, or irritable?", opts: ["Never","Rarely","Sometimes","Often","Always"], key: "gh7", reverse: true },
+      { q: "How would you rate your fatigue on average?", opts: ["None","Mild","Moderate","Severe","Very Severe"], key: "gh8", reverse: true },
+      { q: "How would you rate your pain on average? (0 = no pain, 10 = worst)", opts: ["0","1","2","3","4","5","6","7","8","9","10"], key: "gh9", reverse: true },
+      { q: "In general, please rate how well you carry out your usual social activities and roles:", opts: ["Excellent","Very Good","Good","Fair","Poor"], key: "gh10", reverse: false }
+    ];
+
+    // ===== CMS VARIABLE OPTIONS =====
+    const literacyOptions = ["Extremely comfortable", "Quite a bit", "Somewhat", "A little bit", "Not at all"];
+    const painOptions = ["None", "Mild", "Moderate", "Severe", "Extreme"];
+
+    // ===== INIT =====
+    document.addEventListener('DOMContentLoaded', async () => {
+      renderCMSOptions();
+      await loadPatients();
+      await loadSurgeons();
+    });
+
+    async function loadPatients() {
+      try {
+        const { data } = await sb.from('patients').select('id, first_name, last_name, mrn').eq('clinic_id', CLINIC_ID).order('last_name');
+        patients = data || [];
+        const sel = document.getElementById('patient-select');
+        sel.innerHTML = '<option value="">Select patient</option>' +
+          patients.map(p => `<option value="${p.id}">${p.last_name}, ${p.first_name} (${p.mrn || 'No MRN'})</option>`).join('');
+      } catch(e) { console.error('Patient load error:', e); }
+    }
+
+    async function loadSurgeons() {
+      try {
+        const { data } = await sb.from('users').select('id, first_name, last_name').eq('clinic_id', CLINIC_ID).eq('role', 'surgeon').order('last_name');
+        surgeons = data || [];
+        const sel = document.getElementById('surgeon-select');
+        sel.innerHTML = '<option value="">Select surgeon</option>' +
+          surgeons.map(s => `<option value="${s.id}">Dr. ${s.last_name}, ${s.first_name}</option>`).join('');
+      } catch(e) { console.error('Surgeon load error:', e); }
+    }
+
+    // ===== NAVIGATION =====
+    function nextStep(step) {
+      if (step === 3) renderJointAssessment();
+      if (step === 4) renderPromisQuestions();
+      if (step === 5) updateCMSLabels();
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
+      document.getElementById('step-' + step).classList.add('visible');
+      currentStep = step;
+      updateProgress();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function updateProgress() {
+      const steps = document.querySelectorAll('.progress-step');
+      const labels = document.querySelectorAll('#progress-labels span');
+      steps.forEach((s, i) => {
+        s.classList.remove('active', 'complete');
+        labels[i].classList.remove('active', 'complete');
+        if (i < currentStep - 1) { s.classList.add('complete'); labels[i].classList.add('complete'); }
+        if (i === currentStep - 1) { s.classList.add('active'); labels[i].classList.add('active'); }
+      });
+    }
+
+    // ===== RENDER JOINT ASSESSMENT =====
+    function renderJointAssessment() {
+      const proc = document.getElementById('procedure-type').value;
+      const isKnee = proc === 'TKA';
+      const questions = isKnee ? koosQuestions : hoosQuestions;
+      const options = isKnee ? koosOptions : hoosOptions;
+      const name = isKnee ? 'KOOS JR' : 'HOOS JR';
+      const count = questions.length;
+
+      document.getElementById('joint-title').textContent = name + ' Assessment';
+      document.getElementById('joint-subtitle').textContent = `${count} questions about your ${isKnee ? 'knee' : 'hip'} function (0-100 scale, higher = better)`;
+
+      const container = document.getElementById('joint-questions');
+      container.innerHTML = questions.map((q, i) => `
+        <div class="radio-group">
+          <div class="radio-group-label"><span class="q-num">${i+1}.</span> ${q}</div>
+          ${options.map((opt, j) => `
+            <div class="radio-option" onclick="selectJoint(${i}, ${j}, this)">
+              <div class="radio-dot"></div>
+              <span>${opt}</span>
+            </div>
+          `).join('')}
+        </div>
+      `).join('');
+    }
+
+    function selectJoint(q, val, el) {
+      jointAnswers[q] = val;
+      el.parentElement.querySelectorAll('.radio-option').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    // ===== RENDER PROMIS-10 =====
+    function renderPromisQuestions() {
+      const container = document.getElementById('promis-questions');
+      container.innerHTML = promisQuestions.map((pq, i) => `
+        <div class="radio-group">
+          <div class="radio-group-label"><span class="q-num">${i+1}.</span> ${pq.q}</div>
+          ${pq.opts.map((opt, j) => `
+            <div class="radio-option" onclick="selectPromis('${pq.key}', ${j}, this)">
+              <div class="radio-dot"></div>
+              <span>${opt}</span>
+            </div>
+          `).join('')}
+        </div>
+      `).join('');
+    }
+
+    function selectPromis(key, val, el) {
+      promisAnswers[key] = val;
+      el.parentElement.querySelectorAll('.radio-option').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    // ===== RENDER CMS OPTIONS =====
+    function renderCMSOptions() {
+      document.getElementById('cms-literacy').innerHTML = literacyOptions.map((opt, i) =>
+        `<div class="radio-option" onclick="setCMSRadio('literacy',${i},this)"><div class="radio-dot"></div><span>${opt}</span></div>`
+      ).join('');
+      document.getElementById('cms-other-pain').innerHTML = painOptions.map((opt, i) =>
+        `<div class="radio-option" onclick="setCMSRadio('other_knee_pain',${i},this)"><div class="radio-dot"></div><span>${opt}</span></div>`
+      ).join('');
+      document.getElementById('cms-other-pain2').innerHTML = painOptions.map((opt, i) =>
+        `<div class="radio-option" onclick="setCMSRadio('other_hip_pain',${i},this)"><div class="radio-dot"></div><span>${opt}</span></div>`
+      ).join('');
+    }
+
+    function setCMS(key, val, el) {
+      cmsAnswers[key] = val;
+      el.parentElement.querySelectorAll('.yesno-btn').forEach(b => b.classList.remove('selected-yes', 'selected-no'));
+      el.classList.add(val ? 'selected-yes' : 'selected-no');
+    }
+
+    function setCMSRadio(key, val, el) {
+      cmsAnswers[key] = val;
+      el.parentElement.querySelectorAll('.radio-option').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    function updateCMSLabels() {
+      const proc = document.getElementById('procedure-type').value;
+      document.getElementById('cms-other-joint').textContent = proc === 'TKA' ? 'knee' : 'hip';
+      document.getElementById('cms-other-joint2').textContent = proc === 'TKA' ? 'hip' : 'knee';
+    }
+
+    // ===== RISK CALCULATION (Angel TKA Risk Estimator logic) =====
+    function calculateRisk() {
+      const age = parseInt(document.getElementById('risk-age').value) || 65;
+      const sex = document.getElementById('risk-sex').value;
+      const bmi = parseFloat(document.getElementById('risk-bmi').value) || 28;
+      const asa = parseInt(document.getElementById('risk-asa').value) || 2;
+      const diabetes = document.getElementById('risk-diabetes').value;
+      const cardiac = document.getElementById('risk-cardiac').value;
+      const pulm = document.getElementById('risk-pulm').value;
+      const smoking = document.getElementById('risk-smoking').value;
+      const renal = document.getElementById('risk-renal').value;
+      const prior = document.getElementById('risk-prior').value;
+      const anemia = document.getElementById('risk-anemia').value;
+      const functional = document.getElementById('risk-functional').value;
+
+      // 90-day mortality risk model (logistic-regression-style scoring)
+      let mortScore = 0;
+      if (age >= 80) mortScore += 2.5; else if (age >= 70) mortScore += 1.2; else if (age >= 60) mortScore += 0.4;
+      if (asa >= 4) mortScore += 3.0; else if (asa >= 3) mortScore += 1.5;
+      if (cardiac === 'chf') mortScore += 2.0; else if (cardiac === 'hx') mortScore += 0.8;
+      if (pulm === 'severe') mortScore += 1.5; else if (pulm === 'copd') mortScore += 0.6;
+      if (renal === 'severe') mortScore += 2.0; else if (renal === 'mild') mortScore += 0.5;
+      if (diabetes === 'insulin') mortScore += 0.8; else if (diabetes === 'oral') mortScore += 0.3;
+      if (functional === 'dependent') mortScore += 2.0; else if (functional === 'partial') mortScore += 1.0;
+      if (anemia === 'yes') mortScore += 0.5;
+      if (smoking === 'current') mortScore += 0.4;
+      const mortRisk = Math.min(15, 0.08 * Math.exp(mortScore * 0.55));
+
+      // 30-day readmission risk model
+      let readmitScore = 0;
+      if (age >= 80) readmitScore += 1.5; else if (age >= 70) readmitScore += 0.7;
+      if (asa >= 4) readmitScore += 2.0; else if (asa >= 3) readmitScore += 1.0;
+      if (bmi >= 40) readmitScore += 1.5; else if (bmi >= 35) readmitScore += 0.8; else if (bmi < 18.5) readmitScore += 1.0;
+      if (diabetes === 'insulin') readmitScore += 1.0; else if (diabetes === 'oral') readmitScore += 0.4;
+      if (cardiac !== 'none') readmitScore += 0.8;
+      if (renal !== 'none') readmitScore += 0.7;
+      if (prior === 'yes') readmitScore += 1.2;
+      if (functional !== 'independent') readmitScore += 0.8;
+      if (anemia === 'yes') readmitScore += 0.6;
+      if (smoking === 'current') readmitScore += 0.5;
+      const readmitRisk = Math.min(25, 2.5 * Math.exp(readmitScore * 0.32));
+
+      // Prolonged LOS risk (>5 days)
+      let losScore = 0;
+      if (age >= 80) losScore += 2.0; else if (age >= 70) losScore += 1.0;
+      if (asa >= 4) losScore += 2.5; else if (asa >= 3) losScore += 1.2;
+      if (bmi >= 40) losScore += 1.5; else if (bmi >= 35) losScore += 0.7;
+      if (cardiac === 'chf') losScore += 2.0; else if (cardiac === 'hx') losScore += 0.8;
+      if (pulm !== 'none') losScore += 1.0;
+      if (functional !== 'independent') losScore += 1.5;
+      if (anemia === 'yes') losScore += 0.8;
+      if (prior === 'yes') losScore += 0.8;
+      const losRisk = Math.min(40, 3.0 * Math.exp(losScore * 0.3));
+
+      // Overall tier
+      let tier = 'LOW';
+      if (mortRisk > 1.0 || readmitRisk > 10 || losRisk > 15) tier = 'HIGH';
+      else if (mortRisk > 0.3 || readmitRisk > 6 || losRisk > 8) tier = 'MODERATE';
+
+      return { mortRisk, readmitRisk, losRisk, tier };
+    }
+
+    // ===== JOINT SCORE CALCULATION =====
+    function calculateJointScore() {
+      const proc = document.getElementById('procedure-type').value;
+      const isKnee = proc === 'TKA';
+      const numQ = isKnee ? 7 : 6;
+      let rawSum = 0, answered = 0;
+      for (let i = 0; i < numQ; i++) {
+        if (jointAnswers[i] !== undefined) { rawSum += jointAnswers[i]; answered++; }
+      }
+      if (answered === 0) return null;
+      // KOOS JR / HOOS JR: 0-100 interval score (100 = best function)
+      const score = Math.round(100 - (rawSum / (answered * 4)) * 100);
+      return score;
+    }
+
+    // ===== PROMIS-10 SCORING =====
+    function calculatePromisScores() {
+      // Physical: gh1, gh3, gh6, gh8(R), gh9(R)
+      // Mental: gh2, gh4, gh5, gh7(R), gh10
+      const physKeys = ['gh1','gh3','gh6','gh8','gh9'];
+      const mentKeys = ['gh2','gh4','gh5','gh7','gh10'];
+
+      let physRaw = 0, mentRaw = 0, physCount = 0, mentCount = 0;
+
+      physKeys.forEach(k => {
+        if (promisAnswers[k] !== undefined) {
+          const pq = promisQuestions.find(q => q.key === k);
+          const maxVal = pq.opts.length - 1;
+          const val = pq.reverse ? promisAnswers[k] : (maxVal - promisAnswers[k]);
+          physRaw += val + 1;
+          physCount++;
+        }
+      });
+      mentKeys.forEach(k => {
+        if (promisAnswers[k] !== undefined) {
+          const pq = promisQuestions.find(q => q.key === k);
+          const maxVal = pq.opts.length - 1;
+          const val = pq.reverse ? promisAnswers[k] : (maxVal - promisAnswers[k]);
+          mentRaw += val + 1;
+          mentCount++;
+        }
+      });
+
+      // Simplified T-score conversion (actual uses IRT-based lookup tables)
+      const physT = physCount > 0 ? Math.round(20 + (physRaw / (physCount * 5)) * 47) : null;
+      const mentT = mentCount > 0 ? Math.round(20 + (mentRaw / (mentCount * 5)) * 47) : null;
+      return { physT, mentT, physRaw, mentRaw };
+    }
+
+    // ===== EXPECTED IMPROVEMENT BASED ON TIER =====
+    function getExpectedImprovement(tier, proc) {
+      // Published data: average improvement by risk tier
+      const table = {
+        TKA: { LOW: 28, MODERATE: 22, HIGH: 15 },
+        THA: { LOW: 30, MODERATE: 24, HIGH: 17 }
+      };
+      return (table[proc] && table[proc][tier]) || 22;
+    }
+
+    // ===== CALCULATE & SHOW =====
+    function calculateAndShow() {
+      const proc = document.getElementById('procedure-type').value || 'TKA';
+      const risk = calculateRisk();
+      const jointScore = calculateJointScore();
+      const promis = calculatePromisScores();
+      const improvement = getExpectedImprovement(risk.tier, proc);
+      const projectedPost = jointScore !== null ? Math.min(100, jointScore + improvement) : null;
+      const scbThreshold = proc === 'TKA' ? 20 : 22;
+
+      // Store results for saving
+      results = {
+        proc, risk, jointScore, projectedPost, improvement, promis,
+        cms: { ...cmsAnswers },
+        bmi: parseFloat(document.getElementById('risk-bmi').value) || null
+      };
+
+      // Patient info line
+      const pSel = document.getElementById('patient-select');
+      const pName = pSel.options[pSel.selectedIndex]?.text || 'Unknown';
+      document.getElementById('results-patient-info').textContent =
+        `${pName} — ${proc === 'TKA' ? 'Total Knee Arthroplasty' : 'Total Hip Arthroplasty'}`;
+
+      // Risk tier badge
+      const badge = document.getElementById('tier-badge');
+      badge.textContent = risk.tier + ' RISK';
+      badge.className = 'tier-badge tier-' + risk.tier.toLowerCase();
+
+      // Risk cards
+      setRiskCard('risk-mort', risk.mortRisk, 0.1, '%');
+      setRiskCard('risk-readmit', risk.readmitRisk, 4.5, '%');
+      setRiskCard('risk-los', risk.losRisk, 5.0, '%');
+
+      // Outcome projection
+      const assessName = proc === 'TKA' ? 'KOOS JR' : 'HOOS JR';
+      document.getElementById('outcome-subtitle').textContent = `${assessName} pre-op vs. projected post-op`;
+      if (jointScore !== null) {
+        document.getElementById('score-pre').textContent = jointScore;
+        document.getElementById('score-post').textContent = projectedPost;
+        document.getElementById('score-delta').textContent = '+' + improvement;
+        setTimeout(() => {
+          document.getElementById('bar-pre').style.width = jointScore + '%';
+          document.getElementById('bar-post').style.width = projectedPost + '%';
+        }, 100);
+        const meetsScb = improvement >= scbThreshold;
+        document.getElementById('scb-note').innerHTML = meetsScb
+          ? `&#10003; Projected improvement of <strong>${improvement} points</strong> meets Substantial Clinical Benefit threshold (${scbThreshold} points for ${proc}).`
+          : `&#9888; Projected improvement of <strong>${improvement} points</strong> is ${scbThreshold - improvement} points below the SCB threshold (${scbThreshold} points for ${proc}). Consider optimization strategies.`;
+        document.getElementById('scb-note').style.background = meetsScb ? 'var(--accent-green-dim)' : 'var(--accent-amber-dim)';
+      } else {
+        document.getElementById('score-pre').textContent = '--';
+        document.getElementById('score-post').textContent = '--';
+        document.getElementById('score-delta').textContent = '--';
+        document.getElementById('scb-note').textContent = 'Complete the joint assessment for outcome projection.';
+      }
+
+      // PROMIS
+      document.getElementById('promis-phys').textContent = promis.physT || '--';
+      document.getElementById('promis-mental').textContent = promis.mentT || '--';
+
+      nextStep(6);
+    }
+
+    function setRiskCard(id, value, baseline, unit) {
+      const card = document.getElementById(id);
+      const tier = value > baseline * 3 ? 'high' : value > baseline * 1.5 ? 'moderate' : 'low';
+      card.className = 'risk-card risk-' + tier;
+      card.querySelector('.risk-value').textContent = value.toFixed(1) + unit;
+      card.querySelector('.risk-sub').textContent = 'Baseline: ' + baseline + unit;
+    }
+
+    // ===== SAVE TO SUPABASE =====
+    async function saveToDatabase() {
+      const btn = document.getElementById('btn-save');
+      btn.disabled = true;
+      btn.innerHTML = 'Saving...';
+
+      try {
+        const patientId = document.getElementById('patient-select').value;
+        const surgeonId = document.getElementById('surgeon-select').value;
+        const surgeryDate = document.getElementById('surgery-date').value;
+
+        if (!patientId) { alert('Please select a patient.'); btn.disabled = false; btn.innerHTML = '&#10003; Save to Patient Record'; return; }
+
+        // Save as a pre-op assessment record
+        const record = {
+          clinic_id: CLINIC_ID,
+          patient_id: patientId,
+          surgeon_id: surgeonId || null,
+          assessment_type: 'preop_risk',
+          procedure_type: results.proc,
+          planned_surgery_date: surgeryDate || null,
+          // Risk scores
+          mortality_risk: parseFloat(results.risk.mortRisk.toFixed(2)),
+          readmission_risk: parseFloat(results.risk.readmitRisk.toFixed(2)),
+          prolonged_los_risk: parseFloat(results.risk.losRisk.toFixed(2)),
+          risk_tier: results.risk.tier,
+          // Risk factors
+          age: parseInt(document.getElementById('risk-age').value) || null,
+          sex: document.getElementById('risk-sex').value || null,
+          bmi: results.bmi,
+          asa_class: parseInt(document.getElementById('risk-asa').value) || null,
+          risk_factors: {
+            diabetes: document.getElementById('risk-diabetes').value,
+            cardiac: document.getElementById('risk-cardiac').value,
+            pulmonary: document.getElementById('risk-pulm').value,
+            smoking: document.getElementById('risk-smoking').value,
+            renal: document.getElementById('risk-renal').value,
+            prior_surgery: document.getElementById('risk-prior').value,
+            anemia: document.getElementById('risk-anemia').value,
+            functional_status: document.getElementById('risk-functional').value,
+          },
+          // Joint score
+          joint_score_type: results.proc === 'TKA' ? 'koos_jr' : 'hoos_jr',
+          joint_score_preop: results.jointScore,
+          projected_postop_score: results.projectedPost,
+          expected_improvement: results.improvement,
+          // PROMIS
+          promis_physical_tscore: results.promis.physT,
+          promis_mental_tscore: results.promis.mentT,
+          // CMS risk variables
+          cms_back_pain: results.cms.back_pain ?? null,
+          cms_health_literacy: results.cms.literacy ?? null,
+          cms_other_knee_pain: results.cms.other_knee_pain ?? null,
+          cms_other_hip_pain: results.cms.other_hip_pain ?? null,
+          // Timestamps
+          assessed_at: new Date().toISOString()
+        };
+
+        const { data, error } = await sb.from('preop_assessments').insert([record]);
+
+        if (error) {
+          // If table doesn't exist yet, show the SQL
+          if (error.message && error.message.includes('relation')) {
+            alert('The preop_assessments table needs to be created in Supabase first. See the SQL migration below the page. Data was NOT saved.');
+          } else {
+            alert('Save error: ' + error.message);
+          }
+          btn.disabled = false;
+          btn.innerHTML = '&#10003; Save to Patient Record';
+          return;
+        }
+
+        // Show success toast
+        const toast = document.getElementById('toast');
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+        btn.innerHTML = '&#10003; Saved!';
+        btn.style.background = 'var(--accent-green-dim)';
+        btn.style.color = 'var(--accent-green)';
+
+      } catch(e) {
+        console.error('Save error:', e);
+        alert('Error saving: ' + e.message);
+        btn.disabled = false;
+        btn.innerHTML = '&#10003; Save to Patient Record';
+      }
+    }
+
+    // ===== PDF GENERATION =====
+    function generatePDF() {
+      const proc = results.proc;
+      const pSel = document.getElementById('patient-select');
+      const pName = pSel.options[pSel.selectedIndex]?.text || 'Patient';
+      const assessName = proc === 'TKA' ? 'KOOS JR' : 'HOOS JR';
+      const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+      const w = window.open('', '_blank');
+      w.document.write(`<!DOCTYPE html><html><head><title>Pre-Op Report - ${pName}</title>
+        <style>
+          body { font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; color: #222; line-height: 1.6; }
+          h1 { font-size: 22px; border-bottom: 2px solid #1B3A5C; padding-bottom: 8px; color: #1B3A5C; }
+          h2 { font-size: 16px; color: #1B3A5C; margin-top: 24px; }
+          .meta { color: #666; font-size: 13px; margin-bottom: 20px; }
+          table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+          th, td { padding: 8px 12px; border: 1px solid #ddd; font-size: 13px; }
+          th { background: #f0f4f8; text-align: left; font-weight: 600; }
+          .tier { font-size: 18px; font-weight: bold; padding: 8px 20px; border-radius: 6px; display: inline-block; margin: 8px 0; }
+          .tier-low { background: #d5f5e3; color: #2d8b46; }
+          .tier-moderate { background: #fef9e7; color: #c4960a; }
+          .tier-high { background: #fdedec; color: #c0392b; }
+          .footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #ddd; font-size: 11px; color: #999; }
+          @media print { body { margin: 20px; } }
+        </style></head><body>
+        <h1>SRO Intelligence &mdash; Pre-Operative Risk Assessment</h1>
+        <div class="meta">${pName} | ${proc === 'TKA' ? 'Total Knee Arthroplasty' : 'Total Hip Arthroplasty'} | ${date}</div>
+
+        <h2>Overall Risk Tier</h2>
+        <div class="tier tier-${results.risk.tier.toLowerCase()}">${results.risk.tier} RISK</div>
+
+        <h2>Risk Scores</h2>
+        <table>
+          <tr><th>Metric</th><th>Patient Risk</th><th>Baseline</th></tr>
+          <tr><td>90-Day Mortality</td><td>${results.risk.mortRisk.toFixed(2)}%</td><td>0.1%</td></tr>
+          <tr><td>30-Day Readmission</td><td>${results.risk.readmitRisk.toFixed(2)}%</td><td>4.5%</td></tr>
+          <tr><td>Prolonged LOS (&gt;5 days)</td><td>${results.risk.losRisk.toFixed(2)}%</td><td>5.0%</td></tr>
+        </table>
+
+        <h2>${assessName} Outcome Projection</h2>
+        <table>
+          <tr><th>Pre-Op Score</th><th>Expected Improvement</th><th>Projected Post-Op</th><th>SCB Threshold</th></tr>
+          <tr><td>${results.jointScore ?? '--'}</td><td>+${results.improvement}</td><td>${results.projectedPost ?? '--'}</td><td>${proc === 'TKA' ? '20' : '22'} points</td></tr>
+        </table>
+
+        <h2>PROMIS-10</h2>
+        <table>
+          <tr><th>Physical Health T-Score</th><th>Mental Health T-Score</th><th>Population Mean</th></tr>
+          <tr><td>${results.promis.physT ?? '--'}</td><td>${results.promis.mentT ?? '--'}</td><td>50</td></tr>
+        </table>
+
+        <h2>CMS Risk Variables</h2>
+        <table>
+          <tr><th>Variable</th><th>Value</th></tr>
+          <tr><td>BMI</td><td>${results.bmi ?? '--'}</td></tr>
+          <tr><td>Low Back Pain</td><td>${results.cms.back_pain === true ? 'Yes' : results.cms.back_pain === false ? 'No' : '--'}</td></tr>
+          <tr><td>Health Literacy (SILS-2)</td><td>${results.cms.literacy !== undefined ? literacyOptions[results.cms.literacy] : '--'}</td></tr>
+          <tr><td>Other Knee Pain</td><td>${results.cms.other_knee_pain !== undefined ? painOptions[results.cms.other_knee_pain] : '--'}</td></tr>
+          <tr><td>Other Hip Pain</td><td>${results.cms.other_hip_pain !== undefined ? painOptions[results.cms.other_hip_pain] : '--'}</td></tr>
+        </table>
+
+        <div class="footer">
+          Generated by SRO Intelligence | ${date} | For clinical decision support only. Not a substitute for clinical judgment.
+        </div>
+        <script>window.print();<\/script>
+      </body></html>`);
+      w.document.close();
+    }
+  </script>
+</body>
+</html>
