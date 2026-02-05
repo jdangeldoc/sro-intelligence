@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings | SRO Intelligence</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0f1c;
+            --bg-secondary: #111827;
+            --bg-card: #1a2234;
+            --bg-hover: #242f45;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-blue: #3b82f6;
+            --accent-blue-hover: #2563eb;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-yellow: #f59e0b;
+            --border-color: #2d3a52;
+            --border-light: #374151;
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        /* Navigation */
+        .nav {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .nav-logo {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--accent-blue), #8b5cf6);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            color: white;
+        }
+
+        .nav-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 4px;
+        }
+
+        .nav-link {
+            padding: 8px 16px;
+            border-radius: 6px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .nav-link.active {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        /* Main Content */
+        .main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        .page-header {
+            margin-bottom: 32px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 15px;
+        }
+
+        /* Settings Sections */
+        .settings-grid {
+            display: grid;
+            gap: 24px;
+        }
+
+        .settings-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .section-desc {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-top: 4px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-blue-hover);
+        }
+
+        .btn-secondary {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+        }
+
+        .btn-danger {
+            background: transparent;
+            color: var(--accent-red);
+            border: 1px solid var(--accent-red);
+        }
+
+        .btn-danger:hover {
+            background: var(--accent-red);
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+
+        /* Surgeon Table */
+        .surgeon-table {
+            width: 100%;
+        }
+
+        .surgeon-table th,
+        .surgeon-table td {
+            padding: 16px 24px;
+            text-align: left;
+        }
+
+        .surgeon-table th {
+            background: var(--bg-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+
+        .surgeon-table td {
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .surgeon-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .surgeon-table tr:hover td {
+            background: var(--bg-hover);
+        }
+
+        .surgeon-name {
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .surgeon-email {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .specialty-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .stat-cell {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 500px;
+            transform: translateY(20px);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            padding: 20px 24px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 14px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .form-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 40px;
+        }
+
+        /* Clinic Info Card */
+        .clinic-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 24px;
+        }
+
+        .info-item {
+            padding: 16px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .info-value {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .info-value.mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--text-muted);
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-text {
+            font-size: 15px;
+            margin-bottom: 16px;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 14px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1001;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            border-color: var(--accent-green);
+        }
+
+        .toast.error {
+            border-color: var(--accent-red);
+        }
+
+        .toast-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .toast.success .toast-icon {
+            background: var(--accent-green);
+            color: white;
+        }
+
+        .toast.error .toast-icon {
+            background: var(--accent-red);
+            color: white;
+        }
+
+        /* Loading spinner */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 48px;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .surgeon-table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-inner">
+            <a href="sro-clinician-dashboard.html" class="nav-brand">
+                <div class="nav-logo">SR</div>
+                <span class="nav-title">SRO Intelligence</span>
+            </a>
+            <div class="nav-links">
+                <a href="sro-clinician-dashboard.html" class="nav-link">Dashboard</a>
+                <a href="sro-patients.html" class="nav-link">Patients</a>
+                <a href="sro-analytics.html" class="nav-link">Analytics</a>
+                <a href="sro-settings.html" class="nav-link active">Settings</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="page-header">
+            <h1 class="page-title">Settings</h1>
+            <p class="page-subtitle">Manage your clinic, surgeons, and system preferences</p>
+        </div>
+
+        <div class="settings-grid">
+            <!-- Clinic Information -->
+            <section class="settings-section">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">Clinic Information</h2>
+                        <p class="section-desc">Your clinic details and identifiers</p>
+                    </div>
+                </div>
+                <div class="clinic-info" id="clinic-info">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Surgeons -->
+            <section class="settings-section">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">Surgeons</h2>
+                        <p class="section-desc">Manage surgeons in your practice</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="openAddSurgeonModal()">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M12 5v14M5 12h14"/>
+                        </svg>
+                        Add Surgeon
+                    </button>
+                </div>
+                <div id="surgeons-container">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Add/Edit Surgeon Modal -->
+    <div class="modal-overlay" id="surgeon-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-title">Add Surgeon</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="surgeon-form" onsubmit="saveSurgeon(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="surgeon-id">
+                    
+                    <div class="form-group">
+                        <label class="form-label">First Name *</label>
+                        <input type="text" class="form-input" id="surgeon-first-name" placeholder="Sarah" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Last Name *</label>
+                        <input type="text" class="form-input" id="surgeon-last-name" placeholder="Smith" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Email *</label>
+                        <input type="email" class="form-input" id="surgeon-email" placeholder="sarah.smith@clinic.com" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Specialty</label>
+                        <select class="form-input form-select" id="surgeon-specialty">
+                            <option value="">Select specialty...</option>
+                            <option value="Hip & Knee Replacement">Hip & Knee Replacement</option>
+                            <option value="Sports Medicine">Sports Medicine</option>
+                            <option value="Spine Surgery">Spine Surgery</option>
+                            <option value="Shoulder & Elbow">Shoulder & Elbow</option>
+                            <option value="Foot & Ankle">Foot & Ankle</option>
+                            <option value="Hand & Wrist">Hand & Wrist</option>
+                            <option value="Trauma Surgery">Trauma Surgery</option>
+                            <option value="Pediatric Orthopedics">Pediatric Orthopedics</option>
+                            <option value="General Orthopedics">General Orthopedics</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">NPI Number</label>
+                        <input type="text" class="form-input" id="surgeon-npi" placeholder="1234567890" maxlength="10">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="save-btn">Save Surgeon</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-overlay" id="delete-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Delete Surgeon</h3>
+                <button class="modal-close" onclick="closeDeleteModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to remove <strong id="delete-surgeon-name"></strong> from your clinic?</p>
+                <p style="color: var(--text-muted); font-size: 13px; margin-top: 12px;">
+                    This will not delete their patient data, but they will no longer appear in surgeon lists.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+                <button class="btn btn-danger" onclick="confirmDelete()">Delete Surgeon</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <span class="toast-icon">✓</span>
+        <span class="toast-message" id="toast-message">Success!</span>
+    </div>
+
+    <script>
+        // Configuration
+        const SUPABASE_URL = 'https://kutnednztssloqluygse.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_Bs41LPV6lzVSk3RvdNGnOg_Io1z1m-o';
+        const CLINIC_ID = '11111111-1111-1111-1111-111111111111';
+
+        let surgeonToDelete = null;
+
+        // Supabase request helper
+        async function supabaseRequest(endpoint, options = {}) {
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}`, {
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': options.prefer || 'return=representation',
+                    ...options.headers
+                },
+                ...options
+            });
+            
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(error);
+            }
+            
+            const text = await response.text();
+            return text ? JSON.parse(text) : null;
+        }
+
+        // Load clinic information
+        async function loadClinicInfo() {
+            try {
+                const clinics = await supabaseRequest(`clinics?id=eq.${CLINIC_ID}`);
+                const clinic = clinics[0];
+                
+                if (clinic) {
+                    document.getElementById('clinic-info').innerHTML = `
+                        <div class="info-item">
+                            <div class="info-label">Clinic Name</div>
+                            <div class="info-value">${clinic.name || 'Not Set'}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Clinic ID</div>
+                            <div class="info-value mono">${clinic.id}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Created</div>
+                            <div class="info-value">${new Date(clinic.created_at).toLocaleDateString()}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Status</div>
+                            <div class="info-value" style="color: var(--accent-green);">Active</div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading clinic:', error);
+                document.getElementById('clinic-info').innerHTML = `
+                    <div class="info-item">
+                        <div class="info-value" style="color: var(--accent-red);">Error loading clinic info</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Load surgeons
+        async function loadSurgeons() {
+            try {
+                const surgeons = await supabaseRequest(
+                    `users?clinic_id=eq.${CLINIC_ID}&role=eq.surgeon&order=first_name.asc`
+                );
+
+                const container = document.getElementById('surgeons-container');
+
+                if (!surgeons || surgeons.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">👨‍⚕️</div>
+                            <p class="empty-text">No surgeons added yet</p>
+                            <button class="btn btn-primary" onclick="openAddSurgeonModal()">Add Your First Surgeon</button>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Get patient counts for each surgeon
+                const episodes = await supabaseRequest(
+                    `episodes?clinic_id=eq.${CLINIC_ID}&select=surgeon_id,patient_id,status`
+                );
+
+                const surgeonStats = {};
+                episodes.forEach(ep => {
+                    if (!ep.surgeon_id) return;
+                    if (!surgeonStats[ep.surgeon_id]) {
+                        surgeonStats[ep.surgeon_id] = { total: new Set(), active: new Set() };
+                    }
+                    surgeonStats[ep.surgeon_id].total.add(ep.patient_id);
+                    if (ep.status === 'active') {
+                        surgeonStats[ep.surgeon_id].active.add(ep.patient_id);
+                    }
+                });
+
+                container.innerHTML = `
+                    <table class="surgeon-table">
+                        <thead>
+                            <tr>
+                                <th>Surgeon</th>
+                                <th>Specialty</th>
+                                <th>NPI</th>
+                                <th>Active Patients</th>
+                                <th>Total Patients</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${surgeons.map(surgeon => {
+                                const stats = surgeonStats[surgeon.id] || { total: new Set(), active: new Set() };
+                                const fullName = [surgeon.first_name, surgeon.last_name].filter(Boolean).join(' ') || 'Unknown';
+                                return `
+                                    <tr>
+                                        <td>
+                                            <div class="surgeon-name">${fullName}</div>
+                                            <div class="surgeon-email">${surgeon.email || '-'}</div>
+                                        </td>
+                                        <td>
+                                            ${surgeon.specialty ? `<span class="specialty-badge">${surgeon.specialty}</span>` : '-'}
+                                        </td>
+                                        <td class="stat-cell">${surgeon.npi || '-'}</td>
+                                        <td class="stat-cell">${stats.active.size}</td>
+                                        <td class="stat-cell">${stats.total.size}</td>
+                                        <td>
+                                            <div class="action-buttons">
+                                                <button class="btn btn-secondary btn-sm" onclick='editSurgeon(${JSON.stringify(surgeon)})'>Edit</button>
+                                                <button class="btn btn-danger btn-sm" onclick='deleteSurgeon("${surgeon.id}", "${fullName}")'>Delete</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (error) {
+                console.error('Error loading surgeons:', error);
+                document.getElementById('surgeons-container').innerHTML = `
+                    <div class="empty-state">
+                        <p class="empty-text" style="color: var(--accent-red);">Error loading surgeons</p>
+                        <button class="btn btn-secondary" onclick="loadSurgeons()">Retry</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Modal functions
+        function openAddSurgeonModal() {
+            document.getElementById('modal-title').textContent = 'Add Surgeon';
+            document.getElementById('surgeon-form').reset();
+            document.getElementById('surgeon-id').value = '';
+            document.getElementById('save-btn').textContent = 'Add Surgeon';
+            document.getElementById('surgeon-modal').classList.add('active');
+        }
+
+        function editSurgeon(surgeon) {
+            document.getElementById('modal-title').textContent = 'Edit Surgeon';
+            document.getElementById('surgeon-id').value = surgeon.id;
+            document.getElementById('surgeon-first-name').value = surgeon.first_name || '';
+            document.getElementById('surgeon-last-name').value = surgeon.last_name || '';
+            document.getElementById('surgeon-email').value = surgeon.email || '';
+            document.getElementById('surgeon-specialty').value = surgeon.specialty || '';
+            document.getElementById('surgeon-npi').value = surgeon.npi || '';
+            document.getElementById('save-btn').textContent = 'Save Changes';
+            document.getElementById('surgeon-modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('surgeon-modal').classList.remove('active');
+        }
+
+        function deleteSurgeon(id, name) {
+            surgeonToDelete = id;
+            document.getElementById('delete-surgeon-name').textContent = name;
+            document.getElementById('delete-modal').classList.add('active');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('delete-modal').classList.remove('active');
+            surgeonToDelete = null;
+        }
+
+        async function confirmDelete() {
+            if (!surgeonToDelete) return;
+
+            try {
+                // Instead of deleting, we'll change their role to 'inactive'
+                await supabaseRequest(`users?id=eq.${surgeonToDelete}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ role: 'inactive' })
+                });
+
+                showToast('Surgeon removed successfully', 'success');
+                closeDeleteModal();
+                loadSurgeons();
+            } catch (error) {
+                console.error('Error removing surgeon:', error);
+                showToast('Error removing surgeon', 'error');
+            }
+        }
+
+        async function saveSurgeon(event) {
+            event.preventDefault();
+
+            const id = document.getElementById('surgeon-id').value;
+            const surgeonData = {
+                first_name: document.getElementById('surgeon-first-name').value.trim(),
+                last_name: document.getElementById('surgeon-last-name').value.trim(),
+                email: document.getElementById('surgeon-email').value.trim(),
+                specialty: document.getElementById('surgeon-specialty').value,
+                npi: document.getElementById('surgeon-npi').value.trim(),
+                role: 'surgeon',
+                clinic_id: CLINIC_ID
+            };
+
+            try {
+                if (id) {
+                    // Update existing surgeon
+                    await supabaseRequest(`users?id=eq.${id}`, {
+                        method: 'PATCH',
+                        body: JSON.stringify(surgeonData)
+                    });
+                    showToast('Surgeon updated successfully', 'success');
+                } else {
+                    // Create new surgeon with UUID and password_hash
+                    surgeonData.id = crypto.randomUUID();
+                    surgeonData.password_hash = '$2a$10$abcdefghijklmnopqrstuv';
+                    await supabaseRequest('users', {
+                        method: 'POST',
+                        body: JSON.stringify(surgeonData)
+                    });
+                    showToast('Surgeon added successfully', 'success');
+                }
+
+                closeModal();
+                loadSurgeons();
+            } catch (error) {
+                console.error('Error saving surgeon:', error);
+                showToast('Error saving surgeon', 'error');
+            }
+        }
+
+        // Toast notification
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            
+            toast.className = `toast ${type}`;
+            toastMessage.textContent = message;
+            toast.querySelector('.toast-icon').textContent = type === 'success' ? '✓' : '✕';
+            
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Close modals on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                closeDeleteModal();
+            }
+        });
+
+        // Close modals on overlay click
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    closeModal();
+                    closeDeleteModal();
+                }
+            });
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadClinicInfo();
+            loadSurgeons();
+        });
+    </script>
+</body>
+</html>

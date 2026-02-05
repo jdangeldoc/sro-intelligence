@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | SRO Intelligence</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0f1c;
+            --bg-secondary: #111827;
+            --bg-card: #1a2234;
+            --bg-hover: #242f45;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-blue: #3b82f6;
+            --accent-blue-hover: #2563eb;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-yellow: #f59e0b;
+            --border-color: #2d3a52;
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        /* Navigation */
+        .nav {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .nav-logo {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--accent-blue), #8b5cf6);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            color: white;
+        }
+
+        .nav-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 4px;
+        }
+
+        .nav-link {
+            padding: 8px 16px;
+            border-radius: 6px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .nav-link.active {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        /* Main Content */
+        .main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-blue-hover);
+        }
+
+        .btn-secondary {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-value.green { color: var(--accent-green); }
+        .stat-value.yellow { color: var(--accent-yellow); }
+        .stat-value.red { color: var(--accent-red); }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            position: relative;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 14px 10px 42px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        .filter-select {
+            padding: 10px 36px 10px 14px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            cursor: pointer;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        /* Patient Table */
+        .table-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .patient-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .patient-table th,
+        .patient-table td {
+            padding: 14px 16px;
+            text-align: left;
+        }
+
+        .patient-table th {
+            background: var(--bg-secondary);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .patient-table td {
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .patient-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .patient-table tbody tr {
+            transition: background 0.15s;
+        }
+
+        .patient-table tbody tr:hover {
+            background: var(--bg-hover);
+        }
+
+        .patient-name {
+            font-weight: 600;
+        }
+
+        .surgery-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .status-dot.green { background: var(--accent-green); }
+        .status-dot.yellow { background: var(--accent-yellow); }
+        .status-dot.red { background: var(--accent-red); }
+        .status-dot.gray { background: var(--text-muted); }
+
+        .days-cell {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .progress-bar {
+            width: 80px;
+            height: 6px;
+            background: var(--bg-secondary);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 3px;
+        }
+
+        .progress-fill.green { background: var(--accent-green); }
+        .progress-fill.yellow { background: var(--accent-yellow); }
+        .progress-fill.red { background: var(--accent-red); }
+
+        .progress-text {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+            padding: 24px;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transform: translateY(20px);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .modal-subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .modal-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        /* Detail Sections */
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .detail-section {
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .detail-section-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .detail-value {
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .detail-value.mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding-left: 24px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 7px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--border-color);
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 20px;
+        }
+
+        .timeline-item:last-child {
+            padding-bottom: 0;
+        }
+
+        .timeline-dot {
+            position: absolute;
+            left: -20px;
+            top: 4px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent-blue);
+            border: 2px solid var(--bg-card);
+        }
+
+        .timeline-dot.green { background: var(--accent-green); }
+        .timeline-dot.yellow { background: var(--accent-yellow); }
+        .timeline-dot.red { background: var(--accent-red); }
+
+        .timeline-date {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .timeline-type {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .timeline-details {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        /* Loading & Empty States */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 64px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 64px 24px;
+            color: var(--text-muted);
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .empty-text {
+            font-size: 16px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .table-container {
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-inner">
+            <a href="sro-clinician-dashboard.html" class="nav-brand">
+                <div class="nav-logo">SR</div>
+                <span class="nav-title">SRO Intelligence</span>
+            </a>
+            <div class="nav-links">
+                <a href="sro-clinician-dashboard.html" class="nav-link active">Dashboard</a>
+                <a href="sro-patients.html" class="nav-link">Patients</a>
+                <a href="sro-analytics.html" class="nav-link">Analytics</a>
+                <a href="sro-settings.html" class="nav-link">Settings</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="page-header">
+            <h1 class="page-title">Dashboard</h1>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="exportData()">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                    </svg>
+                    Export
+                </button>
+                <a href="sro-patients.html" class="btn btn-primary">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                    Add Patient
+                </a>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid" id="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Active Patients</div>
+                <div class="stat-value" id="stat-active">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">On Track</div>
+                <div class="stat-value green" id="stat-green">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Needs Attention</div>
+                <div class="stat-value yellow" id="stat-yellow">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Overdue</div>
+                <div class="stat-value red" id="stat-red">-</div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <div class="search-box">
+                <svg class="search-icon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="M21 21l-4.35-4.35"/>
+                </svg>
+                <input type="text" class="search-input" id="search-input" placeholder="Search patients...">
+            </div>
+            <select class="filter-select" id="status-filter">
+                <option value="">All Status</option>
+                <option value="green">On Track</option>
+                <option value="yellow">Needs Attention</option>
+                <option value="red">Overdue</option>
+            </select>
+            <select class="filter-select" id="surgeon-filter">
+                <option value="">All Surgeons</option>
+            </select>
+        </div>
+
+        <!-- Patient Table -->
+        <div class="table-container" id="table-container">
+            <div class="loading">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Patient Detail Modal -->
+    <div class="modal-overlay" id="detail-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <div>
+                    <h3 class="modal-title" id="detail-name">Patient Name</h3>
+                    <p class="modal-subtitle" id="detail-subtitle">Surgery details</p>
+                </div>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="detail-body">
+                <div class="loading">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const SUPABASE_URL = 'https://kutnednztssloqluygse.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_Bs41LPV6lzVSk3RvdNGnOg_Io1z1m-o';
+        const CLINIC_ID = '11111111-1111-1111-1111-111111111111';
+
+        let allPatients = [];
+        let surgeons = [];
+
+        // Supabase helper
+        async function supabaseRequest(endpoint, options = {}) {
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}`, {
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': options.prefer || 'return=representation',
+                    ...options.headers
+                },
+                ...options
+            });
+            
+            if (!response.ok) {
+                throw new Error(await response.text());
+            }
+            
+            const text = await response.text();
+            return text ? JSON.parse(text) : null;
+        }
+
+        // Load surgeons
+        async function loadSurgeons() {
+            try {
+                surgeons = await supabaseRequest(
+                    `users?clinic_id=eq.${CLINIC_ID}&role=eq.surgeon&order=first_name.asc`
+                );
+                
+                const surgeonFilter = document.getElementById('surgeon-filter');
+                surgeons.forEach(s => {
+                    const fullName = [s.first_name, s.last_name].filter(Boolean).join(' ') || 'Unknown';
+                    surgeonFilter.innerHTML += `<option value="${s.id}">${fullName}</option>`;
+                });
+            } catch (error) {
+                console.error('Error loading surgeons:', error);
+            }
+        }
+
+        // Load dashboard data
+        async function loadDashboard() {
+            try {
+                const [patients, episodes, checkins] = await Promise.all([
+                    supabaseRequest(`patients?clinic_id=eq.${CLINIC_ID}&order=first_name.asc`),
+                    supabaseRequest(`episodes?clinic_id=eq.${CLINIC_ID}`),
+                    supabaseRequest(`checkins?clinic_id=eq.${CLINIC_ID}&select=episode_id,created_at,checkin_type,pain_level`)
+                ]);
+
+                // Build lookups
+                const episodesByPatient = {};
+                episodes.forEach(ep => {
+                    if (!episodesByPatient[ep.patient_id]) {
+                        episodesByPatient[ep.patient_id] = [];
+                    }
+                    episodesByPatient[ep.patient_id].push(ep);
+                });
+
+                const checkinsByEpisode = {};
+                checkins.forEach(c => {
+                    if (!checkinsByEpisode[c.episode_id]) {
+                        checkinsByEpisode[c.episode_id] = [];
+                    }
+                    checkinsByEpisode[c.episode_id].push(c);
+                });
+
+                // Process patients
+                allPatients = patients.map(p => {
+                    const patientEpisodes = episodesByPatient[p.id] || [];
+                    const activeEpisode = patientEpisodes.find(e => e.status === 'active') || patientEpisodes[0];
+                    const fullName = [p.first_name, p.last_name].filter(Boolean).join(' ') || 'Unknown';
+                    
+                    let daysSinceSurgery = null;
+                    let totalCheckins = 0;
+                    let lastCheckin = null;
+                    let status = 'gray';
+                    let surgeonId = null;
+                    let surgeonName = null;
+                    let ptCompliance = 0;
+
+                    if (activeEpisode) {
+                        surgeonId = activeEpisode.surgeon_id;
+                        const surgeon = surgeons.find(s => s.id === surgeonId);
+                        surgeonName = surgeon ? [surgeon.first_name, surgeon.last_name].filter(Boolean).join(' ') : 'Unassigned';
+
+                        if (activeEpisode.surgery_date) {
+                            const surgeryDate = new Date(activeEpisode.surgery_date);
+                            daysSinceSurgery = Math.floor((new Date() - surgeryDate) / (1000 * 60 * 60 * 24));
+                        }
+
+                        const episodeCheckins = checkinsByEpisode[activeEpisode.id] || [];
+                        totalCheckins = episodeCheckins.length;
+                        
+                        if (episodeCheckins.length > 0) {
+                            const sorted = episodeCheckins.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                            lastCheckin = sorted[0].created_at;
+                        }
+
+                        // Calculate PT compliance (check-ins per day ratio)
+                        ptCompliance = Math.min(100, Math.round((totalCheckins / Math.max(1, daysSinceSurgery || 1)) * 100));
+
+                        // Determine status based on last check-in
+                        if (lastCheckin) {
+                            const daysSinceCheckin = Math.floor((new Date() - new Date(lastCheckin)) / (1000 * 60 * 60 * 24));
+                            if (daysSinceCheckin <= 3) {
+                                status = 'green';
+                            } else if (daysSinceCheckin <= 7) {
+                                status = 'yellow';
+                            } else {
+                                status = 'red';
+                            }
+                        } else if (daysSinceSurgery !== null && daysSinceSurgery > 1) {
+                            status = 'red';
+                        }
+                    }
+
+                    return {
+                        ...p,
+                        activeEpisode,
+                        episodes: patientEpisodes,
+                        fullName,
+                        daysSinceSurgery,
+                        totalCheckins,
+                        lastCheckin,
+                        status,
+                        surgeonId,
+                        surgeonName,
+                        ptCompliance
+                    };
+                });
+
+                updateStats();
+                renderTable();
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                document.getElementById('table-container').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">⚠️</div>
+                        <p class="empty-text">Error loading data. <a href="#" onclick="loadDashboard()">Retry</a></p>
+                    </div>
+                `;
+            }
+        }
+
+        // Update stats
+        function updateStats() {
+            const activePatients = allPatients.filter(p => p.activeEpisode?.status === 'active');
+            document.getElementById('stat-active').textContent = activePatients.length;
+            document.getElementById('stat-green').textContent = allPatients.filter(p => p.status === 'green').length;
+            document.getElementById('stat-yellow').textContent = allPatients.filter(p => p.status === 'yellow').length;
+            document.getElementById('stat-red').textContent = allPatients.filter(p => p.status === 'red').length;
+        }
+
+        // Render patient table
+        function renderTable() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const statusFilter = document.getElementById('status-filter').value;
+            const surgeonFilter = document.getElementById('surgeon-filter').value;
+
+            let filtered = allPatients.filter(p => {
+                if (searchTerm && !p.fullName.toLowerCase().includes(searchTerm)) return false;
+                if (statusFilter && p.status !== statusFilter) return false;
+                if (surgeonFilter && p.surgeonId !== surgeonFilter) return false;
+                return true;
+            });
+
+            // Sort by status priority (red first, then yellow, then green)
+            const statusPriority = { red: 0, yellow: 1, green: 2, gray: 3 };
+            filtered.sort((a, b) => statusPriority[a.status] - statusPriority[b.status]);
+
+            const container = document.getElementById('table-container');
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">👥</div>
+                        <p class="empty-text">${searchTerm || statusFilter || surgeonFilter ? 'No patients match your filters' : 'No patients yet'}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <table class="patient-table">
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Patient</th>
+                            <th>Surgery</th>
+                            <th>Surgeon</th>
+                            <th>Days Post-Op</th>
+                            <th>PT Compliance</th>
+                            <th>Last Check-in</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filtered.map(p => {
+                            const ptColor = p.ptCompliance >= 70 ? 'green' : p.ptCompliance >= 40 ? 'yellow' : 'red';
+                            return `
+                                <tr>
+                                    <td>
+                                        <div class="status-indicator">
+                                            <span class="status-dot ${p.status}"></span>
+                                            <span>${getStatusText(p.status)}</span>
+                                        </div>
+                                    </td>
+                                    <td class="patient-name">${p.fullName}</td>
+                                    <td>
+                                        ${p.activeEpisode?.surgery_type ? 
+                                            `<span class="surgery-badge">${p.activeEpisode.surgery_type}</span>` : '-'}
+                                    </td>
+                                    <td>${p.surgeonName || '-'}</td>
+                                    <td class="days-cell">${p.daysSinceSurgery !== null ? p.daysSinceSurgery : '-'}</td>
+                                    <td>
+                                        <div class="progress-container">
+                                            <div class="progress-bar">
+                                                <div class="progress-fill ${ptColor}" style="width: ${p.ptCompliance}%"></div>
+                                            </div>
+                                            <span class="progress-text">${p.ptCompliance}%</span>
+                                        </div>
+                                    </td>
+                                    <td>${p.lastCheckin ? formatDate(p.lastCheckin) : 'Never'}</td>
+                                    <td>
+                                        <button class="btn btn-secondary btn-sm" onclick="openPatientDetail('${p.id}')">View</button>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // Open patient detail modal
+        async function openPatientDetail(patientId) {
+            const modal = document.getElementById('detail-modal');
+            modal.classList.add('active');
+
+            const patient = allPatients.find(p => p.id === patientId);
+            if (!patient) return;
+
+            document.getElementById('detail-name').textContent = patient.fullName;
+            document.getElementById('detail-subtitle').textContent = 
+                patient.activeEpisode ? `${patient.activeEpisode.surgery_type} • ${formatDate(patient.activeEpisode.surgery_date)}` : 'No active episode';
+
+            try {
+                const checkins = await supabaseRequest(
+                    `checkins?episode_id=eq.${patient.activeEpisode?.id}&order=created_at.desc`
+                );
+
+                document.getElementById('detail-body').innerHTML = `
+                    <div class="detail-grid">
+                        <div class="detail-section">
+                            <div class="detail-section-title">📋 Patient Information</div>
+                            <div class="detail-row">
+                                <span class="detail-label">Name</span>
+                                <span class="detail-value">${patient.fullName}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Date of Birth</span>
+                                <span class="detail-value">${patient.date_of_birth ? formatDate(patient.date_of_birth) : '-'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Phone</span>
+                                <span class="detail-value">${patient.phone || '-'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Email</span>
+                                <span class="detail-value">${patient.email || '-'}</span>
+                            </div>
+                        </div>
+
+                        <div class="detail-section">
+                            <div class="detail-section-title">🏥 Episode Details</div>
+                            <div class="detail-row">
+                                <span class="detail-label">Surgery Type</span>
+                                <span class="detail-value">${patient.activeEpisode?.surgery_type || '-'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Surgery Date</span>
+                                <span class="detail-value">${patient.activeEpisode?.surgery_date ? formatDate(patient.activeEpisode.surgery_date) : '-'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Surgeon</span>
+                                <span class="detail-value">${patient.surgeonName || '-'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Days Post-Op</span>
+                                <span class="detail-value mono">${patient.daysSinceSurgery !== null ? patient.daysSinceSurgery : '-'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">PT Compliance</span>
+                                <span class="detail-value">${patient.ptCompliance}%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <div class="detail-section-title">📊 Check-in History (${checkins?.length || 0} total)</div>
+                        ${checkins && checkins.length > 0 ? `
+                            <div class="timeline">
+                                ${checkins.slice(0, 10).map(c => {
+                                    const color = c.pain_level > 7 ? 'red' : c.pain_level > 4 ? 'yellow' : 'green';
+                                    return `
+                                        <div class="timeline-item">
+                                            <div class="timeline-dot ${color}"></div>
+                                            <div class="timeline-date">${formatDateTime(c.created_at)}</div>
+                                            <div class="timeline-type">${formatCheckinType(c.checkin_type)}</div>
+                                            ${c.pain_level !== null ? `<div class="timeline-details">Pain Level: ${c.pain_level}/10</div>` : ''}
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                            ${checkins.length > 10 ? `<p style="color: var(--text-muted); font-size: 13px; margin-top: 16px;">Showing 10 of ${checkins.length} check-ins</p>` : ''}
+                        ` : `<p style="color: var(--text-muted);">No check-ins recorded yet</p>`}
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading patient details:', error);
+                document.getElementById('detail-body').innerHTML = `
+                    <div class="empty-state">
+                        <p style="color: var(--accent-red);">Error loading patient details</p>
+                    </div>
+                `;
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('detail-modal').classList.remove('active');
+        }
+
+        // Export data
+        function exportData() {
+            const csv = [
+                ['Name', 'Surgery Type', 'Surgery Date', 'Surgeon', 'Days Post-Op', 'Check-ins', 'PT Compliance', 'Status'].join(','),
+                ...allPatients.map(p => [
+                    `"${p.fullName}"`,
+                    p.activeEpisode?.surgery_type || '',
+                    p.activeEpisode?.surgery_date || '',
+                    `"${p.surgeonName || ''}"`,
+                    p.daysSinceSurgery || '',
+                    p.totalCheckins,
+                    `${p.ptCompliance}%`,
+                    getStatusText(p.status)
+                ].join(','))
+            ].join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `sro-patients-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Utilities
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            return new Date(dateStr).toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric' 
+            });
+        }
+
+        function formatDateTime(dateStr) {
+            if (!dateStr) return '-';
+            return new Date(dateStr).toLocaleString('en-US', { 
+                month: 'short', 
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+        }
+
+        function formatCheckinType(type) {
+            const types = {
+                'daily': 'Daily Check-in',
+                'pro_pm': 'PRO-PM Assessment',
+                'medication': 'Medication Log',
+                'pt_exercise': 'PT Exercise'
+            };
+            return types[type] || type || 'Check-in';
+        }
+
+        function getStatusText(status) {
+            const texts = {
+                'green': 'On Track',
+                'yellow': 'Attention',
+                'red': 'Overdue',
+                'gray': 'Pending'
+            };
+            return texts[status] || status;
+        }
+
+        // Event listeners
+        document.getElementById('search-input').addEventListener('input', renderTable);
+        document.getElementById('status-filter').addEventListener('change', renderTable);
+        document.getElementById('surgeon-filter').addEventListener('change', renderTable);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        document.getElementById('detail-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'detail-modal') closeModal();
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadSurgeons();
+            await loadDashboard();
+        });
+    </script>
+</body>
+</html>
