@@ -110,6 +110,44 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
+  -- Pre-Op Assessments (Risk stratification)
+  CREATE TABLE IF NOT EXISTS preop_assessments (
+    id TEXT PRIMARY KEY,
+    patient_id TEXT REFERENCES patients(id),
+    clinic_id TEXT REFERENCES clinics(id),
+    surgeon_id TEXT REFERENCES users(id),
+    assessment_type TEXT DEFAULT 'preop',
+    procedure_type TEXT,
+    planned_surgery_date DATE,
+    assessed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    
+    mortality_risk REAL,
+    readmission_risk REAL,
+    prolonged_los_risk REAL,
+    risk_tier TEXT,
+    
+    age INTEGER,
+    sex TEXT,
+    bmi REAL,
+    asa_class INTEGER,
+    comorbidities TEXT,
+    
+    joint_score_type TEXT,
+    joint_score_preop REAL,
+    projected_postop_score REAL,
+    expected_improvement REAL,
+    
+    promis_physical_tscore REAL,
+    promis_mental_tscore REAL,
+    
+    cms_back_pain INTEGER DEFAULT 0,
+    cms_health_literacy TEXT,
+    cms_other_knee_pain INTEGER DEFAULT 0,
+    cms_other_hip_pain INTEGER DEFAULT 0,
+    
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
   -- RPM Time Logs
   CREATE TABLE IF NOT EXISTS rpm_time_logs (
     id TEXT PRIMARY KEY,
@@ -135,6 +173,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_checkins_episode ON checkins(episode_id);
   CREATE INDEX IF NOT EXISTS idx_checkins_date ON checkins(checkin_date);
   CREATE INDEX IF NOT EXISTS idx_rpm_logs_billing ON rpm_time_logs(clinic_id, user_id, billing_month);
+  CREATE INDEX IF NOT EXISTS idx_preop_patient ON preop_assessments(patient_id);
+  CREATE INDEX IF NOT EXISTS idx_preop_clinic ON preop_assessments(clinic_id);
 `);
 
 // Insert default clinic if none exists
@@ -300,6 +340,7 @@ app.delete('/api/patients/:id', (req, res) => {
   // Delete related records first
   db.prepare('DELETE FROM checkins WHERE patient_id = ?').run(req.params.id);
   db.prepare('DELETE FROM pro_assessments WHERE patient_id = ?').run(req.params.id);
+  db.prepare('DELETE FROM preop_assessments WHERE patient_id = ?').run(req.params.id);
   db.prepare('DELETE FROM rpm_time_logs WHERE patient_id = ?').run(req.params.id);
   db.prepare('DELETE FROM episodes WHERE patient_id = ?').run(req.params.id);
   db.prepare('DELETE FROM patients WHERE id = ?').run(req.params.id);
@@ -444,6 +485,118 @@ app.post('/api/pro-assessments', (req, res) => {
   res.json({ id, success: true });
 });
 
+// --- Pre-Op Assessments ---
+app.get('/api/preop-assessments', (req, res) => {
+  const { patient_id, clinic_id, procedure_type } = req.query;
+  let query = 'SELECT * FROM preop_assessments WHERE 1=1';
+  const params = [];
+  
+  if (patient_id) { query += ' AND patient_id = ?'; params.push(patient_id); }
+  if (clinic_id) { query += ' AND clinic_id = ?'; params.push(clinic_id); }
+  if (procedure_type) { query += ' AND procedure_type = ?'; params.push(procedure_type); }
+  
+  query += ' ORDER BY assessed_at DESC';
+  const assessments = db.prepare(query).all(...params);
+  res.json(assessments);
+});
+
+app.get('/api/preop-assessments/:id', (req, res) => {
+  const assessment = db.prepare('SELECT * FROM preop_assessments WHERE id = ?').get(req.params.id);
+  if (!assessment) {
+    return res.status(404).json({ error: 'Assessment not found' });
+  }
+  res.json(assessment);
+});
+
+app.post('/api/preop-assessments', (req, res) => {
+  const id = uuid();
+  const {
+    patient_id, clinic_id, surgeon_id, assessment_type, procedure_type, planned_surgery_date,
+    mortality_risk, readmission_risk, prolonged_los_risk, risk_tier,
+    age, sex, bmi, asa_class, comorbidities,
+    joint_score_type, joint_score_preop, projected_postop_score, expected_improvement,
+    promis_physical_tscore, promis_mental_tscore,
+    cms_back_pain, cms_health_literacy, cms_other_knee_pain, cms_other_hip_pain
+  } = req.body;
+  
+  db.prepare(`
+    INSERT INTO preop_assessments (
+      id, patient_id, clinic_id, surgeon_id, assessment_type, procedure_type, planned_surgery_date,
+      mortality_risk, readmission_risk, prolonged_los_risk, risk_tier,
+      age, sex, bmi, asa_class, comorbidities,
+      joint_score_type, joint_score_preop, projected_postop_score, expected_improvement,
+      promis_physical_tscore, promis_mental_tscore,
+      cms_back_pain, cms_health_literacy, cms_other_knee_pain, cms_other_hip_pain
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id, patient_id, clinic_id, surgeon_id, assessment_type || 'preop', procedure_type, planned_surgery_date,
+    mortality_risk, readmission_risk, prolonged_los_risk, risk_tier,
+    age, sex, bmi, asa_class, Array.isArray(comorbidities) ? JSON.stringify(comorbidities) : comorbidities,
+    joint_score_type, joint_score_preop, projected_postop_score, expected_improvement,
+    promis_physical_tscore, promis_mental_tscore,
+    cms_back_pain ? 1 : 0, cms_health_literacy, cms_other_knee_pain ? 1 : 0, cms_other_hip_pain ? 1 : 0
+  );
+  
+  res.json({ id, success: true });
+});
+
+app.delete('/api/preop-assessments/:id', (req, res) => {
+  db.prepare('DELETE FROM preop_assessments WHERE id = ?').run(req.params.id);
+  res.json({ success: true });
+});
+
+// Get pre-op and post-op comparison for a patient (SCB calculation)
+app.get('/api/preop-postop-comparison/:patient_id', (req, res) => {
+  const preop = db.prepare(`
+    SELECT * FROM preop_assessments 
+    WHERE patient_id = ? 
+    ORDER BY assessed_at DESC 
+    LIMIT 1
+  `).get(req.params.patient_id);
+  
+  const postop = db.prepare(`
+    SELECT * FROM pro_assessments 
+    WHERE patient_id = ? 
+    AND assessment_type IN ('koos_jr', 'hoos_jr')
+    ORDER BY assessment_date DESC 
+    LIMIT 1
+  `).get(req.params.patient_id);
+  
+  if (!preop) {
+    return res.json({ hasPreop: false });
+  }
+  
+  const result = {
+    hasPreop: true,
+    preop: {
+      date: preop.assessed_at,
+      jointScore: preop.joint_score_preop,
+      jointScoreType: preop.joint_score_type,
+      riskTier: preop.risk_tier,
+      projectedScore: preop.projected_postop_score,
+      expectedImprovement: preop.expected_improvement
+    }
+  };
+  
+  if (postop) {
+    const actualImprovement = postop.score - preop.joint_score_preop;
+    const scbThreshold = preop.joint_score_type === 'koos_jr' ? 12 : 14;
+    
+    result.hasPostop = true;
+    result.postop = {
+      date: postop.assessment_date,
+      jointScore: postop.score,
+      actualImprovement: actualImprovement,
+      achievedSCB: actualImprovement >= scbThreshold,
+      scbThreshold: scbThreshold
+    };
+  } else {
+    result.hasPostop = false;
+  }
+  
+  res.json(result);
+});
+
 // --- RPM Time Logs ---
 app.get('/api/rpm-logs', (req, res) => {
   const { clinic_id, user_id, patient_id, billing_month } = req.query;
@@ -464,7 +617,6 @@ app.post('/api/rpm-logs', (req, res) => {
   const id = uuid();
   const { patient_id, episode_id, user_id, clinic_id, started_at, ended_at, duration_seconds, activity_type, notes } = req.body;
   
-  // Auto-calculate billing month from started_at
   const billingMonth = started_at ? started_at.substring(0, 7) : new Date().toISOString().substring(0, 7);
   
   db.prepare(`
@@ -479,7 +631,6 @@ app.post('/api/rpm-logs', (req, res) => {
 app.get('/api/rpm-summary', (req, res) => {
   const { clinic_id, user_id, billing_month } = req.query;
   
-  // Get RPM time logs grouped by patient
   let query = `
     SELECT 
       p.id as patient_id,
@@ -501,7 +652,6 @@ app.get('/api/rpm-summary', (req, res) => {
   
   const summary = db.prepare(query).all(...params);
   
-  // Get check-in days for each patient in this billing month
   const checkinQuery = db.prepare(`
     SELECT COUNT(DISTINCT checkin_date) as checkin_days
     FROM checkins
@@ -509,7 +659,6 @@ app.get('/api/rpm-summary', (req, res) => {
     AND strftime('%Y-%m', checkin_date) = ?
   `);
   
-  // Get staff time breakdown per patient
   const staffTimeQuery = db.prepare(`
     SELECT 
       u.first_name || ' ' || u.last_name as staff_name,
@@ -522,14 +671,12 @@ app.get('/api/rpm-summary', (req, res) => {
     GROUP BY u.id
   `);
   
-  // Calculate days left in month
   const today = new Date();
   const currentMonth = today.toISOString().slice(0, 7);
   const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
   const daysLeftInMonth = lastDayOfMonth - today.getDate();
   const isCurrentMonth = billing_month === currentMonth;
   
-  // Add billing eligibility and check-in days
   const result = summary.map(row => {
     const checkinResult = checkinQuery.get(row.patient_id, billing_month);
     const checkinDays = checkinResult ? checkinResult.checkin_days : 0;
@@ -539,7 +686,6 @@ app.get('/api/rpm-summary', (req, res) => {
     const totalMinutes = Math.round(totalSeconds / 60);
     const neededCheckins = Math.max(0, 16 - checkinDays);
     
-    // Determine status
     let daysStatus = '';
     let daysStatusCode = '';
     
@@ -555,7 +701,6 @@ app.get('/api/rpm-summary', (req, res) => {
         daysStatusCode = 'wont-make-it';
       }
     } else {
-      // Past month
       if (checkinDays >= 16) {
         daysStatus = '✅ Qualified';
         daysStatusCode = 'qualified';
@@ -590,7 +735,6 @@ app.get('/api/dashboard-stats', (req, res) => {
   const today = new Date().toISOString().split('T')[0];
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   
-  // Active patients
   const activePatients = db.prepare(`
     SELECT COUNT(DISTINCT p.id) as count
     FROM patients p
@@ -598,14 +742,12 @@ app.get('/api/dashboard-stats', (req, res) => {
     WHERE p.clinic_id = ? AND e.status = 'active'
   `).get(clinic_id);
   
-  // Patients with check-in today
   const checkedInToday = db.prepare(`
     SELECT COUNT(DISTINCT patient_id) as count
     FROM checkins
     WHERE clinic_id = ? AND checkin_date = ?
   `).get(clinic_id, today);
   
-  // Patients needing attention (pain >= 7 or missed PT for 3+ days)
   const needsAttention = db.prepare(`
     SELECT COUNT(DISTINCT p.id) as count
     FROM patients p
@@ -619,7 +761,6 @@ app.get('/api/dashboard-stats', (req, res) => {
     AND (c.pain_level >= 7 OR c.pt_exercises = 0)
   `).get(clinic_id);
   
-  // Overdue check-ins (no check-in in 3+ days)
   const overdue = db.prepare(`
     SELECT COUNT(DISTINCT p.id) as count
     FROM patients p
@@ -681,16 +822,14 @@ app.get('*', (req, res) => {
 });
 
 // ============ CLOUD RELAY POLLING ============
-// Configuration - set these in environment or config file
 const RELAY_URL = process.env.RELAY_URL || 'https://sro-cloud-relay.onrender.com';
-const RELAY_SECRET = process.env.RELAY_SECRET || 'clinic-secret-key'; // PLACEHOLDER - set unique secret per clinic
-const POLL_INTERVAL = 15 * 60 * 1000; // 15 minutes
+const RELAY_SECRET = process.env.RELAY_SECRET || 'clinic-secret-key';
+const POLL_INTERVAL = 15 * 60 * 1000;
 
 async function pollCloudRelay() {
-  const clinicId = '11111111-1111-1111-1111-111111111111'; // TODO: Get from config
+  const clinicId = '11111111-1111-1111-1111-111111111111';
   
   try {
-    // Fetch pending check-ins from cloud relay
     const response = await fetch(`${RELAY_URL}/pending/${clinicId}?secret=${RELAY_SECRET}`);
     
     if (!response.ok) {
@@ -710,7 +849,6 @@ async function pollCloudRelay() {
     const confirmedIds = [];
     
     for (const checkin of data.checkins) {
-      // Find patient by token
       const patient = db.prepare(`
         SELECT p.id as patient_id, p.clinic_id, e.id as episode_id
         FROM patients p
@@ -723,7 +861,6 @@ async function pollCloudRelay() {
         continue;
       }
       
-      // Insert check-in into local database
       const id = crypto.randomUUID();
       db.prepare(`
         INSERT INTO checkins (id, patient_id, episode_id, clinic_id, checkin_type, checkin_date,
@@ -743,13 +880,10 @@ async function pollCloudRelay() {
         checkin.notes
       );
       
-      // TODO: Store ROM data if we add rom_flexion/rom_extension columns
-      
       confirmedIds.push(checkin.id);
       console.log(`[Relay Poll] Stored check-in for patient ${patient.patient_id}`);
     }
     
-    // Confirm receipt to cloud relay (so it can delete them)
     if (confirmedIds.length > 0) {
       await fetch(`${RELAY_URL}/confirm-batch`, {
         method: 'POST',
@@ -768,10 +902,9 @@ async function pollCloudRelay() {
   }
 }
 
-// Start polling when server starts
 console.log('[Relay Poll] Starting cloud relay polling every 15 minutes...');
 setInterval(pollCloudRelay, POLL_INTERVAL);
-pollCloudRelay(); // Poll immediately on startup
+pollCloudRelay();
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
@@ -785,6 +918,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('║  Pages:                                                   ║');
   console.log(`║    Dashboard:  http://localhost:${PORT}/dashboard.html        ║`);
   console.log(`║    Check-in:   http://localhost:${PORT}/checkin.html          ║`);
+  console.log(`║    Pre-Op:     http://localhost:${PORT}/preop-assessment.html ║`);
   console.log(`║    Analytics:  http://localhost:${PORT}/analytics.html        ║`);
   console.log(`║    Settings:   http://localhost:${PORT}/settings.html         ║`);
   console.log(`║    RPM Report: http://localhost:${PORT}/rpm-report.html       ║`);

@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pre-Op Assessment | SRO Intelligence</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .assessment-container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .step {
+      display: none;
+      background: #1a1f2e;
+      border-radius: 12px;
+      padding: 30px;
+      margin-bottom: 20px;
+    }
+    .step.active {
+      display: block;
+    }
+    .step-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #2a3142;
+    }
+    .step-title {
+      font-size: 1.5rem;
+      color: #fff;
+    }
+    .step-indicator {
+      color: #6b7280;
+      font-size: 0.9rem;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #9ca3af;
+      font-weight: 500;
+    }
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #374151;
+      border-radius: 8px;
+      background: #0d1117;
+      color: #fff;
+      font-size: 1rem;
+    }
+    .form-group input:focus, .form-group select:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+    .radio-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .radio-option {
+      flex: 1;
+      min-width: 120px;
+    }
+    .radio-option input {
+      display: none;
+    }
+    .radio-option label {
+      display: block;
+      padding: 15px;
+      background: #0d1117;
+      border: 2px solid #374151;
+      border-radius: 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .radio-option input:checked + label {
+      border-color: #3b82f6;
+      background: #1e3a5f;
+    }
+    .radio-option label:hover {
+      border-color: #4b5563;
+    }
+    .likert-scale {
+      display: flex;
+      justify-content: space-between;
+      gap: 5px;
+      margin-top: 10px;
+    }
+    .likert-option {
+      flex: 1;
+      text-align: center;
+    }
+    .likert-option input {
+      display: none;
+    }
+    .likert-option label {
+      display: block;
+      padding: 10px 5px;
+      background: #0d1117;
+      border: 2px solid #374151;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+    .likert-option input:checked + label {
+      border-color: #3b82f6;
+      background: #1e3a5f;
+    }
+    .question-block {
+      background: #0d1117;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 15px;
+    }
+    .question-text {
+      color: #e5e7eb;
+      margin-bottom: 15px;
+      font-size: 1rem;
+    }
+    .btn-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #2a3142;
+    }
+    .btn {
+      padding: 12px 30px;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #3b82f6;
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: #2563eb;
+    }
+    .btn-secondary {
+      background: #374151;
+      color: #fff;
+    }
+    .btn-secondary:hover {
+      background: #4b5563;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .checkbox-group {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+    }
+    .checkbox-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      background: #0d1117;
+      border: 1px solid #374151;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .checkbox-option:hover {
+      border-color: #4b5563;
+    }
+    .checkbox-option input {
+      width: auto;
+    }
+    .results-card {
+      background: #0d1117;
+      border-radius: 12px;
+      padding: 25px;
+      margin-bottom: 20px;
+    }
+    .results-card h3 {
+      color: #fff;
+      margin-bottom: 15px;
+      font-size: 1.2rem;
+    }
+    .risk-badge {
+      display: inline-block;
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+    .risk-low { background: #065f46; color: #34d399; }
+    .risk-moderate { background: #78350f; color: #fbbf24; }
+    .risk-high { background: #7f1d1d; color: #f87171; }
+    .score-display {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #3b82f6;
+    }
+    .score-label {
+      color: #9ca3af;
+      font-size: 0.9rem;
+    }
+    .projection-bar {
+      height: 30px;
+      background: #1f2937;
+      border-radius: 15px;
+      overflow: hidden;
+      position: relative;
+      margin: 10px 0;
+    }
+    .projection-fill {
+      height: 100%;
+      border-radius: 15px;
+      transition: width 0.5s ease;
+    }
+    .projection-marker {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      width: 3px;
+      background: #fff;
+    }
+    .nav-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 20px;
+      background: #1a1f2e;
+      border-bottom: 1px solid #2a3142;
+    }
+    .nav-header h1 {
+      font-size: 1.3rem;
+      color: #fff;
+    }
+    .back-link {
+      color: #3b82f6;
+      text-decoration: none;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+    .progress-bar {
+      height: 4px;
+      background: #1f2937;
+      margin-bottom: 20px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: #3b82f6;
+      transition: width 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+  <div class="nav-header">
+    <a href="dashboard.html" class="back-link">← Back to Dashboard</a>
+    <h1>Pre-Operative Assessment</h1>
+    <div></div>
+  </div>
+  
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill" style="width: 16.6%"></div>
+  </div>
+
+  <div class="assessment-container">
+    <!-- Step 1: Patient Selection -->
+    <div class="step active" id="step1">
+      <div class="step-header">
+        <h2 class="step-title">Patient & Procedure</h2>
+        <span class="step-indicator">Step 1 of 6</span>
+      </div>
+      
+      <div class="form-group">
+        <label>Select Patient</label>
+        <select id="patientSelect">
+          <option value="">-- Select Patient --</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>Procedure Type</label>
+        <div class="radio-group">
+          <div class="radio-option">
+            <input type="radio" name="procedure" id="procTKA" value="TKA">
+            <label for="procTKA">Total Knee (TKA)</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="procedure" id="procTHA" value="THA">
+            <label for="procTHA">Total Hip (THA)</label>
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Planned Surgery Date</label>
+        <input type="date" id="surgeryDate">
+      </div>
+      
+      <div class="btn-row">
+        <div></div>
+        <button class="btn btn-primary" onclick="nextStep()">Next →</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Clinical Risk Factors -->
+    <div class="step" id="step2">
+      <div class="step-header">
+        <h2 class="step-title">Clinical Risk Factors</h2>
+        <span class="step-indicator">Step 2 of 6</span>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label>Age</label>
+          <input type="number" id="age" min="18" max="120" placeholder="Years">
+        </div>
+        <div class="form-group">
+          <label>Sex</label>
+          <select id="sex">
+            <option value="">Select</option>
+            <option value="M">Male</option>
+            <option value="F">Female</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>BMI</label>
+          <input type="number" id="bmi" min="10" max="80" step="0.1" placeholder="kg/m²">
+        </div>
+        <div class="form-group">
+          <label>ASA Class</label>
+          <select id="asaClass">
+            <option value="">Select</option>
+            <option value="1">ASA I - Healthy</option>
+            <option value="2">ASA II - Mild systemic disease</option>
+            <option value="3">ASA III - Severe systemic disease</option>
+            <option value="4">ASA IV - Life-threatening disease</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Comorbidities (select all that apply)</label>
+        <div class="checkbox-group">
+          <label class="checkbox-option">
+            <input type="checkbox" name="comorbidity" value="diabetes"> Diabetes
+          </label>
+          <label class="checkbox-option">
+            <input type="checkbox" name="comorbidity" value="hypertension"> Hypertension
+          </label>
+          <label class="checkbox-option">
+            <input type="checkbox" name="comorbidity" value="cardiac"> Cardiac Disease
+          </label>
+          <label class="checkbox-option">
+            <input type="checkbox" name="comorbidity" value="pulmonary"> Pulmonary Disease
+          </label>
+          <label class="checkbox-option">
+            <input type="checkbox" name="comorbidity" value="renal"> Renal Disease
+          </label>
+          <label class="checkbox-option">
+            <input type="checkbox" name="comorbidity" value="obesity"> Obesity (BMI > 35)
+          </label>
+          <label class="checkbox-option">
+            <input type="checkbox" name="comorbidity" value="smoking"> Current Smoker
+          </label>
+          <label class="checkbox-option">
+            <input type="checkbox" name="comorbidity" value="opioid"> Chronic Opioid Use
+          </label>
+        </div>
+      </div>
+      
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="prevStep()">← Back</button>
+        <button class="btn btn-primary" onclick="nextStep()">Next →</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Joint Assessment (KOOS Jr / HOOS Jr) -->
+    <div class="step" id="step3">
+      <div class="step-header">
+        <h2 class="step-title" id="jointTitle">Joint Function Assessment</h2>
+        <span class="step-indicator">Step 3 of 6</span>
+      </div>
+      
+      <p style="color: #9ca3af; margin-bottom: 20px;" id="jointInstructions">
+        These questions ask about your knee/hip symptoms. Answer based on the last 7 days.
+      </p>
+      
+      <!-- KOOS Jr Questions (shown for TKA) -->
+      <div id="koosQuestions">
+        <div class="question-block">
+          <div class="question-text">1. How often are you aware of problems with your knee?</div>
+          <div class="likert-scale">
+            <div class="likert-option"><input type="radio" name="koos1" id="koos1_0" value="0"><label for="koos1_0">Never</label></div>
+            <div class="likert-option"><input type="radio" name="koos1" id="koos1_1" value="1"><label for="koos1_1">Monthly</label></div>
+            <div class="likert-option"><input type="radio" name="koos1" id="koos1_2" value="2"><label for="koos1_2">Weekly</label></div>
+            <div class="likert-option"><input type="radio" name="koos1" id="koos1_3" value="3"><label for="koos1_3">Daily</label></div>
+            <div class="likert-option"><input type="radio" name="koos1" id="koos1_4" value="4"><label for="koos1_4">Always</label></div>
+          </div>
+        </div>
+        
+        <div class="question-block">
+          <div class="question-text">2. Have you modified your lifestyle to avoid activities potentially damaging to your knee?</div>
+          <div class="likert-scale">
+            <div class="likert-option"><input type="radio" name="koos2" id="koos2_0" value="0"><label for="koos2_0">Not at all</label></div>
+            <div class="likert-option"><input type="radio" name="koos2" id="koos2_1" value="1"><label for="koos2_1">Mildly</label></div>
+            <div class="likert-option"><input type="radio" name="koos2" id="koos2_2" value="2"><label for="koos2_2">Moderately</label></div>
+            <div class="likert-option"><input type="radio" name="koos2" id="koos2_3" value="3"><label for="koos2_3">Severely</label></div>
+            <div class="likert-option"><input type="radio" name="koos2" id="koos2_4" value="4"><label for="koos2_4">Totally</label></div>
+          </div>
+        </div>
+        
+        <div class="question-block">
+          <div class="question-text">3. How much are you troubled with lack of confidence in your knee?</div>
+          <div class="likert-scale">
+            <div class="likert-option"><input type="radio" name="koos3" id="koos3_0" value="0"><label for="koos3_0">Not at all</label></div>
+            <div class="likert-option"><input type="radio" name="koos3" id="koos3_1" value="1"><label for="koos3_1">Mildly</label></div>
+            <div class="likert-option"><input type="radio" name="koos3" id="koos3_2" value="2"><label for="koos3_2">Moderately</label></div>
+            <div class="likert-option"><input type="radio" name="koos3" id="koos3_3" value="3"><label for="koos3_3">Severely</label></div>
+            <div class="likert-option"><input type="radio" name="koos3" id="koos3_4" value="4"><label for="koos3_4">Extremely</label></div>
+          </div>
+        </div>
+        
+        <div class="question-block">
+          <div class="question-text">4. What difficulty have you experienced rising from sitting?</div>
+          <div class="likert-scale">
+            <div class="likert-option"><input type="radio" name="koos4" id="koos4_0" value="0"><label for="koos4_0">None</label></div>
+            <div class="likert-option"><input type="radio" name="koos4" id="koos4_1" value="1"><label for="koos4_1">Mild</label></div>
+            <div class="likert-option"><input type="radio" name="koos4" id="koos4_2" value="2"><label for="koos4_2">Moderate</label></div>
+            <div class="likert-option"><input type="radio" name="koos4" id="koos4_3" value="3"><label for="koos4_3">Severe</label></div>
+            <div class="likert-option"><input type="radio" name="koos4" id="koos4_4" value="4"><label for="koos4_4">Extreme</label></div>
+          </div>
+        </div>
+        
+        <div class="question-block">
+          <div class="question-text">5. What difficulty have you experienced bending to the floor?</div>
+          <div class="likert-scale">
+            <div class="likert-option"><input type="radio" name="koos5" id="koos5_0" value="0"><label for="koos5_0">None</label></div>
+            <div class="likert-option"><input type="radio" name="koos5" id="koos5_1" value="1"><label for="koos5_1">Mild</label></div>
+            <div class="likert-option"><input type="radio" name="koos5" id="koos5_2" value="2"><label for="koos5_2">Moderate</label></div>
+            <div class="likert-option"><input type="radio" name="koos5" id="koos5_3" value="3"><label for="koos5_3">Severe</label></div>
+            <div class="likert-option"><input type="radio" name="koos5" id="koos5_4" value="4"><label for="koos5_4">Extreme</label></div>
+          </div>
+        </div>
+        
+        <div class="question-block">
+          <div class="question-text">6. What difficulty have you experienced twisting/pivoting on your knee?</div>
+          <div class="likert-scale">
+            <div class="likert-option"><input type="radio" name="koos6" id="koos6_0" value="0"><label for="koos6_0">None</label></div>
+            <div class="likert-option"><input type="radio" name="koos6" id="koos6_1" value="1"><label for="koos6_1">Mild</label></div>
+            <div class="likert-option"><input type="radio" name="koos6" id="koos6_2" value="2"><label for="koos6_2">Moderate</label></div>
+            <div class="likert-option"><input type="radio" name="koos6" id="koos6_3" value="3"><label for="koos6_3">Severe</label></div>
+            <div class="likert-option"><input type="radio" name="koos6" id="koos6_4" value="4"><label for="koos6_4">Extreme</label></div>
+          </div>
+        </div>
+        
+        <div class="question-block">
+          <div class="question-text">7. What difficulty have you experienced straightening your knee fully?</div>
+          <div class="likert-scale">
+            <div class="likert-option"><input type="radio" name="koos7" id="koos7_0" value="0"><label for="koos7_0">None</label></div>
+            <div class="likert-option"><input type="radio" name="koos7" id="koos7_1" value="1"><label for="koos7_1">Mild</label></div>
+            <div class="likert-option"><input type="radio" name="koos7" id="koos7_2" value="2"><label for="koos7_2">Moderate</label></div>
+            <div class="likert-option"><input type="radio" name="koos7" id="koos7_3" value="3"><label for="koos7_3">Severe</label></div>
+            <div class="likert-option"><input type="radio" name="koos7" id="koos7_4" value="4"><label for="koos7_4">Extreme</label></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- HOOS Jr Questions (shown for THA) -->
+      <div id="hoosQuestions" style="display: none;">
+        <div class="question-block">
+          <div class="question-text">1. What difficulty have you experienced going down stairs?</div>
+          <div class="likert-scale">
+            <div class="likert-option"><input type="radio" name="hoos1" id="hoos1_0" value="0"><label for="hoos1_0">None</label></div>
+            <div class="likert-option"><input type="radio" name="hoos1" id="hoos1_1" value="1"><label for="hoos1_1">Mild</label></div>
+            <div class="likert-option"><input type="radio" name="hoos1" id="hoos1_2" value="2"><label for="hoos1_2">Moderate</label></div>
+            <div class="likert-option"><input type="radio" name="hoos1" id="hoos1_3" value="3"><label for="hoos1_3">Severe</label></div>
+            <div class="likert-option"><input type="radio" name="hoos1" id="hoos1_4" value="4"><label for="hoos1_4">Extreme</label></div>
+          </div>
+        </div>
+        
+        <div class="question-block">
+          <div class="question-text">2. What difficulty have you experienced getting in/out of bath or shower?</div>
+          <div class="likert-scale">
+            <div class="likert-option"><input type="radio" name="hoos2" id="hoos2_0" value="0"><label for="hoos2_0">None</label></div>
+            <div class="likert-option"><input type="radio" name="hoos2" id="hoos2_1" value="1"><label for="hoos2_1">Mild</label></div>
+            <div class="likert-option"><input type="radio" name="hoos2" id="hoos2_2" value="2"><label for="hoos2_2">Moderate</label></div>
+            <div class="likert-option"><input type="radio" name="hoos2" id="hoos2_3" value="3"><label for="hoos2_3">Severe</label></div>
+            <div class="likert-option"><input type="radio" name="hoos2" id="hoos2_4" value="4"><label for="hoos2_4">Extreme</label></div>
+          </div>
+        </div>
+        
+        <div class="question-block">
+          <div class="question-text">3. What difficulty have you experienced sitting?</div>
+          <div class="likert-scale">
+            <div class="likert-option"><input type="radio" name="hoos3" id="hoos3_0" value="0"><label for="hoos3_0">None</label></div>
+            <div class="likert-option"><input type="radio" name="hoos3" id="hoos3_1" value="1"><label for="hoos3_1">Mild</label></div>
+            <div class="likert-option"><input type="radio" name="hoos3" id="hoos3_2" value="2"><label for="hoos3_2">Moderate</label></div>
+            <div class="likert-option"><input type="radio" name="hoos3" id="hoos3_3" value="3"><label for="hoos3_3">Severe</label></div>
+            <div class="likert-option"><input type="radio" name="hoos3" id="hoos3_4" value="4"><label for="hoos3_4">Extreme</label></div>
+          </div>
+        </div>
+        
+        <div class="question-block">
+          <div class="question-text">4. What difficulty have you experienced running?</div>
+          <div class="likert-scale">
+            <div class="likert-option"><input type="radio" name="hoos4" id="hoos4_0" value="0"><label for="hoos4_0">None</label></div>
+            <div class="likert-option"><input type="radio" name="hoos4" id="hoos4_1" value="1"><label for="hoos4_1">Mild</label></div>
+            <div class="likert-option"><input type="radio" name="hoos4" id="hoos4_2" value="2"><label for="hoos4_2">Moderate</label></div>
+            <div class="likert-option"><input type="radio" name="hoos4" id="hoos4_3" value="3"><label for="hoos4_3">Severe</label></div>
+            <div class="likert-option"><input type="radio" name="hoos4" id="hoos4_4" value="4"><label for="hoos4_4">Extreme</label></div>
+          </div>
+        </div>
+        
+        <div class="question-block">
+          <div class="question-text">5. What difficulty have you experienced twisting/pivoting on your hip?</div>
+          <div class="likert-scale">
+            <div class="likert-option"><input type="radio" name="hoos5" id="hoos5_0" value="0"><label for="hoos5_0">None</label></div>
+            <div class="likert-option"><input type="radio" name="hoos5" id="hoos5_1" value="1"><label for="hoos5_1">Mild</label></div>
+            <div class="likert-option"><input type="radio" name="hoos5" id="hoos5_2" value="2"><label for="hoos5_2">Moderate</label></div>
+            <div class="likert-option"><input type="radio" name="hoos5" id="hoos5_3" value="3"><label for="hoos5_3">Severe</label></div>
+            <div class="likert-option"><input type="radio" name="hoos5" id="hoos5_4" value="4"><label for="hoos5_4">Extreme</label></div>
+          </div>
+        </div>
+        
+        <div class="question-block">
+          <div class="question-text">6. How often are you aware of problems with your hip?</div>
+          <div class="likert-scale">
+            <div class="likert-option"><input type="radio" name="hoos6" id="hoos6_0" value="0"><label for="hoos6_0">Never</label></div>
+            <div class="likert-option"><input type="radio" name="hoos6" id="hoos6_1" value="1"><label for="hoos6_1">Monthly</label></div>
+            <div class="likert-option"><input type="radio" name="hoos6" id="hoos6_2" value="2"><label for="hoos6_2">Weekly</label></div>
+            <div class="likert-option"><input type="radio" name="hoos6" id="hoos6_3" value="3"><label for="hoos6_3">Daily</label></div>
+            <div class="likert-option"><input type="radio" name="hoos6" id="hoos6_4" value="4"><label for="hoos6_4">Always</label></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="prevStep()">← Back</button>
+        <button class="btn btn-primary" onclick="nextStep()">Next →</button>
+      </div>
+    </div>
+
+    <!-- Step 4: PROMIS-10 -->
+    <div class="step" id="step4">
+      <div class="step-header">
+        <h2 class="step-title">Global Health (PROMIS-10)</h2>
+        <span class="step-indicator">Step 4 of 6</span>
+      </div>
+      
+      <p style="color: #9ca3af; margin-bottom: 20px;">
+        These questions ask about your overall health and quality of life.
+      </p>
+      
+      <div class="question-block">
+        <div class="question-text">1. In general, would you say your health is:</div>
+        <div class="likert-scale">
+          <div class="likert-option"><input type="radio" name="promis1" id="promis1_5" value="5"><label for="promis1_5">Excellent</label></div>
+          <div class="likert-option"><input type="radio" name="promis1" id="promis1_4" value="4"><label for="promis1_4">Very Good</label></div>
+          <div class="likert-option"><input type="radio" name="promis1" id="promis1_3" value="3"><label for="promis1_3">Good</label></div>
+          <div class="likert-option"><input type="radio" name="promis1" id="promis1_2" value="2"><label for="promis1_2">Fair</label></div>
+          <div class="likert-option"><input type="radio" name="promis1" id="promis1_1" value="1"><label for="promis1_1">Poor</label></div>
+        </div>
+      </div>
+      
+      <div class="question-block">
+        <div class="question-text">2. In general, would you say your quality of life is:</div>
+        <div class="likert-scale">
+          <div class="likert-option"><input type="radio" name="promis2" id="promis2_5" value="5"><label for="promis2_5">Excellent</label></div>
+          <div class="likert-option"><input type="radio" name="promis2" id="promis2_4" value="4"><label for="promis2_4">Very Good</label></div>
+          <div class="likert-option"><input type="radio" name="promis2" id="promis2_3" value="3"><label for="promis2_3">Good</label></div>
+          <div class="likert-option"><input type="radio" name="promis2" id="promis2_2" value="2"><label for="promis2_2">Fair</label></div>
+          <div class="likert-option"><input type="radio" name="promis2" id="promis2_1" value="1"><label for="promis2_1">Poor</label></div>
+        </div>
+      </div>
+      
+      <div class="question-block">
+        <div class="question-text">3. In general, how would you rate your physical health?</div>
+        <div class="likert-scale">
+          <div class="likert-option"><input type="radio" name="promis3" id="promis3_5" value="5"><label for="promis3_5">Excellent</label></div>
+          <div class="likert-option"><input type="radio" name="promis3" id="promis3_4" value="4"><label for="promis3_4">Very Good</label></div>
+          <div class="likert-option"><input type="radio" name="promis3" id="promis3_3" value="3"><label for="promis3_3">Good</label></div>
+          <div class="likert-option"><input type="radio" name="promis3" id="promis3_2" value="2"><label for="promis3_2">Fair</label></div>
+          <div class="likert-option"><input type="radio" name="promis3" id="promis3_1" value="1"><label for="promis3_1">Poor</label></div>
+        </div>
+      </div>
+      
+      <div class="question-block">
+        <div class="question-text">4. In general, how would you rate your mental health?</div>
+        <div class="likert-scale">
+          <div class="likert-option"><input type="radio" name="promis4" id="promis4_5" value="5"><label for="promis4_5">Excellent</label></div>
+          <div class="likert-option"><input type="radio" name="promis4" id="promis4_4" value="4"><label for="promis4_4">Very Good</label></div>
+          <div class="likert-option"><input type="radio" name="promis4" id="promis4_3" value="3"><label for="promis4_3">Good</label></div>
+          <div class="likert-option"><input type="radio" name="promis4" id="promis4_2" value="2"><label for="promis4_2">Fair</label></div>
+          <div class="likert-option"><input type="radio" name="promis4" id="promis4_1" value="1"><label for="promis4_1">Poor</label></div>
+        </div>
+      </div>
+      
+      <div class="question-block">
+        <div class="question-text">5. In general, how would you rate your satisfaction with social activities?</div>
+        <div class="likert-scale">
+          <div class="likert-option"><input type="radio" name="promis5" id="promis5_5" value="5"><label for="promis5_5">Excellent</label></div>
+          <div class="likert-option"><input type="radio" name="promis5" id="promis5_4" value="4"><label for="promis5_4">Very Good</label></div>
+          <div class="likert-option"><input type="radio" name="promis5" id="promis5_3" value="3"><label for="promis5_3">Good</label></div>
+          <div class="likert-option"><input type="radio" name="promis5" id="promis5_2" value="2"><label for="promis5_2">Fair</label></div>
+          <div class="likert-option"><input type="radio" name="promis5" id="promis5_1" value="1"><label for="promis5_1">Poor</label></div>
+        </div>
+      </div>
+      
+      <div class="question-block">
+        <div class="question-text">6. To what extent are you able to carry out everyday physical activities?</div>
+        <div class="likert-scale">
+          <div class="likert-option"><input type="radio" name="promis6" id="promis6_5" value="5"><label for="promis6_5">Completely</label></div>
+          <div class="likert-option"><input type="radio" name="promis6" id="promis6_4" value="4"><label for="promis6_4">Mostly</label></div>
+          <div class="likert-option"><input type="radio" name="promis6" id="promis6_3" value="3"><label for="promis6_3">Moderately</label></div>
+          <div class="likert-option"><input type="radio" name="promis6" id="promis6_2" value="2"><label for="promis6_2">A Little</label></div>
+          <div class="likert-option"><input type="radio" name="promis6" id="promis6_1" value="1"><label for="promis6_1">Not at All</label></div>
+        </div>
+      </div>
+      
+      <div class="question-block">
+        <div class="question-text">7. How would you rate your pain on average? (0 = No pain, 10 = Worst pain)</div>
+        <div class="likert-scale">
+          <div class="likert-option"><input type="radio" name="promis7" id="promis7_0" value="0"><label for="promis7_0">0</label></div>
+          <div class="likert-option"><input type="radio" name="promis7" id="promis7_1" value="1"><label for="promis7_1">1-2</label></div>
+          <div class="likert-option"><input type="radio" name="promis7" id="promis7_2" value="2"><label for="promis7_2">3-4</label></div>
+          <div class="likert-option"><input type="radio" name="promis7" id="promis7_3" value="3"><label for="promis7_3">5-6</label></div>
+          <div class="likert-option"><input type="radio" name="promis7" id="promis7_4" value="4"><label for="promis7_4">7-8</label></div>
+          <div class="likert-option"><input type="radio" name="promis7" id="promis7_5" value="5"><label for="promis7_5">9-10</label></div>
+        </div>
+      </div>
+      
+      <div class="question-block">
+        <div class="question-text">8. How would you rate your fatigue on average?</div>
+        <div class="likert-scale">
+          <div class="likert-option"><input type="radio" name="promis8" id="promis8_1" value="1"><label for="promis8_1">None</label></div>
+          <div class="likert-option"><input type="radio" name="promis8" id="promis8_2" value="2"><label for="promis8_2">Mild</label></div>
+          <div class="likert-option"><input type="radio" name="promis8" id="promis8_3" value="3"><label for="promis8_3">Moderate</label></div>
+          <div class="likert-option"><input type="radio" name="promis8" id="promis8_4" value="4"><label for="promis8_4">Severe</label></div>
+          <div class="likert-option"><input type="radio" name="promis8" id="promis8_5" value="5"><label for="promis8_5">Very Severe</label></div>
+        </div>
+      </div>
+      
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="prevStep()">← Back</button>
+        <button class="btn btn-primary" onclick="nextStep()">Next →</button>
+      </div>
+    </div>
+
+    <!-- Step 5: CMS Risk Variables -->
+    <div class="step" id="step5">
+      <div class="step-header">
+        <h2 class="step-title">Additional Risk Factors</h2>
+        <span class="step-indicator">Step 5 of 6</span>
+      </div>
+      
+      <div class="form-group">
+        <label>Do you have chronic back pain?</label>
+        <div class="radio-group">
+          <div class="radio-option">
+            <input type="radio" name="backPain" id="backPainNo" value="no">
+            <label for="backPainNo">No</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="backPain" id="backPainYes" value="yes">
+            <label for="backPainYes">Yes</label>
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>How confident are you filling out medical forms by yourself?</label>
+        <div class="radio-group">
+          <div class="radio-option">
+            <input type="radio" name="healthLiteracy" id="hlExtremely" value="extremely">
+            <label for="hlExtremely">Extremely</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="healthLiteracy" id="hlQuite" value="quite">
+            <label for="hlQuite">Quite a bit</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="healthLiteracy" id="hlSomewhat" value="somewhat">
+            <label for="hlSomewhat">Somewhat</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="healthLiteracy" id="hlLittle" value="little">
+            <label for="hlLittle">A little</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="healthLiteracy" id="hlNot" value="not">
+            <label for="hlNot">Not at all</label>
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-group" id="otherKneePainGroup">
+        <label>Do you have pain in your OTHER knee?</label>
+        <div class="radio-group">
+          <div class="radio-option">
+            <input type="radio" name="otherKneePain" id="okpNo" value="no">
+            <label for="okpNo">No</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="otherKneePain" id="okpYes" value="yes">
+            <label for="okpYes">Yes</label>
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-group" id="otherHipPainGroup" style="display: none;">
+        <label>Do you have pain in your OTHER hip?</label>
+        <div class="radio-group">
+          <div class="radio-option">
+            <input type="radio" name="otherHipPain" id="ohpNo" value="no">
+            <label for="ohpNo">No</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="otherHipPain" id="ohpYes" value="yes">
+            <label for="ohpYes">Yes</label>
+          </div>
+        </div>
+      </div>
+      
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="prevStep()">← Back</button>
+        <button class="btn btn-primary" onclick="calculateAndShowResults()">Calculate Results →</button>
+      </div>
+    </div>
+
+    <!-- Step 6: Results -->
+    <div class="step" id="step6">
+      <div class="step-header">
+        <h2 class="step-title">Assessment Results</h2>
+        <span class="step-indicator">Step 6 of 6</span>
+      </div>
+      
+      <div class="results-card">
+        <h3>Risk Tier</h3>
+        <div id="riskTierBadge" class="risk-badge risk-low">LOW RISK</div>
+      </div>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+        <div class="results-card">
+          <h3 id="jointScoreTitle">KOOS Jr Score</h3>
+          <div class="score-display" id="jointScoreValue">--</div>
+          <div class="score-label">Pre-operative baseline (0-100)</div>
+        </div>
+        
+        <div class="results-card">
+          <h3>Projected Post-Op Score</h3>
+          <div class="score-display" id="projectedScore">--</div>
+          <div class="score-label">Expected at 1 year</div>
+        </div>
+        
+        <div class="results-card">
+          <h3>Expected Improvement</h3>
+          <div class="score-display" id="expectedImprovement">--</div>
+          <div class="score-label">Points gained</div>
+        </div>
+      </div>
+      
+      <div class="results-card">
+        <h3>Outcome Projection</h3>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+          <span style="color: #9ca3af;">Pre-Op</span>
+          <span style="color: #9ca3af;">Post-Op (Projected)</span>
+        </div>
+        <div class="projection-bar">
+          <div class="projection-fill" id="projectionFill" style="width: 0%; background: linear-gradient(90deg, #ef4444, #f59e0b, #22c55e);"></div>
+          <div class="projection-marker" id="preOpMarker" style="left: 0%;"></div>
+          <div class="projection-marker" id="postOpMarker" style="left: 0%; background: #3b82f6;"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #6b7280;">
+          <span>0</span>
+          <span>25</span>
+          <span>50</span>
+          <span>75</span>
+          <span>100</span>
+        </div>
+      </div>
+      
+      <div class="results-card">
+        <h3>Risk Estimates</h3>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; text-align: center;">
+          <div>
+            <div style="font-size: 1.5rem; font-weight: 600; color: #f59e0b;" id="mortalityRisk">--%</div>
+            <div style="color: #9ca3af; font-size: 0.85rem;">90-Day Mortality</div>
+          </div>
+          <div>
+            <div style="font-size: 1.5rem; font-weight: 600; color: #f59e0b;" id="readmissionRisk">--%</div>
+            <div style="color: #9ca3af; font-size: 0.85rem;">30-Day Readmission</div>
+          </div>
+          <div>
+            <div style="font-size: 1.5rem; font-weight: 600; color: #f59e0b;" id="losRisk">--%</div>
+            <div style="color: #9ca3af; font-size: 0.85rem;">Prolonged LOS</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="results-card">
+        <h3>PROMIS-10 Summary</h3>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+          <div>
+            <div style="font-size: 1.3rem; font-weight: 600; color: #3b82f6;" id="promisPhysical">--</div>
+            <div style="color: #9ca3af; font-size: 0.85rem;">Physical T-Score</div>
+          </div>
+          <div>
+            <div style="font-size: 1.3rem; font-weight: 600; color: #8b5cf6;" id="promisMental">--</div>
+            <div style="color: #9ca3af; font-size: 0.85rem;">Mental T-Score</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="prevStep()">← Back</button>
+        <button class="btn btn-primary" onclick="saveAssessment()">Save Assessment</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentStep = 1;
+    const totalSteps = 6;
+    let clinicId = '11111111-1111-1111-1111-111111111111';
+    let calculatedResults = {};
+
+    // Load patients on page load
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadPatients();
+      
+      // Listen for procedure type change
+      document.querySelectorAll('input[name="procedure"]').forEach(radio => {
+        radio.addEventListener('change', updateJointQuestions);
+      });
+    });
+
+    async function loadPatients() {
+      try {
+        const response = await fetch(`/api/patients?clinic_id=${clinicId}`);
+        const patients = await response.json();
+        
+        const select = document.getElementById('patientSelect');
+        patients.forEach(p => {
+          const option = document.createElement('option');
+          option.value = p.id;
+          option.textContent = `${p.last_name}, ${p.first_name}`;
+          select.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Error loading patients:', error);
+      }
+    }
+
+    function updateJointQuestions() {
+      const procedure = document.querySelector('input[name="procedure"]:checked')?.value;
+      const koosDiv = document.getElementById('koosQuestions');
+      const hoosDiv = document.getElementById('hoosQuestions');
+      const jointTitle = document.getElementById('jointTitle');
+      const jointInstructions = document.getElementById('jointInstructions');
+      const otherKnee = document.getElementById('otherKneePainGroup');
+      const otherHip = document.getElementById('otherHipPainGroup');
+      
+      if (procedure === 'TKA') {
+        koosDiv.style.display = 'block';
+        hoosDiv.style.display = 'none';
+        jointTitle.textContent = 'Knee Function (KOOS Jr)';
+        jointInstructions.textContent = 'These questions ask about your knee symptoms. Answer based on the last 7 days.';
+        otherKnee.style.display = 'block';
+        otherHip.style.display = 'none';
+      } else if (procedure === 'THA') {
+        koosDiv.style.display = 'none';
+        hoosDiv.style.display = 'block';
+        jointTitle.textContent = 'Hip Function (HOOS Jr)';
+        jointInstructions.textContent = 'These questions ask about your hip symptoms. Answer based on the last 7 days.';
+        otherKnee.style.display = 'none';
+        otherHip.style.display = 'block';
+      }
+    }
+
+    function nextStep() {
+      if (currentStep < totalSteps) {
+        document.getElementById(`step${currentStep}`).classList.remove('active');
+        currentStep++;
+        document.getElementById(`step${currentStep}`).classList.add('active');
+        updateProgress();
+      }
+    }
+
+    function prevStep() {
+      if (currentStep > 1) {
+        document.getElementById(`step${currentStep}`).classList.remove('active');
+        currentStep--;
+        document.getElementById(`step${currentStep}`).classList.add('active');
+        updateProgress();
+      }
+    }
+
+    function updateProgress() {
+      const progress = (currentStep / totalSteps) * 100;
+      document.getElementById('progressFill').style.width = `${progress}%`;
+    }
+
+    function calculateKoosJr() {
+      let rawScore = 0;
+      for (let i = 1; i <= 7; i++) {
+        const val = document.querySelector(`input[name="koos${i}"]:checked`)?.value;
+        if (val !== undefined) rawScore += parseInt(val);
+      }
+      // KOOS Jr interval score conversion (simplified)
+      // Raw 0-28 maps to 0-100 (inverted - lower raw = better function)
+      const intervalScore = Math.round(100 - (rawScore / 28) * 100);
+      return intervalScore;
+    }
+
+    function calculateHoosJr() {
+      let rawScore = 0;
+      for (let i = 1; i <= 6; i++) {
+        const val = document.querySelector(`input[name="hoos${i}"]:checked`)?.value;
+        if (val !== undefined) rawScore += parseInt(val);
+      }
+      // HOOS Jr interval score conversion (simplified)
+      // Raw 0-24 maps to 0-100 (inverted)
+      const intervalScore = Math.round(100 - (rawScore / 24) * 100);
+      return intervalScore;
+    }
+
+    function calculatePromis10() {
+      // Physical function items: 3, 6, 7, 10 (we have 1-8, mapping accordingly)
+      // Mental function items: 4, 5, 8 (and others)
+      // Simplified T-score calculation
+      
+      let physicalRaw = 0;
+      let mentalRaw = 0;
+      
+      // Physical: items 1, 3, 6, 7
+      [1, 3, 6].forEach(i => {
+        const val = document.querySelector(`input[name="promis${i}"]:checked`)?.value;
+        if (val) physicalRaw += parseInt(val);
+      });
+      // Pain is reverse scored
+      const painVal = document.querySelector('input[name="promis7"]:checked')?.value;
+      if (painVal) physicalRaw += (5 - parseInt(painVal));
+      
+      // Mental: items 2, 4, 5, 8
+      [2, 4, 5].forEach(i => {
+        const val = document.querySelector(`input[name="promis${i}"]:checked`)?.value;
+        if (val) mentalRaw += parseInt(val);
+      });
+      // Fatigue is reverse scored
+      const fatigueVal = document.querySelector('input[name="promis8"]:checked')?.value;
+      if (fatigueVal) mentalRaw += (6 - parseInt(fatigueVal));
+      
+      // Convert to T-scores (simplified linear conversion)
+      // Real PROMIS uses IRT, this is approximate
+      const physicalTScore = Math.round(20 + (physicalRaw / 20) * 40);
+      const mentalTScore = Math.round(20 + (mentalRaw / 20) * 40);
+      
+      return { physical: physicalTScore, mental: mentalTScore };
+    }
+
+    function calculateRiskScores() {
+      const age = parseInt(document.getElementById('age').value) || 65;
+      const bmi = parseFloat(document.getElementById('bmi').value) || 30;
+      const asa = parseInt(document.getElementById('asaClass').value) || 2;
+      
+      const comorbidities = document.querySelectorAll('input[name="comorbidity"]:checked').length;
+      
+      // Simplified risk calculation (would be replaced with validated models)
+      let mortalityBase = 0.3;
+      let readmissionBase = 4.0;
+      let losBase = 8.0;
+      
+      // Age adjustments
+      if (age > 75) { mortalityBase += 0.5; readmissionBase += 2; losBase += 5; }
+      else if (age > 65) { mortalityBase += 0.2; readmissionBase += 1; losBase += 2; }
+      
+      // BMI adjustments
+      if (bmi > 40) { mortalityBase += 0.3; readmissionBase += 2; losBase += 4; }
+      else if (bmi > 35) { mortalityBase += 0.1; readmissionBase += 1; losBase += 2; }
+      
+      // ASA adjustments
+      if (asa >= 3) { mortalityBase += 0.5; readmissionBase += 3; losBase += 5; }
+      
+      // Comorbidity adjustments
+      mortalityBase += comorbidities * 0.1;
+      readmissionBase += comorbidities * 0.5;
+      losBase += comorbidities * 1;
+      
+      return {
+        mortality: Math.min(mortalityBase, 5).toFixed(1),
+        readmission: Math.min(readmissionBase, 20).toFixed(1),
+        los: Math.min(losBase, 30).toFixed(1)
+      };
+    }
+
+    function calculateRiskTier(jointScore, risks) {
+      let tier = 'LOW';
+      
+      // Joint score thresholds
+      if (jointScore < 40) tier = 'HIGH';
+      else if (jointScore < 55) tier = 'MODERATE';
+      
+      // Risk score overrides
+      if (parseFloat(risks.mortality) > 1.5 || parseFloat(risks.readmission) > 10) {
+        tier = 'HIGH';
+      } else if (parseFloat(risks.mortality) > 0.8 || parseFloat(risks.readmission) > 6) {
+        if (tier === 'LOW') tier = 'MODERATE';
+      }
+      
+      return tier;
+    }
+
+    function projectOutcome(preOpScore, procedure) {
+      // Average improvement based on literature
+      // TKA KOOS Jr: ~20-25 point improvement
+      // THA HOOS Jr: ~25-30 point improvement
+      const avgImprovement = procedure === 'TKA' ? 22 : 27;
+      
+      // Adjust based on pre-op score (floor/ceiling effects)
+      let projectedImprovement = avgImprovement;
+      if (preOpScore > 60) projectedImprovement = avgImprovement * 0.7;
+      else if (preOpScore < 40) projectedImprovement = avgImprovement * 1.2;
+      
+      const projected = Math.min(100, preOpScore + projectedImprovement);
+      
+      return {
+        projected: Math.round(projected),
+        improvement: Math.round(projected - preOpScore)
+      };
+    }
+
+    function calculateAndShowResults() {
+      const procedure = document.querySelector('input[name="procedure"]:checked')?.value;
+      
+      // Calculate joint score
+      let jointScore;
+      if (procedure === 'TKA') {
+        jointScore = calculateKoosJr();
+      } else {
+        jointScore = calculateHoosJr();
+      }
+      
+      // Calculate PROMIS
+      const promis = calculatePromis10();
+      
+      // Calculate risks
+      const risks = calculateRiskScores();
+      
+      // Calculate risk tier
+      const riskTier = calculateRiskTier(jointScore, risks);
+      
+      // Project outcomes
+      const projection = projectOutcome(jointScore, procedure);
+      
+      // Store results
+      calculatedResults = {
+        procedure,
+        jointScore,
+        jointScoreType: procedure === 'TKA' ? 'koos_jr' : 'hoos_jr',
+        projectedScore: projection.projected,
+        expectedImprovement: projection.improvement,
+        promisPhysical: promis.physical,
+        promisMental: promis.mental,
+        mortalityRisk: risks.mortality,
+        readmissionRisk: risks.readmission,
+        losRisk: risks.los,
+        riskTier
+      };
+      
+      // Update UI
+      document.getElementById('jointScoreTitle').textContent = 
+        procedure === 'TKA' ? 'KOOS Jr Score' : 'HOOS Jr Score';
+      document.getElementById('jointScoreValue').textContent = jointScore;
+      document.getElementById('projectedScore').textContent = projection.projected;
+      document.getElementById('expectedImprovement').textContent = `+${projection.improvement}`;
+      
+      document.getElementById('mortalityRisk').textContent = `${risks.mortality}%`;
+      document.getElementById('readmissionRisk').textContent = `${risks.readmission}%`;
+      document.getElementById('losRisk').textContent = `${risks.los}%`;
+      
+      document.getElementById('promisPhysical').textContent = promis.physical;
+      document.getElementById('promisMental').textContent = promis.mental;
+      
+      // Update risk badge
+      const badge = document.getElementById('riskTierBadge');
+      badge.textContent = `${riskTier} RISK`;
+      badge.className = `risk-badge risk-${riskTier.toLowerCase()}`;
+      
+      // Update projection bar
+      document.getElementById('projectionFill').style.width = `${projection.projected}%`;
+      document.getElementById('preOpMarker').style.left = `${jointScore}%`;
+      document.getElementById('postOpMarker').style.left = `${projection.projected}%`;
+      
+      // Go to results step
+      nextStep();
+    }
+
+    async function saveAssessment() {
+      const patientId = document.getElementById('patientSelect').value;
+      const surgeryDate = document.getElementById('surgeryDate').value;
+      
+      if (!patientId) {
+        alert('Please select a patient');
+        return;
+      }
+      
+      // Get comorbidities
+      const comorbidities = [];
+      document.querySelectorAll('input[name="comorbidity"]:checked').forEach(cb => {
+        comorbidities.push(cb.value);
+      });
+      
+      const assessmentData = {
+        patient_id: patientId,
+        clinic_id: clinicId,
+        assessment_type: 'preop',
+        procedure_type: calculatedResults.procedure,
+        planned_surgery_date: surgeryDate,
+        
+        // Risk scores
+        mortality_risk: parseFloat(calculatedResults.mortalityRisk),
+        readmission_risk: parseFloat(calculatedResults.readmissionRisk),
+        prolonged_los_risk: parseFloat(calculatedResults.losRisk),
+        risk_tier: calculatedResults.riskTier,
+        
+        // Clinical inputs
+        age: parseInt(document.getElementById('age').value),
+        sex: document.getElementById('sex').value,
+        bmi: parseFloat(document.getElementById('bmi').value),
+        asa_class: parseInt(document.getElementById('asaClass').value),
+        comorbidities: comorbidities,
+        
+        // Joint scores
+        joint_score_type: calculatedResults.jointScoreType,
+        joint_score_preop: calculatedResults.jointScore,
+        projected_postop_score: calculatedResults.projectedScore,
+        expected_improvement: calculatedResults.expectedImprovement,
+        
+        // PROMIS
+        promis_physical_tscore: calculatedResults.promisPhysical,
+        promis_mental_tscore: calculatedResults.promisMental,
+        
+        // CMS variables
+        cms_back_pain: document.querySelector('input[name="backPain"]:checked')?.value === 'yes',
+        cms_health_literacy: document.querySelector('input[name="healthLiteracy"]:checked')?.value,
+        cms_other_knee_pain: document.querySelector('input[name="otherKneePain"]:checked')?.value === 'yes',
+        cms_other_hip_pain: document.querySelector('input[name="otherHipPain"]:checked')?.value === 'yes'
+      };
+      
+      try {
+        const response = await fetch('/api/preop-assessments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(assessmentData)
+        });
+        
+        if (response.ok) {
+          alert('Assessment saved successfully!');
+          window.location.href = 'dashboard.html';
+        } else {
+          const error = await response.json();
+          alert('Error saving assessment: ' + (error.message || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error saving assessment. Please try again.');
+      }
+    }
+  </script>
+</body>
+</html>

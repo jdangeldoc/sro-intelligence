@@ -5,6 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard | SRO Intelligence</title>
     <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .risk-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .risk-low { background: #065f46; color: #34d399; }
+        .risk-moderate { background: #78350f; color: #fbbf24; }
+        .risk-high { background: #7f1d1d; color: #f87171; }
+        .risk-none { background: #374151; color: #9ca3af; font-size: 0.65rem; }
+        .btn-preop {
+            background: #8b5cf6 !important;
+            color: white !important;
+        }
+        .btn-preop:hover {
+            background: #7c3aed !important;
+        }
+        .preop-section {
+            background: #1a1f2e;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .preop-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .preop-stat {
+            text-align: center;
+        }
+        .preop-stat-value {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #3b82f6;
+        }
+        .preop-stat-label {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+    </style>
 </head>
 <body>
     <!-- Navigation -->
@@ -15,6 +60,7 @@
         </div>
         <div class="nav-links">
             <a href="/dashboard.html" class="nav-link active">Dashboard</a>
+            <a href="/preop-assessment.html" class="nav-link">Pre-Op</a>
             <a href="/analytics.html" class="nav-link">Analytics</a>
             <a href="/rpm-report.html" class="nav-link">RPM Billing</a>
             <a href="/settings.html" class="nav-link">Settings</a>
@@ -62,6 +108,7 @@
             </div>
             <div class="actions">
                 <button class="btn btn-secondary" onclick="exportPatients()">Export CSV</button>
+                <a href="/preop-assessment.html" class="btn btn-preop">+ Pre-Op Assessment</a>
                 <button class="btn btn-primary" onclick="openAddPatientModal()">+ Add Patient</button>
             </div>
         </div>
@@ -74,6 +121,7 @@
                         <th>Patient</th>
                         <th>Surgery</th>
                         <th>Day</th>
+                        <th>Risk</th>
                         <th>Surgeon</th>
                         <th>Last Check-in</th>
                         <th>Pain</th>
@@ -84,7 +132,7 @@
                 </thead>
                 <tbody id="patientTableBody">
                     <tr>
-                        <td colspan="9" class="loading">Loading patients...</td>
+                        <td colspan="10" class="loading">Loading patients...</td>
                     </tr>
                 </tbody>
             </table>
@@ -132,6 +180,17 @@
                         <button class="btn btn-secondary btn-sm" style="margin-top: 10px; width: 100%;" onclick="openManualCheckinModal()">
                             📞 Log Phone/Manual Check-in
                         </button>
+                    </div>
+                </div>
+                
+                <!-- Pre-Op Assessment Section -->
+                <div class="preop-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 style="margin: 0;">Pre-Op Assessment</h3>
+                        <a id="preopActionBtn" href="#" class="btn btn-sm btn-preop">+ Complete Pre-Op</a>
+                    </div>
+                    <div id="preopInfo" style="margin-top: 15px;">
+                        Loading...
                     </div>
                 </div>
                 
@@ -369,5 +428,181 @@
     </div>
 
     <script src="js/dashboard.js"></script>
+    <script>
+        // ==========================================
+        // PRE-OP ASSESSMENT INTEGRATION
+        // ==========================================
+        
+        // Cache for preop assessments
+        let preopAssessments = {};
+        
+        // Load preop assessments for all patients
+        async function loadPreopAssessments() {
+            try {
+                const clinicId = localStorage.getItem('clinicId') || '11111111-1111-1111-1111-111111111111';
+                const response = await fetch(`/api/preop-assessments?clinic_id=${clinicId}`);
+                const assessments = await response.json();
+                
+                // Index by patient_id (keep most recent)
+                preopAssessments = {};
+                assessments.forEach(a => {
+                    if (!preopAssessments[a.patient_id] || new Date(a.assessed_at) > new Date(preopAssessments[a.patient_id].assessed_at)) {
+                        preopAssessments[a.patient_id] = a;
+                    }
+                });
+                
+                // Re-render table if patients already loaded
+                if (typeof patients !== 'undefined' && patients.length > 0) {
+                    renderPatientTable();
+                }
+            } catch (error) {
+                console.error('Error loading preop assessments:', error);
+            }
+        }
+        
+        // Get risk badge HTML for a patient
+        function getRiskBadge(patientId) {
+            const preop = preopAssessments[patientId];
+            if (!preop || !preop.risk_tier) {
+                return '<span class="risk-badge risk-none">—</span>';
+            }
+            const tier = preop.risk_tier.toLowerCase();
+            return `<span class="risk-badge risk-${tier}">${preop.risk_tier}</span>`;
+        }
+        
+        // Load preop info for patient detail modal
+        async function loadPatientPreopInfo(patientId) {
+            const preopDiv = document.getElementById('preopInfo');
+            const preopBtn = document.getElementById('preopActionBtn');
+            
+            try {
+                const response = await fetch(`/api/preop-postop-comparison/${patientId}`);
+                const data = await response.json();
+                
+                if (!data.hasPreop) {
+                    preopDiv.innerHTML = `<p style="color: #9ca3af;">No pre-op assessment on file.</p>`;
+                    preopBtn.href = `/preop-assessment.html?patient=${patientId}`;
+                    preopBtn.textContent = '+ Complete Pre-Op';
+                    preopBtn.style.display = 'inline-block';
+                    return;
+                }
+                
+                // Hide the button if preop exists, or change to "View/Edit"
+                preopBtn.href = `/preop-assessment.html?patient=${patientId}`;
+                preopBtn.textContent = 'New Assessment';
+                
+                const preop = data.preop;
+                let html = `
+                    <div class="preop-grid">
+                        <div class="preop-stat">
+                            <div><span class="risk-badge risk-${preop.riskTier.toLowerCase()}">${preop.riskTier}</span></div>
+                            <div class="preop-stat-label">Risk Tier</div>
+                        </div>
+                        <div class="preop-stat">
+                            <div class="preop-stat-value">${preop.jointScore}</div>
+                            <div class="preop-stat-label">${preop.jointScoreType === 'koos_jr' ? 'KOOS Jr' : 'HOOS Jr'}</div>
+                        </div>
+                        <div class="preop-stat">
+                            <div class="preop-stat-value" style="color: #22c55e;">${preop.projectedScore}</div>
+                            <div class="preop-stat-label">Projected</div>
+                        </div>
+                        <div class="preop-stat">
+                            <div class="preop-stat-value" style="color: #8b5cf6;">+${preop.expectedImprovement}</div>
+                            <div class="preop-stat-label">Expected Δ</div>
+                        </div>
+                    </div>
+                `;
+                
+                if (data.hasPostop) {
+                    const postop = data.postop;
+                    html += `
+                        <hr style="border-color: #374151; margin: 15px 0;">
+                        <div class="preop-grid">
+                            <div class="preop-stat">
+                                <div class="preop-stat-value">${postop.jointScore}</div>
+                                <div class="preop-stat-label">Actual Post-Op</div>
+                            </div>
+                            <div class="preop-stat">
+                                <div class="preop-stat-value" style="color: ${postop.actualImprovement >= 0 ? '#22c55e' : '#ef4444'};">
+                                    ${postop.actualImprovement >= 0 ? '+' : ''}${postop.actualImprovement}
+                                </div>
+                                <div class="preop-stat-label">Actual Δ</div>
+                            </div>
+                            <div class="preop-stat">
+                                <div class="preop-stat-value">${postop.achievedSCB ? '✅' : '❌'}</div>
+                                <div class="preop-stat-label">SCB Achieved</div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                preopDiv.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Error loading preop info:', error);
+                preopDiv.innerHTML = '<p style="color: #ef4444;">Error loading pre-op data</p>';
+            }
+        }
+        
+        // Store reference to original openPatientModal
+        const _originalOpenPatientModal = window.openPatientModal;
+        
+        // Override openPatientModal to also load preop info
+        window.openPatientModal = function(patientId) {
+            if (_originalOpenPatientModal) {
+                _originalOpenPatientModal(patientId);
+            }
+            loadPatientPreopInfo(patientId);
+        };
+        
+        // Store reference to original renderPatientRow
+        const _originalRenderPatientRow = window.renderPatientRow;
+        
+        // Override renderPatientRow to include risk column
+        window.renderPatientRow = function(patient) {
+            // If original function exists, we need to modify its output
+            // Since we can't easily modify, let's check if this function is called
+            // and inject risk data
+            
+            // Get base row (this won't work directly, so we'll use a different approach)
+            // We'll modify renderPatientTable instead via MutationObserver or post-processing
+        };
+        
+        // Modify the table after it's rendered to add risk column data
+        function addRiskColumnToTable() {
+            const rows = document.querySelectorAll('#patientTableBody tr[data-patient-id]');
+            rows.forEach(row => {
+                const patientId = row.getAttribute('data-patient-id');
+                if (patientId) {
+                    // Find or create risk cell (4th column)
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 4) {
+                        // Check if risk cell already has content
+                        const riskCell = cells[3];
+                        if (riskCell && !riskCell.querySelector('.risk-badge')) {
+                            riskCell.innerHTML = getRiskBadge(patientId);
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Watch for table changes and add risk badges
+        const tableObserver = new MutationObserver((mutations) => {
+            addRiskColumnToTable();
+        });
+        
+        // Start observing when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load preop assessments
+            loadPreopAssessments();
+            
+            // Start observing table for changes
+            const tableBody = document.getElementById('patientTableBody');
+            if (tableBody) {
+                tableObserver.observe(tableBody, { childList: true, subtree: true });
+            }
+        });
+    </script>
 </body>
 </html>

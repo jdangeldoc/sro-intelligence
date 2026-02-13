@@ -8,6 +8,7 @@ let patients = [];
 let surgeons = [];
 let currentPatient = null;
 let currentEpisode = null;
+let preopAssessments = {}; // Cache for preop assessments
 
 // RPM Timer State
 let rpmTimer = {
@@ -32,9 +33,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Load data
     await loadSurgeons();
+    await loadPreopAssessments();
     await loadStats();
     await loadPatients();
 });
+
+// ============ PREOP ASSESSMENTS ============
+async function loadPreopAssessments() {
+    try {
+        const response = await fetch(`/api/preop-assessments?clinic_id=${CLINIC_ID}`);
+        const assessments = await response.json();
+        
+        // Index by patient_id (keep most recent)
+        preopAssessments = {};
+        assessments.forEach(a => {
+            if (!preopAssessments[a.patient_id] || new Date(a.assessed_at) > new Date(preopAssessments[a.patient_id].assessed_at)) {
+                preopAssessments[a.patient_id] = a;
+            }
+        });
+    } catch (error) {
+        console.error('Error loading preop assessments:', error);
+    }
+}
+
+function getRiskBadge(patientId) {
+    const preop = preopAssessments[patientId];
+    if (!preop || !preop.risk_tier) {
+        return '<span class="risk-badge risk-none">—</span>';
+    }
+    const tier = preop.risk_tier.toLowerCase();
+    return `<span class="risk-badge risk-${tier}">${preop.risk_tier}</span>`;
+}
 
 // ============ DATA LOADING ============
 async function loadStats() {
@@ -90,7 +119,7 @@ async function loadPatients() {
     } catch (error) {
         console.error('Error loading patients:', error);
         document.getElementById('patientTableBody').innerHTML = 
-            '<tr><td colspan="9" class="error">Error loading patients</td></tr>';
+            '<tr><td colspan="10" class="error">Error loading patients</td></tr>';
     }
 }
 
@@ -113,7 +142,7 @@ function renderPatientTable() {
     });
     
     if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="empty">No patients found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="empty">No patients found</td></tr>';
         return;
     }
     
@@ -128,13 +157,14 @@ function renderPatientTable() {
             Math.floor((Date.now() - new Date(patient.surgery_date)) / (1000 * 60 * 60 * 24)) : '-';
         
         return `
-            <tr onclick="openPatientModal('${patient.id}')" class="clickable">
+            <tr onclick="openPatientModal('${patient.id}')" class="clickable" data-patient-id="${patient.id}">
                 <td>
                     <strong>${patient.last_name}, ${patient.first_name}</strong>
                     ${patient.mrn ? `<br><small class="text-muted">MRN: ${patient.mrn}</small>` : ''}
                 </td>
                 <td>${patient.surgery_type || '-'}</td>
                 <td>${daysPostOp}</td>
+                <td>${getRiskBadge(patient.id)}</td>
                 <td>${patient.surgeon_first_name ? `Dr. ${patient.surgeon_last_name}` : '-'}</td>
                 <td>${patient.last_checkin_date || 'Never'}</td>
                 <td>
@@ -196,6 +226,7 @@ async function openPatientModal(patientId) {
     renderSurgeryInfo();
     renderCheckinLink();
     await loadPatientCheckins(patientId);
+    await loadPatientPreopInfo(patientId);
 }
 
 function renderPatientInfo() {
@@ -246,6 +277,88 @@ async function loadPatientCheckins(patientId) {
         renderPainChart(checkins);
     } catch (error) {
         console.error('Error loading checkins:', error);
+    }
+}
+
+// Load preop info for patient detail modal
+async function loadPatientPreopInfo(patientId) {
+    const preopDiv = document.getElementById('preopInfo');
+    const preopBtn = document.getElementById('preopActionBtn');
+    
+    if (!preopDiv) return; // Element doesn't exist in HTML
+    
+    try {
+        const response = await fetch(`/api/preop-postop-comparison/${patientId}`);
+        const data = await response.json();
+        
+        if (!data.hasPreop) {
+            preopDiv.innerHTML = `<p style="color: #9ca3af;">No pre-op assessment on file.</p>`;
+            if (preopBtn) {
+                preopBtn.href = `/preop-assessment.html?patient=${patientId}`;
+                preopBtn.textContent = '+ Complete Pre-Op';
+                preopBtn.style.display = 'inline-block';
+            }
+            return;
+        }
+        
+        // Update button if preop exists
+        if (preopBtn) {
+            preopBtn.href = `/preop-assessment.html?patient=${patientId}`;
+            preopBtn.textContent = 'New Assessment';
+        }
+        
+        const preop = data.preop;
+        let html = `
+            <div class="preop-grid">
+                <div class="preop-stat">
+                    <div><span class="risk-badge risk-${preop.riskTier.toLowerCase()}">${preop.riskTier}</span></div>
+                    <div class="preop-stat-label">Risk Tier</div>
+                </div>
+                <div class="preop-stat">
+                    <div class="preop-stat-value">${preop.jointScore}</div>
+                    <div class="preop-stat-label">${preop.jointScoreType === 'koos_jr' ? 'KOOS Jr' : 'HOOS Jr'}</div>
+                </div>
+                <div class="preop-stat">
+                    <div class="preop-stat-value" style="color: #22c55e;">${preop.projectedScore}</div>
+                    <div class="preop-stat-label">Projected</div>
+                </div>
+                <div class="preop-stat">
+                    <div class="preop-stat-value" style="color: #8b5cf6;">+${preop.expectedImprovement}</div>
+                    <div class="preop-stat-label">Expected Δ</div>
+                </div>
+            </div>
+        `;
+        
+        if (data.hasPostop) {
+            const postop = data.postop;
+            html += `
+                <hr style="border-color: #374151; margin: 15px 0;">
+                <div class="preop-grid">
+                    <div class="preop-stat">
+                        <div class="preop-stat-value">${postop.jointScore}</div>
+                        <div class="preop-stat-label">Actual Post-Op</div>
+                    </div>
+                    <div class="preop-stat">
+                        <div class="preop-stat-value" style="color: ${postop.actualImprovement >= 0 ? '#22c55e' : '#ef4444'};">
+                            ${postop.actualImprovement >= 0 ? '+' : ''}${postop.actualImprovement}
+                        </div>
+                        <div class="preop-stat-label">Actual Δ</div>
+                    </div>
+                    <div class="preop-stat">
+                        <div class="preop-stat-value">${postop.achievedSCB ? '✅' : '❌'}</div>
+                        <div class="preop-stat-label">SCB Achieved</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        preopDiv.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error loading preop info:', error);
+        if (preopDiv) {
+            preopDiv.innerHTML = '<p style="color: #ef4444;">Error loading pre-op data</p>';
+        }
     }
 }
 
@@ -509,17 +622,21 @@ function closeRpmLogModal() {
 
 // ============ EXPORT ============
 function exportPatients() {
-    const headers = ['Patient Name', 'MRN', 'Surgery Type', 'Surgery Date', 'Surgeon', 'Last Check-in', 'Pain', 'PT Status'];
-    const rows = patients.map(p => [
-        `${p.last_name}, ${p.first_name}`,
-        p.mrn || '',
-        p.surgery_type || '',
-        p.surgery_date || '',
-        p.surgeon_first_name ? `Dr. ${p.surgeon_last_name}` : '',
-        p.last_checkin_date || '',
-        p.last_pain_level !== null ? p.last_pain_level : '',
-        p.last_pt_exercises === 1 ? 'Yes' : p.last_pt_exercises === 0 ? 'No' : ''
-    ]);
+    const headers = ['Patient Name', 'MRN', 'Surgery Type', 'Surgery Date', 'Risk Tier', 'Surgeon', 'Last Check-in', 'Pain', 'PT Status'];
+    const rows = patients.map(p => {
+        const preop = preopAssessments[p.id];
+        return [
+            `${p.last_name}, ${p.first_name}`,
+            p.mrn || '',
+            p.surgery_type || '',
+            p.surgery_date || '',
+            preop ? preop.risk_tier : '',
+            p.surgeon_first_name ? `Dr. ${p.surgeon_last_name}` : '',
+            p.last_checkin_date || '',
+            p.last_pain_level !== null ? p.last_pain_level : '',
+            p.last_pt_exercises === 1 ? 'Yes' : p.last_pt_exercises === 0 ? 'No' : ''
+        ];
+    });
     
     const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
     
