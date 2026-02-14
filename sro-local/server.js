@@ -164,6 +164,22 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
+  -- Adverse Events (ER visits, readmissions)
+  CREATE TABLE IF NOT EXISTS adverse_events (
+    id TEXT PRIMARY KEY,
+    patient_id TEXT REFERENCES patients(id),
+    episode_id TEXT REFERENCES episodes(id),
+    clinic_id TEXT REFERENCES clinics(id),
+    event_type TEXT NOT NULL,
+    event_date DATE,
+    reported_by TEXT DEFAULT 'patient',
+    facility TEXT,
+    reason TEXT,
+    notes TEXT,
+    resolved INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
   -- Create indexes
   CREATE INDEX IF NOT EXISTS idx_patients_clinic ON patients(clinic_id);
   CREATE INDEX IF NOT EXISTS idx_patients_token ON patients(token);
@@ -175,6 +191,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_rpm_logs_billing ON rpm_time_logs(clinic_id, user_id, billing_month);
   CREATE INDEX IF NOT EXISTS idx_preop_patient ON preop_assessments(patient_id);
   CREATE INDEX IF NOT EXISTS idx_preop_clinic ON preop_assessments(clinic_id);
+  CREATE INDEX IF NOT EXISTS idx_adverse_patient ON adverse_events(patient_id);
+  CREATE INDEX IF NOT EXISTS idx_adverse_episode ON adverse_events(episode_id);
 `);
 
 // Insert default clinic if none exists
@@ -338,6 +356,7 @@ app.put('/api/patients/:id', (req, res) => {
 
 app.delete('/api/patients/:id', (req, res) => {
   // Delete related records first
+  db.prepare('DELETE FROM adverse_events WHERE patient_id = ?').run(req.params.id);
   db.prepare('DELETE FROM checkins WHERE patient_id = ?').run(req.params.id);
   db.prepare('DELETE FROM pro_assessments WHERE patient_id = ?').run(req.params.id);
   db.prepare('DELETE FROM preop_assessments WHERE patient_id = ?').run(req.params.id);
@@ -382,6 +401,59 @@ app.get('/api/patient-by-token/:token', (req, res) => {
     surgery_type: patient.surgery_type,
     days_post_op: daysPostOp
   });
+});
+
+// --- Token-based Check-in (for patient-facing form - HIPAA safe, no PHI in request) ---
+app.post('/api/checkin', (req, res) => {
+  const { token, checkin_date, pain_level, pt_exercises, medication_taken, swelling, rom_flexion, rom_extension, concerns_flags, concerns_text, surgery_type, er_visit, er_facility, er_reason, readmitted, readmit_facility, readmit_reason } = req.body;
+  
+  if (!token) {
+    return res.status(400).json({ error: 'Token required' });
+  }
+  
+  const patient = db.prepare(`
+    SELECT p.id as patient_id, p.clinic_id, e.id as episode_id
+    FROM patients p
+    LEFT JOIN episodes e ON e.patient_id = p.id AND e.status = 'active'
+    WHERE p.token = ?
+  `).get(token);
+  
+  if (!patient) {
+    return res.status(404).json({ error: 'Invalid token' });
+  }
+  
+  const id = uuid();
+  const concerns = [concerns_flags, concerns_text].filter(Boolean).join(' | ');
+  
+  db.prepare(`
+    INSERT INTO checkins (id, patient_id, episode_id, clinic_id, checkin_type, checkin_date,
+                          pain_level, pt_exercises, medication_taken, swelling, concerns, notes)
+    VALUES (?, ?, ?, ?, 'daily', ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id, patient.patient_id, patient.episode_id, patient.clinic_id,
+    checkin_date, pain_level, pt_exercises ? 1 : 0, medication_taken ? 1 : 0,
+    swelling, concerns,
+    rom_flexion ? ('ROM: ' + rom_flexion + '/' + (rom_extension || 0)) : null
+  );
+  
+  // Log adverse events if reported
+  if (er_visit === 'yes') {
+    const aeId = uuid();
+    db.prepare(`
+      INSERT INTO adverse_events (id, patient_id, episode_id, clinic_id, event_type, event_date, reported_by, facility, reason)
+      VALUES (?, ?, ?, ?, 'er_visit', ?, 'patient', ?, ?)
+    `).run(aeId, patient.patient_id, patient.episode_id, patient.clinic_id, checkin_date, er_facility || '', er_reason || '');
+  }
+  
+  if (readmitted === 'yes') {
+    const aeId = uuid();
+    db.prepare(`
+      INSERT INTO adverse_events (id, patient_id, episode_id, clinic_id, event_type, event_date, reported_by, facility, reason)
+      VALUES (?, ?, ?, ?, 'readmission', ?, 'patient', ?, ?)
+    `).run(aeId, patient.patient_id, patient.episode_id, patient.clinic_id, checkin_date, readmit_facility || '', readmit_reason || '');
+  }
+  
+  res.json({ id, success: true });
 });
 
 // --- Episodes ---
@@ -597,6 +669,186 @@ app.get('/api/preop-postop-comparison/:patient_id', (req, res) => {
   res.json(result);
 });
 
+// --- Adverse Events (ER Visits, Readmissions) ---
+app.get('/api/adverse-events', (req, res) => {
+  const { patient_id, episode_id, clinic_id, event_type } = req.query;
+  let query = 'SELECT * FROM adverse_events WHERE 1=1';
+  const params = [];
+  
+  if (patient_id) { query += ' AND patient_id = ?'; params.push(patient_id); }
+  if (episode_id) { query += ' AND episode_id = ?'; params.push(episode_id); }
+  if (clinic_id) { query += ' AND clinic_id = ?'; params.push(clinic_id); }
+  if (event_type) { query += ' AND event_type = ?'; params.push(event_type); }
+  
+  query += ' ORDER BY event_date DESC, created_at DESC';
+  const events = db.prepare(query).all(...params);
+  res.json(events);
+});
+
+app.post('/api/adverse-events', (req, res) => {
+  const id = uuid();
+  const { patient_id, episode_id, clinic_id, event_type, event_date, reported_by, facility, reason, notes } = req.body;
+  
+  db.prepare(`
+    INSERT INTO adverse_events (id, patient_id, episode_id, clinic_id, event_type, event_date, reported_by, facility, reason, notes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, patient_id, episode_id, clinic_id, event_type, event_date, reported_by || 'patient', facility, reason, notes);
+  
+  res.json({ id, success: true });
+});
+
+app.put('/api/adverse-events/:id', (req, res) => {
+  const { resolved, notes } = req.body;
+  db.prepare('UPDATE adverse_events SET resolved = ?, notes = ? WHERE id = ?').run(resolved ? 1 : 0, notes, req.params.id);
+  res.json({ success: true });
+});
+
+// --- Token-based adverse event (from patient check-in) ---
+app.post('/api/adverse-event-by-token', (req, res) => {
+  const { token, event_type, event_date, facility, reason } = req.body;
+  
+  if (!token) return res.status(400).json({ error: 'Token required' });
+  
+  const patient = db.prepare(`
+    SELECT p.id as patient_id, p.clinic_id, e.id as episode_id
+    FROM patients p
+    LEFT JOIN episodes e ON e.patient_id = p.id AND e.status = 'active'
+    WHERE p.token = ?
+  `).get(token);
+  
+  if (!patient) return res.status(404).json({ error: 'Invalid token' });
+  
+  const id = uuid();
+  db.prepare(`
+    INSERT INTO adverse_events (id, patient_id, episode_id, clinic_id, event_type, event_date, reported_by, facility, reason)
+    VALUES (?, ?, ?, ?, ?, ?, 'patient', ?, ?)
+  `).run(id, patient.patient_id, patient.episode_id, patient.clinic_id, event_type, event_date, facility, reason);
+  
+  res.json({ id, success: true });
+});
+
+// --- Seed Demo Data ---
+app.post('/api/seed-demo', (req, res) => {
+  const clinicId = '11111111-1111-1111-1111-111111111111';
+  
+  // Get existing surgeons
+  const surgeons = db.prepare('SELECT id FROM users WHERE clinic_id = ? AND role = ?').all(clinicId, 'surgeon');
+  if (surgeons.length === 0) return res.status(400).json({ error: 'No surgeons found. Create surgeons first.' });
+  
+  const today = new Date();
+  const fmt = (d) => d.toISOString().split('T')[0];
+  const daysAgo = (n) => { const d = new Date(today); d.setDate(d.getDate() - n); return d; };
+  
+  const demoPatients = [
+    { first: 'Maria', last: 'Rodriguez', mrn: '10001', dob: '1958-03-15', surgery: 'TKA', daysAgoSurgery: 7, surgeonIdx: 0, phone: '555-201-0001', email: 'maria.r@email.com' },
+    { first: 'Robert', last: 'Thompson', mrn: '10002', dob: '1965-11-22', surgery: 'THA', daysAgoSurgery: 14, surgeonIdx: 1, phone: '555-201-0002', email: 'robert.t@email.com' },
+    { first: 'Patricia', last: 'Chen', mrn: '10003', dob: '1972-07-08', surgery: 'TKA', daysAgoSurgery: 21, surgeonIdx: 0, phone: '555-201-0003', email: 'patricia.c@email.com' },
+    { first: 'James', last: 'Williams', mrn: '10004', dob: '1955-01-30', surgery: 'Revision TKA', daysAgoSurgery: 3, surgeonIdx: 2, phone: '555-201-0004', email: 'james.w@email.com' },
+    { first: 'Linda', last: 'Davis', mrn: '10005', dob: '1960-09-12', surgery: 'THA', daysAgoSurgery: 30, surgeonIdx: 1, phone: '555-201-0005', email: 'linda.d@email.com' },
+    { first: 'Michael', last: 'Johnson', mrn: '10006', dob: '1968-05-25', surgery: 'TKA', daysAgoSurgery: 10, surgeonIdx: 2, phone: '555-201-0006', email: 'michael.j@email.com' }
+  ];
+  
+  const insertPatient = db.prepare('INSERT OR IGNORE INTO patients (id, clinic_id, first_name, last_name, date_of_birth, email, phone, mrn, token) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  const insertEpisode = db.prepare('INSERT OR IGNORE INTO episodes (id, patient_id, clinic_id, surgeon_id, surgery_type, surgery_date, status) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  const insertCheckin = db.prepare('INSERT OR IGNORE INTO checkins (id, patient_id, episode_id, clinic_id, checkin_type, checkin_date, pain_level, pt_exercises, medication_taken, swelling, concerns, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  const insertAdverse = db.prepare('INSERT OR IGNORE INTO adverse_events (id, patient_id, episode_id, clinic_id, event_type, event_date, reported_by, facility, reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  const insertPreop = db.prepare(`INSERT OR IGNORE INTO preop_assessments (id, patient_id, clinic_id, surgeon_id, procedure_type, planned_surgery_date, risk_tier, age, sex, bmi, asa_class, joint_score_type, joint_score_preop, projected_postop_score, expected_improvement, promis_physical_tscore, promis_mental_tscore) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  
+  const transaction = db.transaction(() => {
+    demoPatients.forEach((dp, idx) => {
+      const patientId = `demo-patient-${idx + 1}`;
+      const episodeId = `demo-episode-${idx + 1}`;
+      const token = `demo${String(idx + 1).padStart(4, '0')}seed`;
+      const surgeonId = surgeons[dp.surgeonIdx % surgeons.length].id;
+      const surgeryDate = fmt(daysAgo(dp.daysAgoSurgery));
+      
+      // Patient
+      insertPatient.run(patientId, clinicId, dp.first, dp.last, dp.dob, dp.email, dp.phone, dp.mrn, token);
+      
+      // Episode
+      insertEpisode.run(episodeId, patientId, clinicId, surgeonId, dp.surgery, surgeryDate, 'active');
+      
+      // PreOp assessment
+      const age = today.getFullYear() - parseInt(dp.dob.split('-')[0]);
+      const scoreType = dp.surgery.includes('TH') ? 'hoos_jr' : 'koos_jr';
+      const preScore = 45 + Math.floor(Math.random() * 20);
+      const riskTier = preScore < 50 ? 'HIGH' : preScore < 60 ? 'MODERATE' : 'LOW';
+      insertPreop.run(`demo-preop-${idx+1}`, patientId, clinicId, surgeonId, dp.surgery, surgeryDate, riskTier, age, idx%2===0?'F':'M', 25+Math.random()*10, idx<3?2:3, scoreType, preScore, preScore+18, 18, 35+Math.random()*15, 40+Math.random()*15);
+      
+      // Checkins — generate realistic daily data
+      const checkinDays = Math.min(dp.daysAgoSurgery, 14);
+      for (let d = 0; d < checkinDays; d++) {
+        // Skip some days for patients 3 and 4 (overdue/attention)
+        if (idx === 3 && d > 0 && d < 3) continue; // James: gap in check-ins
+        if (idx === 4 && d < 4) continue; // Linda: hasn't checked in recently
+        
+        const dayOffset = dp.daysAgoSurgery - d;
+        const checkinDate = fmt(daysAgo(dayOffset));
+        
+        // Pain decreases over time, higher for revisions
+        let basePain = dp.surgery.includes('Revision') ? 7 : 5;
+        let pain = Math.max(1, Math.min(10, basePain - Math.floor(d * 0.4) + Math.floor(Math.random() * 2)));
+        
+        // Patient 1 (Maria): good recovery
+        if (idx === 0) pain = Math.max(1, 5 - Math.floor(d * 0.5));
+        // Patient 3 (James): high pain, recent revision
+        if (idx === 3) pain = Math.min(10, 8 + Math.floor(Math.random() * 2));
+        // Patient 5 (Michael): moderate but trending up (bad sign)
+        if (idx === 5) pain = Math.min(10, 3 + Math.floor(d * 0.3) + Math.floor(Math.random() * 2));
+        
+        const ptDone = (idx === 3 || (idx === 5 && d > 5)) ? 0 : 1;
+        const medTaken = d < 2 && idx === 4 ? 0 : 1;
+        const swelling = pain >= 6 ? 'moderate' : pain >= 4 ? 'mild' : 'none';
+        const concerns = (idx === 3 && d === checkinDays - 1) ? 'Fever or chills' : '';
+        const rom = dp.surgery.includes('TK') ? `ROM: ${70 + d * 3}/${Math.max(0, 15 - d)}` : null;
+        
+        insertCheckin.run(
+          `demo-checkin-${idx+1}-${d}`, patientId, episodeId, clinicId,
+          'daily', checkinDate, pain, ptDone, medTaken, swelling, concerns, rom
+        );
+      }
+      
+      // Adverse events for specific patients
+      // Patient 4 (James): ER visit 2 days ago
+      if (idx === 3) {
+        insertAdverse.run(`demo-adverse-1`, patientId, episodeId, clinicId, 'er_visit', fmt(daysAgo(2)), 'patient', 'Baptist Medical Center', 'High pain and swelling, concern about infection');
+      }
+      // Patient 5 (Linda): readmission 5 days ago
+      if (idx === 4) {
+        insertAdverse.run(`demo-adverse-2`, patientId, episodeId, clinicId, 'readmission', fmt(daysAgo(5)), 'staff', 'University Hospital', 'Wound drainage, possible surgical site infection');
+      }
+    });
+  });
+  
+  try {
+    transaction();
+    res.json({ success: true, message: `Seeded ${demoPatients.length} demo patients with check-ins, preop assessments, and adverse events.` });
+  } catch (error) {
+    console.error('Seed error:', error);
+    res.json({ success: false, error: error.message });
+  }
+});
+
+// Clear demo data
+app.post('/api/clear-demo', (req, res) => {
+  const transaction = db.transaction(() => {
+    db.prepare("DELETE FROM adverse_events WHERE id LIKE 'demo-%'").run();
+    db.prepare("DELETE FROM checkins WHERE id LIKE 'demo-%'").run();
+    db.prepare("DELETE FROM pro_assessments WHERE id LIKE 'demo-%'").run();
+    db.prepare("DELETE FROM preop_assessments WHERE id LIKE 'demo-%'").run();
+    db.prepare("DELETE FROM rpm_time_logs WHERE patient_id LIKE 'demo-%'").run();
+    db.prepare("DELETE FROM episodes WHERE id LIKE 'demo-%'").run();
+    db.prepare("DELETE FROM patients WHERE id LIKE 'demo-%'").run();
+  });
+  
+  try {
+    transaction();
+    res.json({ success: true, message: 'Demo data cleared.' });
+  } catch (error) {
+    res.json({ success: false, error: error.message });
+  }
+});
+
 // --- RPM Time Logs ---
 app.get('/api/rpm-logs', (req, res) => {
   const { clinic_id, user_id, patient_id, billing_month } = req.query;
@@ -774,11 +1026,23 @@ app.get('/api/dashboard-stats', (req, res) => {
     AND (c.last_checkin IS NULL OR c.last_checkin < ?)
   `).get(clinic_id, sevenDaysAgo);
   
+  const erVisits = db.prepare(`
+    SELECT COUNT(*) as count FROM adverse_events
+    WHERE clinic_id = ? AND event_type = 'er_visit'
+  `).get(clinic_id);
+  
+  const readmissions = db.prepare(`
+    SELECT COUNT(*) as count FROM adverse_events
+    WHERE clinic_id = ? AND event_type = 'readmission'
+  `).get(clinic_id);
+  
   res.json({
     active_patients: activePatients.count,
     checked_in_today: checkedInToday.count,
     needs_attention: needsAttention.count,
-    overdue: overdue.count
+    overdue: overdue.count,
+    er_visits: erVisits.count,
+    readmissions: readmissions.count
   });
 });
 

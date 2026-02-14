@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PreOp Optimizer | SRO Intelligence</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f2937}
+.navbar{background:#1e293b;color:white;padding:10px 20px;display:flex;align-items:center;justify-content:space-between}
+.navbar h1{font-size:1.2rem;font-weight:700}
+.navbar a{color:#93c5fd;text-decoration:none;font-size:0.9rem;margin-left:16px}
+.navbar a:hover{color:white}
+.patient-header{background:white;border-bottom:2px solid #e5e7eb;padding:12px 20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.patient-header select,.patient-header input{padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem}
+.ph-label{font-size:0.8rem;color:#6b7280;margin-bottom:2px}
+.ph-group{display:flex;flex-direction:column}
+.tabs{display:flex;background:white;border-bottom:2px solid #e5e7eb;padding:0 20px}
+.tab-btn{padding:12px 20px;cursor:pointer;font-size:0.9rem;font-weight:600;color:#6b7280;border:none;background:none;border-bottom:3px solid transparent;transition:all 0.2s}
+.tab-btn:hover{color:#1e40af;background:#f0f4ff}
+.tab-btn.active{color:#1e40af;border-bottom-color:#2563eb}
+.tab-panel{display:none;padding:20px;max-width:1200px;margin:0 auto}
+.tab-panel.active{display:block}
+.card{background:white;border-radius:10px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.08)}
+.card h3{font-size:1rem;color:#1e40af;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #e5e7eb}
+
+/* FULL-SCREEN INTAKE */
+.fs-screen{display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:white;z-index:1000;flex-direction:column}
+.fs-screen.active{display:flex}
+.fs-top{flex-shrink:0;padding:10px 20px;display:flex;align-items:center;gap:16px;border-bottom:2px solid #e5e7eb}
+.fs-top .back-btn{padding:8px 16px;border:1px solid #d1d5db;background:white;border-radius:8px;cursor:pointer;font-size:1rem}
+.fs-bar-wrap{flex:1;height:10px;background:#e5e7eb;border-radius:5px;overflow:hidden}
+.fs-bar-fill{height:100%;background:#2563eb;border-radius:5px;transition:width 0.3s}
+.fs-top .section-tag{color:#2563eb;font-weight:600;font-size:0.9rem}
+.fs-qcount{font-size:0.85rem;color:#6b7280;white-space:nowrap}
+.fs-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;overflow-y:auto}
+.fs-question{font-size:2rem;font-weight:800;text-align:center;max-width:700px;margin-bottom:30px;line-height:1.3}
+.fs-options{display:flex;flex-direction:column;gap:10px;width:100%;max-width:480px}
+.fs-options.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:500px}
+.fs-options.grid2 .fs-opt{font-size:1rem;padding:14px 10px}
+.fs-opt{padding:16px 20px;border:2px solid #e5e7eb;border-radius:12px;font-size:1.15rem;font-weight:600;cursor:pointer;text-align:center;transition:all 0.15s;background:white}
+.fs-opt:hover{border-color:#2563eb;background:#eff6ff}
+.fs-opt.selected{border-color:#2563eb;background:#2563eb;color:white}
+.fs-slider-wrap{text-align:center;width:100%;max-width:400px}
+.fs-slider-val{font-size:3.5rem;font-weight:800;color:#2563eb}
+.fs-slider-unit{font-size:1rem;color:#6b7280}
+.fs-slider{width:100%;margin:16px 0;height:8px;-webkit-appearance:none;background:#e5e7eb;border-radius:4px;outline:none}
+.fs-slider::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:#2563eb;cursor:pointer}
+.fs-bottom{flex-shrink:0;padding:12px 20px;display:flex;justify-content:center;gap:12px;border-top:1px solid #e5e7eb}
+.fs-bottom button{padding:12px 32px;border-radius:10px;font-size:1.05rem;font-weight:600;cursor:pointer;border:2px solid #e5e7eb;background:white;color:#374151}
+.fs-bottom button.green{background:#16a34a;border-color:#16a34a;color:white}
+.fs-bottom button.green:hover{background:#15803d}
+
+/* COMORBIDITY TABLE */
+.comorb-table{width:100%;border-collapse:collapse}
+.comorb-table th{text-align:left;padding:8px 10px;font-size:0.8rem;color:#6b7280;border-bottom:2px solid #e5e7eb}
+.comorb-table td{padding:8px 10px;border-bottom:1px solid #f3f4f6;font-size:0.9rem}
+.comorb-table tr:hover{background:#f8fafc}
+.comorb-table .cat-row td{font-weight:700;color:#1e40af;background:#f0f4ff;padding-top:12px}
+.comorb-table input[type="checkbox"]{width:18px;height:18px;cursor:pointer}
+.score-bar{display:flex;align-items:center;gap:20px;padding:12px 16px;background:#f0f4ff;border-radius:8px;margin-bottom:16px;flex-wrap:wrap}
+.score-item{display:flex;align-items:center;gap:6px}
+.score-val{font-size:1.3rem;font-weight:800;color:#1e40af}
+.score-label{font-size:0.8rem;color:#6b7280}
+
+/* WORKUP */
+.workup-status{padding:12px 20px;border-radius:8px;font-size:1.1rem;font-weight:700;text-align:center;margin-bottom:16px}
+.workup-status.pending{background:#fef3c7;color:#92400e}
+.workup-status.cleared{background:#dcfce7;color:#166534}
+.workup-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px}
+.workup-item.done{background:#f0fdf4;border-color:#86efac}
+.wi-type{font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:4px;text-transform:uppercase}
+.wi-type.test{background:#dbeafe;color:#1e40af}
+.wi-type.consult{background:#fce7f3;color:#9d174d}
+.wi-name{font-weight:600;flex:1}
+.wi-comorb{font-size:0.8rem;color:#6b7280}
+.wi-check{width:22px;height:22px;cursor:pointer}
+
+/* DECISION */
+.dec-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.dec-card{background:white;border-radius:10px;padding:16px;text-align:center;border:2px solid #e5e7eb}
+.dec-val{font-size:2rem;font-weight:800}
+.dec-label{font-size:0.8rem;color:#6b7280;margin-top:4px}
+.dec-sub{font-size:0.7rem;color:#9ca3af}
+.risk-list .rl-item{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f3f4f6;font-size:0.9rem}
+.rec-box{padding:16px;border-radius:10px;margin-top:16px;text-align:center;font-size:1.1rem;font-weight:700}
+.rec-box.benefit{background:#dcfce7;color:#166534}
+.rec-box.maybe{background:#fef9c3;color:#854d0e}
+.alert-item{padding:8px 12px;margin-bottom:6px;border-radius:6px;font-size:0.9rem}
+.alert-item.warn{background:#fef3c7;color:#92400e}
+.alert-item.danger{background:#fee2e2;color:#991b1b}
+
+/* RESULTS */
+.results-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.rc{background:white;border-radius:10px;padding:14px;text-align:center;border:2px solid #e5e7eb}
+.rc .rv{font-size:1.8rem;font-weight:800}
+.rc .rl{font-size:0.75rem;color:#6b7280;margin-top:2px}
+
+/* SDOH */
+.sdoh-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sdoh-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid #e5e7eb;border-radius:6px}
+.sdoh-item label{font-size:0.85rem;cursor:pointer}
+
+.btn{padding:10px 20px;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;border:none}
+.btn-primary{background:#2563eb;color:white}
+.btn-primary:hover{background:#1d4ed8}
+.btn-success{background:#16a34a;color:white}
+.btn-outline{background:white;color:#374151;border:2px solid #d1d5db}
+
+@media(max-width:900px){.dec-grid{grid-template-columns:1fr 1fr}.results-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.dec-grid{grid-template-columns:1fr}.fs-question{font-size:1.4rem}}
+</style>
+</head>
+<body>
+
+<div class="navbar" id="clinicianNav">
+    <h1>PreOp Optimizer</h1>
+    <div>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="preop.html" style="color:white;font-weight:700;">PreOp</a>
+        <a href="analytics.html">Analytics</a>
+        <a href="rpm-report.html">RPM</a>
+        <a href="settings.html">Settings</a>
+    </div>
+</div>
+
+<div class="patient-header" id="patientHeader">
+    <div class="ph-group">
+        <div class="ph-label">Patient</div>
+        <select id="patientSelect" onchange="loadPatient()"><option value="">Select patient...</option></select>
+    </div>
+    <div class="ph-group">
+        <div class="ph-label">Procedure</div>
+        <select id="procSelect" onchange="onProcChange()"><option value="TKA">TKA - Total Knee</option><option value="THA">THA - Total Hip</option></select>
+    </div>
+    <div class="ph-group">
+        <div class="ph-label">Surgery Date</div>
+        <input type="date" id="surgDate">
+    </div>
+    <div class="ph-group">
+        <div class="ph-label">HCC Score</div>
+        <span id="hccTopVal" style="font-weight:700;font-size:1.1rem;color:#1e40af;">0.000</span>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:8px;">
+        <button class="btn btn-primary" onclick="launchPatientIntake()">Launch Patient Intake</button>
+        <button class="btn btn-outline" onclick="sendToPatient('checkin')" title="Copy check-in link">Send Check-in Link</button>
+        <button class="btn btn-outline" onclick="sendToPatient('preop')" title="Copy preop intake link">Send PreOp Link</button>
+    </div>
+</div>
+
+<div class="tabs" id="tabBar">
+    <button class="tab-btn active" onclick="switchTab(0)">1. Intake Results</button>
+    <button class="tab-btn" onclick="switchTab(1)">2. Comorbidities / HCC</button>
+    <button class="tab-btn" onclick="switchTab(2)">3. Workup Tracking</button>
+    <button class="tab-btn" onclick="switchTab(3)">4. Decision Tool</button>
+</div>
+
+<!-- TAB 0: INTAKE RESULTS -->
+<div class="tab-panel active" id="panel0">
+    <div class="card">
+        <h3>Patient Intake Questionnaire Results</h3>
+        <div id="intakeResults">
+            <p style="color:#6b7280;text-align:center;padding:30px;">No intake completed yet. Click "Launch Patient Intake" to start.</p>
+        </div>
+    </div>
+</div>
+
+<!-- TAB 1: COMORBIDITIES -->
+<div class="tab-panel" id="panel1">
+    <div class="score-bar">
+        <div class="score-item"><span class="score-label">HCC Score:</span><span class="score-val" id="hccScore">0.000</span></div>
+        <div class="score-item"><span class="score-label">Risk Modifier:</span><span class="score-val" id="riskMod">1.00x</span></div>
+        <div class="score-item"><span class="score-label">Est. Readmission:</span><span class="score-val" id="readmitPct">4.5%</span></div>
+    </div>
+    <div class="card"><h3>Comorbidities</h3><table class="comorb-table"><thead><tr><th style="width:40%">Condition</th><th>HCC Code</th><th>Weight</th><th>Present</th><th>Needs Workup</th></tr></thead><tbody id="comorbBody"></tbody></table></div>
+    <div class="card"><h3>Social Determinants of Health</h3><div class="sdoh-grid" id="sdohGrid"></div></div>
+    <div style="text-align:center;padding:16px;"><button class="btn btn-primary" onclick="generateWorkup()">Generate Workup &rarr;</button></div>
+</div>
+
+<!-- TAB 2: WORKUP -->
+<div class="tab-panel" id="panel2">
+    <div class="workup-status pending" id="workupStatus">&#9203; Select comorbidities first</div>
+    <div id="workupList"><p style="text-align:center;color:#6b7280;padding:40px;">Select comorbidities in Tab 2 and click "Generate Workup".</p></div>
+    <div style="text-align:center;padding:16px;">
+        <button class="btn btn-outline" onclick="checkClearance()">Check Clearance</button>
+        <button class="btn btn-primary" onclick="switchTab(3)" style="margin-left:8px;">Decision Tool &rarr;</button>
+    </div>
+</div>
+
+<!-- TAB 3: DECISION TOOL -->
+<div class="tab-panel" id="panel3">
+    <div class="dec-grid">
+        <div class="dec-card" style="border-color:#3b82f6"><div class="dec-val" style="color:#1e40af" id="dPreop">--</div><div class="dec-label">Current Score</div><div class="dec-sub" id="dMeasure">KOOS-JR</div></div>
+        <div class="dec-card" style="border-color:#22c55e"><div class="dec-val" style="color:#16a34a" id="dPostop">--</div><div class="dec-label">Predicted Post-Op</div><div class="dec-sub">Average outcome</div></div>
+        <div class="dec-card" style="border-color:#f59e0b"><div class="dec-val" style="color:#d97706" id="dImprove">--</div><div class="dec-label">Expected Improvement</div><div class="dec-sub" id="dRange"></div></div>
+        <div class="dec-card" id="dReadCard"><div class="dec-val" id="dReadmit">4.5%</div><div class="dec-label">90-Day Readmission</div><div class="dec-sub">Avg: 4.5%</div></div>
+    </div>
+    <div class="card"><h3>Risk Factor Impact</h3><div class="risk-list" id="riskFactorList"><p style="color:#6b7280">Select comorbidities to see impact.</p></div></div>
+    <div id="recBox" class="rec-box benefit" style="display:none;"></div>
+    <div class="card"><h3>Alerts</h3><div id="alertList"><p style="color:#6b7280">Complete intake for alerts.</p></div></div>
+    <div style="text-align:center;padding:16px;">
+        <button class="btn btn-success" onclick="saveAssessment()">Save Assessment</button>
+        <button class="btn btn-outline" style="margin-left:8px;" onclick="printSummary()">Print Summary</button>
+    </div>
+</div>
+
+<!-- FULL-SCREEN PATIENT INTAKE OVERLAY -->
+<div class="fs-screen" id="fsIntake">
+    <div class="fs-top">
+        <button class="back-btn" onclick="fsBack()">&larr; Back</button>
+        <span class="section-tag" id="fsSection">About You</span>
+        <div class="fs-bar-wrap"><div class="fs-bar-fill" id="fsBar" style="width:0%"></div></div>
+        <span class="fs-qcount" id="fsCount">Question 1 of 35</span>
+    </div>
+    <div class="fs-body" id="fsBody"></div>
+    <div class="fs-bottom" id="fsNav">
+        <button onclick="fsBack()">&larr; Back</button>
+        <button class="green" onclick="fsNext()">Next &rarr;</button>
+    </div>
+</div>
+
+<script>
+// HCC LIBRARY
+var HCC_LIB = {
+"comorbidities":{
+"diabetes_controlled":{"display_name":"Diabetes (Controlled, A1c < 8)","hcc_code":"HCC 37","hcc_weight":0.105,"category":"metabolic","workup_required":{"tests":["HbA1c","BMP"],"consults":[],"clearance_criteria":"A1c < 8.0, glucose controlled"},"surgical_risk_modifier":1.1,"outcome_impact":{"koos_reduction":3,"hoos_reduction":3,"readmission_increase":0.02}},
+"diabetes_uncontrolled":{"display_name":"Diabetes (Uncontrolled, A1c >= 8)","hcc_code":"HCC 36","hcc_weight":0.302,"category":"metabolic","workup_required":{"tests":["HbA1c","BMP","Fructosamine"],"consults":["Endocrinology"],"clearance_criteria":"A1c < 8.0 or Endocrine clearance"},"surgical_risk_modifier":1.4,"outcome_impact":{"koos_reduction":8,"hoos_reduction":8,"readmission_increase":0.05}},
+"chf":{"display_name":"Congestive Heart Failure","hcc_code":"HCC 85","hcc_weight":0.323,"category":"cardiac","workup_required":{"tests":["BNP","Echocardiogram","EKG"],"consults":["Cardiology"],"clearance_criteria":"EF > 40%, optimized on meds"},"surgical_risk_modifier":1.6,"outcome_impact":{"koos_reduction":5,"hoos_reduction":5,"readmission_increase":0.08}},
+"copd":{"display_name":"COPD / Chronic Lung Disease","hcc_code":"HCC 111","hcc_weight":0.335,"category":"pulmonary","workup_required":{"tests":["PFTs","Chest X-ray"],"consults":["Pulmonology if FEV1 < 50%"],"clearance_criteria":"FEV1 > 50% or Pulmonology clearance"},"surgical_risk_modifier":1.4,"outcome_impact":{"koos_reduction":4,"hoos_reduction":4,"readmission_increase":0.04}},
+"ckd_stage_3":{"display_name":"CKD Stage 3 (GFR 30-59)","hcc_code":"HCC 138","hcc_weight":0.069,"category":"renal","workup_required":{"tests":["BMP","GFR","Urinalysis"],"consults":[],"clearance_criteria":"Stable GFR, electrolytes normal"},"surgical_risk_modifier":1.2,"outcome_impact":{"koos_reduction":2,"hoos_reduction":2,"readmission_increase":0.02}},
+"ckd_stage_4":{"display_name":"CKD Stage 4 (GFR 15-29)","hcc_code":"HCC 137","hcc_weight":0.289,"category":"renal","workup_required":{"tests":["BMP","GFR","CBC","Phosphorus","PTH"],"consults":["Nephrology"],"clearance_criteria":"Nephrology clearance"},"surgical_risk_modifier":1.5,"outcome_impact":{"koos_reduction":6,"hoos_reduction":6,"readmission_increase":0.06}},
+"obesity_class_2":{"display_name":"Obesity Class II (BMI 35-39.9)","hcc_code":"HCC 48","hcc_weight":0.250,"category":"metabolic","workup_required":{"tests":["BMI","Fasting glucose","Lipid panel"],"consults":["Nutrition if BMI > 40"],"clearance_criteria":"Document BMI, assess for OSA"},"surgical_risk_modifier":1.3,"outcome_impact":{"koos_reduction":4,"hoos_reduction":4,"readmission_increase":0.03}},
+"obesity_class_3":{"display_name":"Obesity Class III / Morbid (BMI >= 40)","hcc_code":"HCC 48","hcc_weight":0.250,"category":"metabolic","workup_required":{"tests":["BMI","Fasting glucose","Lipid panel","HbA1c"],"consults":["Nutrition","Bariatric if BMI > 45"],"clearance_criteria":"BMI < 45 or bariatric clearance"},"surgical_risk_modifier":1.6,"outcome_impact":{"koos_reduction":7,"hoos_reduction":7,"readmission_increase":0.05}},
+"cad":{"display_name":"Coronary Artery Disease","hcc_code":"HCC 88","hcc_weight":0.140,"category":"cardiac","workup_required":{"tests":["EKG","Stress test if >2yr"],"consults":["Cardiology if active symptoms"],"clearance_criteria":"No active angina, stable on meds"},"surgical_risk_modifier":1.4,"outcome_impact":{"koos_reduction":3,"hoos_reduction":3,"readmission_increase":0.04}},
+"atrial_fibrillation":{"display_name":"Atrial Fibrillation","hcc_code":"HCC 96","hcc_weight":0.271,"category":"cardiac","workup_required":{"tests":["EKG","INR if warfarin","Echo"],"consults":["Cardiology for bridging"],"clearance_criteria":"Rate controlled, bridging plan"},"surgical_risk_modifier":1.3,"outcome_impact":{"koos_reduction":2,"hoos_reduction":2,"readmission_increase":0.03}},
+"sleep_apnea":{"display_name":"Obstructive Sleep Apnea","hcc_code":"HCC 108","hcc_weight":0.180,"category":"pulmonary","workup_required":{"tests":["Sleep study if needed"],"consults":["Sleep medicine if uncontrolled"],"clearance_criteria":"CPAP compliant >4hrs/night"},"surgical_risk_modifier":1.3,"outcome_impact":{"koos_reduction":3,"hoos_reduction":3,"readmission_increase":0.03}},
+"depression":{"display_name":"Major Depression","hcc_code":"HCC 155","hcc_weight":0.309,"category":"psychiatric","workup_required":{"tests":["PHQ-9"],"consults":["Psychiatry if severe"],"clearance_criteria":"Stable on treatment, PHQ-9 < 15"},"surgical_risk_modifier":1.2,"outcome_impact":{"koos_reduction":5,"hoos_reduction":5,"readmission_increase":0.03}},
+"malnutrition":{"display_name":"Protein-Calorie Malnutrition","hcc_code":"HCC 21","hcc_weight":0.250,"category":"metabolic","workup_required":{"tests":["Albumin","Prealbumin","Transferrin"],"consults":["Nutrition"],"clearance_criteria":"Albumin > 3.5, Prealbumin > 15"},"surgical_risk_modifier":1.6,"outcome_impact":{"koos_reduction":7,"hoos_reduction":7,"readmission_increase":0.06}},
+"smoking_current":{"display_name":"Current Smoker","hcc_code":null,"hcc_weight":0.100,"category":"lifestyle","workup_required":{"tests":["Cotinine if cessation claimed"],"consults":["Smoking cessation"],"clearance_criteria":"Quit > 4 weeks or counseling documented"},"surgical_risk_modifier":1.4,"outcome_impact":{"koos_reduction":5,"hoos_reduction":5,"readmission_increase":0.04}},
+"opioid_chronic":{"display_name":"Chronic Opioid Use (> 3 months)","hcc_code":"HCC 135","hcc_weight":0.309,"category":"pain_management","workup_required":{"tests":["Urine drug screen","PDMP check","MME calc"],"consults":["Pain management if MME > 90"],"clearance_criteria":"Pain management plan documented"},"surgical_risk_modifier":1.3,"outcome_impact":{"koos_reduction":10,"hoos_reduction":10,"readmission_increase":0.04}},
+"anticoagulation":{"display_name":"On Anticoagulation","hcc_code":null,"hcc_weight":0.050,"category":"hematologic","workup_required":{"tests":["INR if warfarin","Renal function","CBC"],"consults":["Prescribing MD for bridging"],"clearance_criteria":"Bridging plan documented"},"surgical_risk_modifier":1.2,"outcome_impact":{"koos_reduction":1,"hoos_reduction":1,"readmission_increase":0.02}},
+"anemia":{"display_name":"Anemia","hcc_code":"HCC 48","hcc_weight":0.190,"category":"hematologic","workup_required":{"tests":["CBC","Iron studies","Retic count","B12/Folate"],"consults":["Hematology if Hgb < 10"],"clearance_criteria":"Hgb > 10 or Hematology clearance"},"surgical_risk_modifier":1.3,"outcome_impact":{"koos_reduction":3,"hoos_reduction":3,"readmission_increase":0.03}},
+"liver_disease":{"display_name":"Chronic Liver Disease","hcc_code":"HCC 28","hcc_weight":0.390,"category":"hepatic","workup_required":{"tests":["LFTs","Albumin","INR","Platelets","MELD"],"consults":["Hepatology"],"clearance_criteria":"MELD < 10 or Hepatology clearance"},"surgical_risk_modifier":1.8,"outcome_impact":{"koos_reduction":8,"hoos_reduction":8,"readmission_increase":0.08}},
+"pvd":{"display_name":"Peripheral Vascular Disease","hcc_code":"HCC 108","hcc_weight":0.288,"category":"vascular","workup_required":{"tests":["ABI","Arterial duplex if symptomatic"],"consults":["Vascular if ABI < 0.7"],"clearance_criteria":"ABI > 0.7 or Vascular clearance"},"surgical_risk_modifier":1.4,"outcome_impact":{"koos_reduction":4,"hoos_reduction":4,"readmission_increase":0.04}}
+},
+"social_determinants":{
+"transportation":{"display_name":"Transportation Barrier"},
+"housing":{"display_name":"Housing Instability"},
+"caregiver":{"display_name":"No Caregiver Support"},
+"health_literacy":{"display_name":"Low Health Literacy"},
+"food_insecurity":{"display_name":"Food Insecurity"}
+},
+"cms_proms_deltas":{
+"TKA":{"measure":"KOOS-JR","expected_improvement_mean":20,"expected_improvement_range":[15,28],"mcid":8,"scb":16},
+"THA":{"measure":"HOOS-JR","expected_improvement_mean":23,"expected_improvement_range":[18,30],"mcid":8,"scb":18}
+}
+};
+
+// QUESTIONS
+function buildQuestions(joint) {
+    var qs = [];
+    qs.push({id:"age",section:"About You",text:"How old is the patient?",type:"slider",min:40,max:100,def:65,unit:"years old"});
+    qs.push({id:"gender",section:"About You",text:"Patient gender?",type:"choice",options:["Male","Female"]});
+    qs.push({id:"surgery",section:"About You",text:"Which surgery?",type:"choice",options:["KNEE Replacement","HIP Replacement"],triggers_joint:true});
+    qs.push({id:"height_ft",section:"About You",text:"Height (feet)?",type:"choice",options:["4 feet","5 feet","6 feet","7 feet"]});
+    qs.push({id:"height_in",section:"About You",text:"Height (inches)?",type:"choice",options:["0 in","1 in","2 in","3 in","4 in","5 in","6 in","7 in","8 in","9 in","10 in","11 in"]});
+    qs.push({id:"weight",section:"About You",text:"Patient weight?",type:"slider",min:100,max:350,def:180,unit:"pounds"});
+    qs.push({id:"diabetes",section:"Medical History",text:"Does patient have DIABETES?",type:"choice",options:["No","Yes - diet only","Yes - pills","Yes - insulin"]});
+    qs.push({id:"cardiac",section:"Medical History",text:"HEART problems?",type:"choice",options:["No","Yes"]});
+    qs.push({id:"ckd",section:"Medical History",text:"KIDNEY disease?",type:"choice",options:["No","Yes"]});
+    qs.push({id:"smoker",section:"Medical History",text:"Smoking status?",type:"choice",options:["Never smoked","Quit >1 year ago","Quit recently","Current smoker"]});
+    qs.push({id:"health_overall",section:"Medical History",text:"Overall health?",type:"choice",options:["Very healthy","Some problems","Serious problems"]});
+    if (joint==="knee") {
+        var jqs=[["koos_1","How often does the KNEE bother you?","freq"],["koos_2","Changed activities because of knee?","amount"],["koos_3","TWISTING or PIVOTING difficulty?","diff"],["koos_4","STRAIGHTENING knee difficulty?","diff"],["koos_5","UP/DOWN STAIRS difficulty?","diff"],["koos_6","STANDING difficulty?","diff"],["koos_7","GETTING UP from chair difficulty?","diff"]];
+        for(var i=0;i<jqs.length;i++){
+            var o;
+            if(jqs[i][2]==="freq")o=["Never","Monthly","Weekly","Daily","Always"];
+            else if(jqs[i][2]==="amount")o=["Not at all","A little","Somewhat","A lot","Totally"];
+            else o=["No problem","A little hard","Somewhat hard","Very hard","Extremely hard"];
+            qs.push({id:jqs[i][0],section:"Knee Function (KOOS-JR)",text:jqs[i][1],type:"choice",options:o,scoring:[4,3,2,1,0]});
+        }
+    } else {
+        var hqs=[["hoos_1","Going DOWN STAIRS difficulty?","diff"],["hoos_2","GET IN/OUT of car difficulty?","diff"],["hoos_3","WALKING on flat ground?","diff"],["hoos_4","PUT ON socks/shoes?","diff"],["hoos_5","GETTING UP from chair?","diff"],["hoos_6","Morning hip STIFFNESS?","sev"]];
+        for(var i=0;i<hqs.length;i++){
+            var o;
+            if(hqs[i][2]==="sev")o=["None","Mild","Moderate","Severe","Extreme"];
+            else o=["No problem","A little hard","Somewhat hard","Very hard","Extremely hard"];
+            qs.push({id:hqs[i][0],section:"Hip Function (HOOS-JR)",text:hqs[i][1],type:"choice",options:o,scoring:[4,3,2,1,0]});
+        }
+    }
+    var pqs=[["promis_1","General HEALTH?"],["promis_2","QUALITY OF LIFE?"],["promis_3","PHYSICAL health?"],["promis_4","MENTAL health?"],["promis_5","SOCIAL life satisfaction?"]];
+    for(var i=0;i<pqs.length;i++)qs.push({id:pqs[i][0],section:"General Health (PROMIS)",text:pqs[i][1],type:"choice",options:["Excellent","Very Good","Good","Fair","Poor"],scoring:[5,4,3,2,1]});
+    qs.push({id:"promis_6",section:"General Health (PROMIS)",text:"Can do DAILY activities?",type:"choice",options:["Completely","Mostly","Somewhat","A little","Not at all"],scoring:[5,4,3,2,1]});
+    qs.push({id:"promis_7",section:"General Health (PROMIS)",text:"Average PAIN level?",type:"choice",options:["No pain","Mild","Moderate","Severe","Worst pain"],scoring:[5,4,3,2,1]});
+    qs.push({id:"promis_8",section:"General Health (PROMIS)",text:"FATIGUE level?",type:"choice",options:["Not tired","A little","Somewhat","Very tired","Exhausted"],scoring:[5,4,3,2,1]});
+    qs.push({id:"promis_9",section:"General Health (PROMIS)",text:"Feel ANXIOUS or SAD?",type:"choice",options:["Never","Rarely","Sometimes","Often","Always"],scoring:[5,4,3,2,1]});
+    qs.push({id:"promis_10",section:"General Health (PROMIS)",text:"Can do usual WORK/FAMILY activities?",type:"choice",options:["Completely","Mostly","Somewhat","A little","Not at all"],scoring:[5,4,3,2,1]});
+    qs.push({id:"phq_1",section:"Mood Screening",text:"Past 2 weeks: felt DOWN or HOPELESS?",type:"choice",options:["Not at all","Several days","More than half","Nearly every day"],scoring:[0,1,2,3]});
+    qs.push({id:"phq_2",section:"Mood Screening",text:"Past 2 weeks: LITTLE INTEREST in things?",type:"choice",options:["Not at all","Several days","More than half","Nearly every day"],scoring:[0,1,2,3]});
+    qs.push({id:"gad_1",section:"Mood Screening",text:"Past 2 weeks: felt NERVOUS or ANXIOUS?",type:"choice",options:["Not at all","Several days","More than half","Nearly every day"],scoring:[0,1,2,3]});
+    qs.push({id:"gad_2",section:"Mood Screening",text:"Past 2 weeks: can't STOP WORRYING?",type:"choice",options:["Not at all","Several days","More than half","Nearly every day"],scoring:[0,1,2,3]});
+    qs.push({id:"opioid",section:"Pain Medicine",text:"Takes OPIOID pain medicine?",type:"choice",options:["No","Yes - less than 3 months","Yes - more than 3 months"]});
+    qs.push({id:"living",section:"Home Situation",text:"Living situation?",type:"choice",options:["Lives ALONE","With spouse/partner","With family","Nursing home"]});
+    qs.push({id:"help",section:"Home Situation",text:"Help at home for 2 weeks after surgery?",type:"choice",options:["Yes","No","Not sure"]});
+    qs.push({id:"transport",section:"Home Situation",text:"Transportation to follow-up?",type:"choice",options:["Yes, has a ride","Needs help","Not sure"]});
+    return qs;
+}
+
+// STATE
+var intakeResponses = {};
+var intakeQuestions = buildQuestions("knee");
+var intakeIdx = 0;
+var intakeJoint = "knee";
+var comorbChecked = {};
+var sdohChecked = {};
+var workupItems = [];
+
+// TAB SWITCHING
+function switchTab(n) {
+    var btns = document.querySelectorAll('.tab-btn');
+    var panels = document.querySelectorAll('.tab-panel');
+    for(var i=0;i<btns.length;i++){btns[i].classList.remove('active');panels[i].classList.remove('active');}
+    btns[n].classList.add('active');panels[n].classList.add('active');
+    if(n===3) updateDecisionTool();
+}
+
+function onProcChange() {
+    intakeJoint = document.getElementById('procSelect').value === 'THA' ? 'hip' : 'knee';
+    intakeQuestions = buildQuestions(intakeJoint);
+    updateDecisionTool();
+}
+
+// FULL-SCREEN INTAKE
+function launchPatientIntake() {
+    intakeResponses = {};
+    intakeIdx = 0;
+    intakeJoint = document.getElementById('procSelect').value === 'THA' ? 'hip' : 'knee';
+    intakeQuestions = buildQuestions(intakeJoint);
+    document.getElementById('fsIntake').classList.add('active');
+    showFsQuestion(0);
+}
+
+function showFsQuestion(idx) {
+    if (idx < 0) idx = 0;
+    if (idx >= intakeQuestions.length) { finishIntake(); return; }
+    intakeIdx = idx;
+    var q = intakeQuestions[idx];
+    var pct = ((idx) / intakeQuestions.length * 100).toFixed(0);
+    document.getElementById('fsBar').style.width = pct + '%';
+    document.getElementById('fsSection').textContent = q.section;
+    document.getElementById('fsCount').textContent = 'Question ' + (idx+1) + ' of ' + intakeQuestions.length;
+    var body = document.getElementById('fsBody');
+    var html = '<div class="fs-question">' + q.text + '</div>';
+    if (q.type === 'slider') {
+        var val = intakeResponses[q.id] ? intakeResponses[q.id].answer : q.def;
+        html += '<div class="fs-slider-wrap"><div class="fs-slider-val" id="fsSliderVal">' + val + '</div><div class="fs-slider-unit">' + q.unit + '</div><input type="range" class="fs-slider" min="' + q.min + '" max="' + q.max + '" value="' + val + '" oninput="document.getElementById(\'fsSliderVal\').textContent=this.value"></div>';
+    } else {
+        var gridClass = q.options.length > 6 ? ' grid2' : '';
+        html += '<div class="fs-options' + gridClass + '">';
+        var prev = intakeResponses[q.id] ? intakeResponses[q.id].answer : null;
+        for (var i = 0; i < q.options.length; i++) {
+            var sel = (prev === q.options[i]) ? ' selected' : '';
+            html += '<div class="fs-opt' + sel + '" onclick="fsSelectOpt(this,' + i + ')">' + q.options[i] + '</div>';
+        }
+        html += '</div>';
+    }
+    body.innerHTML = html;
+}
+
+function fsSelectOpt(el, optIdx) {
+    var opts = el.parentNode.querySelectorAll('.fs-opt');
+    for(var i=0;i<opts.length;i++) opts[i].classList.remove('selected');
+    el.classList.add('selected');
+    var q = intakeQuestions[intakeIdx];
+    intakeResponses[q.id] = { answer: q.options[optIdx], score: q.scoring ? q.scoring[optIdx] : null, optIndex: optIdx };
+    if (q.triggers_joint) {
+        intakeJoint = q.options[optIdx].indexOf('HIP') >= 0 ? 'hip' : 'knee';
+        intakeQuestions = buildQuestions(intakeJoint);
+    }
+    setTimeout(function(){ fsNext(); }, 400);
+}
+
+function fsNext() {
+    var q = intakeQuestions[intakeIdx];
+    if (q.type === 'slider') {
+        var slider = document.querySelector('.fs-slider');
+        if (slider) intakeResponses[q.id] = { answer: parseInt(slider.value), score: null };
+    }
+    if (!intakeResponses[q.id]) return;
+    showFsQuestion(intakeIdx + 1);
+}
+
+function fsBack() {
+    if (intakeIdx === 0) { document.getElementById('fsIntake').classList.remove('active'); return; }
+    showFsQuestion(intakeIdx - 1);
+}
+
+// FINISH INTAKE
+function finishIntake() {
+    document.getElementById('fsIntake').classList.remove('active');
+    var scores = calculateScores();
+    displayIntakeResults(scores);
+    autoPopulateComorbidities();
+    switchTab(0);
+}
+
+function calculateScores() {
+    var jointKeys = Object.keys(intakeResponses).filter(function(k){return k.startsWith('koos_')||k.startsWith('hoos_');});
+    var jointScores = jointKeys.map(function(k){return intakeResponses[k].score;}).filter(function(s){return s!==null;});
+    var jointName = intakeJoint==='knee' ? 'KOOS-JR' : 'HOOS-JR';
+    var maxScore = intakeJoint==='knee' ? 28 : 24;
+    var jointPct = jointScores.length ? (jointScores.reduce(function(a,b){return a+b;},0) / maxScore * 100) : 50;
+    var promisScores = [];
+    for(var i=1;i<=10;i++){var r=intakeResponses['promis_'+i];promisScores.push(r?r.score:3);}
+    var gph = 30 + promisScores.slice(0,6).reduce(function(a,b){return a+b;},0) * 1.5;
+    var gmh = 30 + promisScores.slice(6).reduce(function(a,b){return a+b;},0) * 2;
+    var phq = (intakeResponses.phq_1?intakeResponses.phq_1.score:0) + (intakeResponses.phq_2?intakeResponses.phq_2.score:0);
+    var gad = (intakeResponses.gad_1?intakeResponses.gad_1.score:0) + (intakeResponses.gad_2?intakeResponses.gad_2.score:0);
+    var bmi = 28;
+    try { var hf=parseInt((intakeResponses.height_ft||{answer:"5 feet"}).answer); var hi=parseInt((intakeResponses.height_in||{answer:"6 in"}).answer); var wt=(intakeResponses.weight||{answer:180}).answer; bmi=(wt/Math.pow(hf*12+hi,2))*703; } catch(e){}
+    var alerts = [];
+    if(phq>=3) alerts.push({text:"Depression screen positive (PHQ-2: "+phq+")",level:"danger"});
+    if(gad>=3) alerts.push({text:"Anxiety screen positive (GAD-2: "+gad+")",level:"warn"});
+    var opioid = (intakeResponses.opioid||{}).answer||"";
+    if(opioid.indexOf("more than 3")>=0) alerts.push({text:"Chronic opioid use (>3 months)",level:"danger"});
+    var living = (intakeResponses.living||{}).answer||"";
+    var help = (intakeResponses.help||{}).answer||"";
+    if(living.indexOf("ALONE")>=0 && help!=="Yes") alerts.push({text:"Lives alone - may need help after surgery",level:"warn"});
+    var smoker = (intakeResponses.smoker||{}).answer||"";
+    if(smoker.indexOf("Current")>=0) alerts.push({text:"Current smoker - higher surgical risk",level:"danger"});
+    if(bmi>=40) alerts.push({text:"BMI "+bmi.toFixed(1)+" - morbid obesity risk",level:"danger"});
+    else if(bmi>=35) alerts.push({text:"BMI "+bmi.toFixed(1)+" - obesity Class II",level:"warn"});
+    return {jointName:jointName,jointPct:Math.round(jointPct),gph:Math.min(Math.max(gph,20),80),gmh:Math.min(Math.max(gmh,20),80),phq:phq,gad:gad,bmi:bmi,alerts:alerts};
+}
+
+function displayIntakeResults(s) {
+    var html = '<div class="results-grid">' +
+        '<div class="rc"><div class="rv" style="color:#1e40af">' + s.jointPct + '</div><div class="rl">' + s.jointName + ' Score</div></div>' +
+        '<div class="rc"><div class="rv" style="color:#7c3aed">' + s.gph.toFixed(0) + '</div><div class="rl">PROMIS Physical</div></div>' +
+        '<div class="rc"><div class="rv" style="color:#0891b2">' + s.gmh.toFixed(0) + '</div><div class="rl">PROMIS Mental</div></div>' +
+        '<div class="rc"><div class="rv" style="color:' + (s.phq>=3?'#dc2626':'#16a34a') + '">' + s.phq + '</div><div class="rl">PHQ-2' + (s.phq>=3?' (Positive)':'') + '</div></div>' +
+        '<div class="rc"><div class="rv" style="color:' + (s.gad>=3?'#dc2626':'#16a34a') + '">' + s.gad + '</div><div class="rl">GAD-2' + (s.gad>=3?' (Positive)':'') + '</div></div>' +
+        '<div class="rc"><div class="rv" style="color:' + (s.bmi>=40?'#dc2626':s.bmi>=35?'#d97706':'#16a34a') + '">' + s.bmi.toFixed(1) + '</div><div class="rl">BMI</div></div>' +
+        '</div>';
+    if (s.alerts.length) {
+        html += '<div class="card"><h3>Alerts</h3>';
+        for(var i=0;i<s.alerts.length;i++) html += '<div class="alert-item ' + s.alerts[i].level + '">' + s.alerts[i].text + '</div>';
+        html += '</div>';
+    }
+    html += '<div class="card"><h3>All Responses</h3><table style="width:100%;border-collapse:collapse;font-size:0.85rem;">';
+    for(var k in intakeResponses) html += '<tr><td style="padding:4px 8px;border-bottom:1px solid #f3f4f6;color:#6b7280;">' + k + '</td><td style="padding:4px 8px;border-bottom:1px solid #f3f4f6;font-weight:600;">' + intakeResponses[k].answer + '</td></tr>';
+    html += '</table></div>';
+    document.getElementById('intakeResults').innerHTML = html;
+    document.getElementById('dPreop').textContent = s.jointPct;
+    document.getElementById('dMeasure').textContent = s.jointName;
+    var alertHtml = '';
+    for(var i=0;i<s.alerts.length;i++) alertHtml += '<div class="alert-item ' + s.alerts[i].level + '">' + s.alerts[i].text + '</div>';
+    document.getElementById('alertList').innerHTML = alertHtml || '<p style="color:#6b7280">No alerts.</p>';
+}
+
+function autoPopulateComorbidities() {
+    var r = intakeResponses;
+    if(r.diabetes && r.diabetes.answer.indexOf('insulin')>=0) setCC('diabetes_uncontrolled',true,true);
+    else if(r.diabetes && r.diabetes.answer!=='No') setCC('diabetes_controlled',true,true);
+    if(r.cardiac && r.cardiac.answer==='Yes') setCC('cad',true,true);
+    if(r.ckd && r.ckd.answer==='Yes') setCC('ckd_stage_3',true,true);
+    if(r.smoker && r.smoker.answer.indexOf('Current')>=0) setCC('smoking_current',true,true);
+    if(r.opioid && r.opioid.answer.indexOf('more than 3')>=0) setCC('opioid_chronic',true,true);
+    var bmi=28;try{var hf=parseInt(r.height_ft.answer);var hi=parseInt(r.height_in.answer);bmi=(r.weight.answer/Math.pow(hf*12+hi,2))*703;}catch(e){}
+    if(bmi>=40)setCC('obesity_class_3',true,true);else if(bmi>=35)setCC('obesity_class_2',true,true);
+    updateScores();renderComorbTable();
+}
+function setCC(id,p,w){comorbChecked[id]={present:p,workup:w};}
+
+// COMORBIDITY TABLE
+function renderComorbTable() {
+    var body = document.getElementById('comorbBody');
+    var html = '';
+    var categories = {};
+    for(var cid in HCC_LIB.comorbidities){var c=HCC_LIB.comorbidities[cid];if(!categories[c.category])categories[c.category]=[];categories[c.category].push({id:cid,data:c});}
+    var catOrder=['metabolic','cardiac','pulmonary','renal','psychiatric','pain_management','hematologic','hepatic','vascular','lifestyle'];
+    for(var ci=0;ci<catOrder.length;ci++){
+        var cat=catOrder[ci];if(!categories[cat])continue;
+        html+='<tr class="cat-row"><td colspan="5">'+cat.replace(/_/g,' ').replace(/\b\w/g,function(l){return l.toUpperCase();})+'</td></tr>';
+        for(var j=0;j<categories[cat].length;j++){
+            var item=categories[cat][j];var chk=comorbChecked[item.id]||{present:false,workup:false};
+            html+='<tr><td>'+item.data.display_name+'</td><td style="color:#6b7280;font-size:0.8rem">'+(item.data.hcc_code||'--')+'</td><td>'+item.data.hcc_weight.toFixed(3)+'</td><td><input type="checkbox" '+(chk.present?'checked':'')+' onchange="toggleComorb(\''+item.id+'\',\'present\',this.checked)"></td><td><input type="checkbox" '+(chk.workup?'checked':'')+' onchange="toggleComorb(\''+item.id+'\',\'workup\',this.checked)"></td></tr>';
+        }
+    }
+    body.innerHTML = html;
+    var sdohHtml='';
+    for(var sid in HCC_LIB.social_determinants){var s=HCC_LIB.social_determinants[sid];var ck=sdohChecked[sid]?'checked':'';sdohHtml+='<div class="sdoh-item"><input type="checkbox" id="sdoh_'+sid+'" '+ck+' onchange="sdohChecked[\''+sid+'\']=this.checked"><label for="sdoh_'+sid+'">'+s.display_name+'</label></div>';}
+    document.getElementById('sdohGrid').innerHTML=sdohHtml;
+}
+
+function toggleComorb(id,field,val){
+    if(!comorbChecked[id])comorbChecked[id]={present:false,workup:false};
+    comorbChecked[id][field]=val;
+    if(field==='workup'&&val)comorbChecked[id].present=true;
+    updateScores();renderComorbTable();
+}
+
+function updateScores(){
+    var hcc=0,risk=1,readInc=0;
+    for(var cid in comorbChecked){if(comorbChecked[cid].present||comorbChecked[cid].workup){var d=HCC_LIB.comorbidities[cid];if(d){hcc+=d.hcc_weight;risk*=d.surgical_risk_modifier;readInc+=d.outcome_impact.readmission_increase;}}}
+    document.getElementById('hccScore').textContent=hcc.toFixed(3);
+    document.getElementById('hccTopVal').textContent=hcc.toFixed(3);
+    document.getElementById('riskMod').textContent=risk.toFixed(2)+'x';
+    document.getElementById('readmitPct').textContent=Math.min(((0.045+readInc)*100),25).toFixed(1)+'%';
+}
+
+// WORKUP
+function generateWorkup(){
+    workupItems=[];
+    for(var cid in comorbChecked){if(comorbChecked[cid].workup){var d=HCC_LIB.comorbidities[cid];if(!d)continue;var wu=d.workup_required;for(var i=0;i<wu.tests.length;i++)workupItems.push({type:'test',name:wu.tests[i],comorbId:cid,comorbName:d.display_name,criteria:wu.clearance_criteria,cleared:false});for(var i=0;i<wu.consults.length;i++)workupItems.push({type:'consult',name:wu.consults[i],comorbId:cid,comorbName:d.display_name,criteria:wu.clearance_criteria,cleared:false});}}
+    renderWorkup();switchTab(2);
+}
+
+function renderWorkup(){
+    var list=document.getElementById('workupList');
+    if(!workupItems.length){list.innerHTML='<p style="text-align:center;color:#6b7280;padding:40px;">No workup items. Check "Needs Workup" on comorbidities.</p>';return;}
+    var html='';
+    for(var i=0;i<workupItems.length;i++){var w=workupItems[i];html+='<div class="workup-item'+(w.cleared?' done':'')+'"><input type="checkbox" class="wi-check" '+(w.cleared?'checked':'')+' onchange="toggleWorkup('+i+',this.checked)"><span class="wi-type '+w.type+'">'+w.type+'</span><span class="wi-name">'+w.name+'</span><span class="wi-comorb">'+w.comorbName+'</span></div>';}
+    list.innerHTML=html;checkClearance();
+}
+
+function toggleWorkup(idx,val){workupItems[idx].cleared=val;renderWorkup();}
+
+function checkClearance(){
+    if(!workupItems.length){document.getElementById('workupStatus').className='workup-status cleared';document.getElementById('workupStatus').textContent='No Workup Required';return true;}
+    var allDone=workupItems.every(function(w){return w.cleared;});
+    var st=document.getElementById('workupStatus');
+    if(allDone){st.className='workup-status cleared';st.textContent='ALL WORKUP COMPLETE - CLEARED FOR SURGERY';}
+    else{var done=workupItems.filter(function(w){return w.cleared;}).length;st.className='workup-status pending';st.textContent='Workup In Progress ('+done+'/'+workupItems.length+' complete)';}
+    return allDone;
+}
+
+// DECISION TOOL
+function updateDecisionTool(){
+    var proc=document.getElementById('procSelect').value;
+    var cms=HCC_LIB.cms_proms_deltas[proc];
+    var preop=parseInt(document.getElementById('dPreop').textContent)||50;
+    var key=proc==='TKA'?'koos_reduction':'hoos_reduction';
+    var reduction=0,factors=[];
+    for(var cid in comorbChecked){if(comorbChecked[cid].present||comorbChecked[cid].workup){var d=HCC_LIB.comorbidities[cid];if(d){var r=d.outcome_impact[key];if(r){reduction+=r;factors.push({name:d.display_name,pts:r,readmit:d.outcome_impact.readmission_increase});}}}}
+    var predicted=cms.expected_improvement_mean-reduction;
+    var postop=Math.min(Math.max(preop+predicted,0),100);
+    var readmit=Math.min((0.045+factors.reduce(function(a,f){return a+f.readmit;},0))*100, 25);
+    document.getElementById('dMeasure').textContent=cms.measure;
+    document.getElementById('dPostop').textContent=Math.round(postop);
+    document.getElementById('dImprove').textContent=(predicted>=0?'+':'')+Math.round(predicted);
+    document.getElementById('dRange').textContent='Range: '+(cms.expected_improvement_range[0]-reduction)+' to +'+(cms.expected_improvement_range[1]-reduction);
+    document.getElementById('dReadmit').textContent=readmit.toFixed(1)+'%';
+    document.getElementById('dReadCard').style.borderColor=readmit>7?'#ef4444':readmit>5?'#f59e0b':'#22c55e';
+    var rfHtml='';
+    if(factors.length){for(var i=0;i<factors.length;i++)rfHtml+='<div class="rl-item"><span>'+factors[i].name+'</span><span style="color:#dc2626;font-weight:600;">-'+factors[i].pts+' pts</span></div>';}
+    else rfHtml='<p style="color:#6b7280">No risk factors - best expected outcomes.</p>';
+    document.getElementById('riskFactorList').innerHTML=rfHtml;
+    var rec=document.getElementById('recBox');
+    if(predicted>=cms.mcid){rec.className='rec-box benefit';rec.textContent='LIKELY TO BENEFIT - Expected improvement ('+Math.round(predicted)+' pts) exceeds MCID ('+cms.mcid+' pts)';}
+    else{rec.className='rec-box maybe';rec.textContent='MAY NOT MEET MCID - Expected improvement ('+Math.round(predicted)+' pts) below MCID ('+cms.mcid+' pts). Discuss expectations.';}
+    rec.style.display='block';
+}
+
+function saveAssessment(){
+    var patSel=document.getElementById('patientSelect');
+    var patId=patSel.value;
+    if(!patId){alert('Select a patient first.');return;}
+    var proc=document.getElementById('procSelect').value;
+    var surgDate=document.getElementById('surgDate').value;
+    var scores=calculateScores();
+    
+    // Gather comorbidity list
+    var comorbList=[];
+    for(var cid in comorbChecked){if(comorbChecked[cid].present||comorbChecked[cid].workup)comorbList.push(cid);}
+    
+    var hcc=parseFloat(document.getElementById('hccScore').textContent)||0;
+    var age=(intakeResponses.age||{}).answer||null;
+    var sex=(intakeResponses.gender||{}).answer||null;
+    
+    var body={
+        patient_id:patId,
+        clinic_id:'11111111-1111-1111-1111-111111111111',
+        procedure_type:proc,
+        planned_surgery_date:surgDate||null,
+        risk_tier:scores.alerts.some(function(a){return a.level==='danger';})?'HIGH':scores.alerts.length?'MODERATE':'LOW',
+        age:age,
+        sex:sex?sex.charAt(0):null,
+        bmi:scores.bmi,
+        comorbidities:comorbList,
+        joint_score_type:scores.jointName.toLowerCase().replace('-','_'),
+        joint_score_preop:scores.jointPct,
+        promis_physical_tscore:scores.gph,
+        promis_mental_tscore:scores.gmh,
+        readmission_risk:parseFloat(document.getElementById('dReadmit').textContent)||4.5
+    };
+
+    // Calculate projected
+    var cms=HCC_LIB.cms_proms_deltas[proc];
+    var reduction=0;
+    for(var i=0;i<comorbList.length;i++){var d=HCC_LIB.comorbidities[comorbList[i]];if(d)reduction+=d.outcome_impact[proc==='TKA'?'koos_reduction':'hoos_reduction'];}
+    var predicted=cms.expected_improvement_mean-reduction;
+    body.expected_improvement=predicted;
+    body.projected_postop_score=Math.min(Math.max(scores.jointPct+predicted,0),100);
+
+    fetch('/api/preop-assessments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    .then(function(r){return r.json();})
+    .then(function(data){
+        if(data.success){
+            alert('Assessment saved successfully!');
+            // Also save PROM scores
+            if(Object.keys(intakeResponses).length>0){
+                fetch('/api/pro-assessments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+                    patient_id:patId,clinic_id:'11111111-1111-1111-1111-111111111111',
+                    assessment_type:scores.jointName.toLowerCase().replace('-','_'),
+                    assessment_date:new Date().toISOString().split('T')[0],
+                    score:scores.jointPct,
+                    responses:intakeResponses
+                })});
+            }
+        } else {alert('Error saving: '+JSON.stringify(data));}
+    }).catch(function(e){alert('Save failed: '+e.message);});
+}
+function printSummary(){window.print();}
+
+function sendToPatient(type){
+    var patSel=document.getElementById('patientSelect');
+    var patId=patSel.value;
+    if(!patId){alert('Select a patient first.');return;}
+    
+    // Get patient token from API
+    fetch('/api/patients/'+patId).then(function(r){return r.json();}).then(function(p){
+        if(!p||!p.token){alert('Patient has no token. Check patient record.');return;}
+        
+        var baseUrl='https://sro-cloud-relay.onrender.com';
+        var link;
+        if(type==='checkin'){
+            link=baseUrl+'/checkin.html?t='+p.token;
+        } else {
+            link=baseUrl+'/preop.html?t='+p.token;
+        }
+        
+        // Copy to clipboard
+        navigator.clipboard.writeText(link).then(function(){
+            var name=(p.first_name||'')+' '+(p.last_name||'');
+            var msg=type==='checkin'?'Check-in':'PreOp intake';
+            alert(msg+' link copied to clipboard!\n\nPatient: '+name+'\nLink: '+link+'\n\nPaste into text message or email to send.\nNo patient info in the link (HIPAA safe).');
+        }).catch(function(){
+            // Fallback
+            prompt('Copy this link and send to patient via text/email:\n(No PHI in link — HIPAA safe)', link);
+        });
+    }).catch(function(e){alert('Error getting patient info: '+e.message);});
+}
+
+function loadPatientList(){
+    var cid='11111111-1111-1111-1111-111111111111';
+    fetch('/api/patients?clinic_id='+cid).then(function(r){return r.json();}).then(function(patients){
+        var sel=document.getElementById('patientSelect');sel.innerHTML='<option value="">Select patient...</option>';
+        for(var i=0;i<patients.length;i++){var p=patients[i];sel.innerHTML+='<option value="'+p.id+'" data-surg="'+(p.surgery_type||'TKA')+'" data-dt="'+(p.surgery_date||'')+'">'+((p.last_name||'')+', '+(p.first_name||''))+(p.surgery_type?' ('+p.surgery_type+')':'')+'</option>';}
+    }).catch(function(e){console.log('Patient load error:',e);});
+}
+function loadPatient(){
+    var sel=document.getElementById('patientSelect');var opt=sel.options[sel.selectedIndex];if(!opt||!opt.value)return;
+    var s=opt.getAttribute('data-surg')||'TKA';var d=opt.getAttribute('data-dt')||'';
+    document.getElementById('procSelect').value=(s==='THA'?'THA':'TKA');
+    if(d)document.getElementById('surgDate').value=d;
+    onProcChange();
+}
+
+// INIT
+renderComorbTable();
+loadPatientList();
+</script>
+</body>
+</html>

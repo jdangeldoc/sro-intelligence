@@ -72,9 +72,11 @@ async function loadStats() {
         const stats = await response.json();
         
         document.getElementById('statActive').textContent = stats.active_patients || 0;
-        document.getElementById('statOnTrack').textContent = (stats.active_patients - stats.needs_attention - stats.overdue) || 0;
+        document.getElementById('statOnTrack').textContent = Math.max(0, (stats.active_patients - stats.needs_attention - stats.overdue)) || 0;
         document.getElementById('statAttention').textContent = stats.needs_attention || 0;
         document.getElementById('statOverdue').textContent = stats.overdue || 0;
+        document.getElementById('statERVisits').textContent = stats.er_visits || 0;
+        document.getElementById('statReadmissions').textContent = stats.readmissions || 0;
     } catch (error) {
         console.error('Error loading stats:', error);
     }
@@ -227,6 +229,7 @@ async function openPatientModal(patientId) {
     renderCheckinLink();
     await loadPatientCheckins(patientId);
     await loadPatientPreopInfo(patientId);
+    await loadPatientAdverseEvents(patientId);
 }
 
 function renderPatientInfo() {
@@ -294,7 +297,7 @@ async function loadPatientPreopInfo(patientId) {
         if (!data.hasPreop) {
             preopDiv.innerHTML = `<p style="color: #9ca3af;">No pre-op assessment on file.</p>`;
             if (preopBtn) {
-                preopBtn.href = `/preop-assessment.html?patient=${patientId}`;
+                preopBtn.href = `/preop.html?patient=${patientId}`;
                 preopBtn.textContent = '+ Complete Pre-Op';
                 preopBtn.style.display = 'inline-block';
             }
@@ -303,7 +306,7 @@ async function loadPatientPreopInfo(patientId) {
         
         // Update button if preop exists
         if (preopBtn) {
-            preopBtn.href = `/preop-assessment.html?patient=${patientId}`;
+            preopBtn.href = `/preop.html?patient=${patientId}`;
             preopBtn.textContent = 'New Assessment';
         }
         
@@ -744,6 +747,130 @@ async function handleQuickRpmLog(event) {
     } catch (error) {
         console.error('Error saving RPM log:', error);
         alert('Error saving time. Please try again.');
+    }
+}
+
+// ============ ADVERSE EVENTS ============
+async function loadPatientAdverseEvents(patientId) {
+    const div = document.getElementById('adverseEventsList');
+    if (!div) return;
+    
+    try {
+        const response = await fetch(`/api/adverse-events?patient_id=${patientId}`);
+        const events = await response.json();
+        
+        if (events.length === 0) {
+            div.innerHTML = '<p class="text-muted" style="text-align:center;">No adverse events recorded.</p>';
+            return;
+        }
+        
+        div.innerHTML = events.map(evt => {
+            const typeLabel = {
+                'er_visit': '🚨 ER Visit',
+                'readmission': '🏥 Readmission',
+                'complication': '⚠️ Complication',
+                'fall': '🤕 Fall',
+                'infection': '🦠 Infection',
+                'other': '📋 Other'
+            }[evt.event_type] || evt.event_type;
+            
+            return `
+                <div style="padding: 12px; border-bottom: 1px solid #eee; ${evt.resolved ? 'opacity: 0.6;' : ''}">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <strong style="color: ${evt.event_type === 'readmission' ? '#7c3aed' : '#dc3545'};">${typeLabel}</strong>
+                        <span class="text-muted" style="font-size: 13px;">${evt.event_date}</span>
+                    </div>
+                    ${evt.facility ? `<div style="font-size: 13px; margin-top: 4px;">📍 ${evt.facility}</div>` : ''}
+                    ${evt.reason ? `<div style="font-size: 13px; color: #666; margin-top: 4px;">${evt.reason}</div>` : ''}
+                    <div style="font-size: 12px; color: #999; margin-top: 4px;">Reported by: ${evt.reported_by}</div>
+                </div>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Error loading adverse events:', error);
+        div.innerHTML = '<p style="color: #ef4444;">Error loading events</p>';
+    }
+}
+
+function openAdverseEventModal() {
+    if (!currentPatient) return;
+    document.getElementById('adverseEventForm').reset();
+    document.getElementById('aeEventDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('adverseEventModal').style.display = 'flex';
+}
+
+function closeAdverseEventModal() {
+    document.getElementById('adverseEventModal').style.display = 'none';
+}
+
+async function handleLogAdverseEvent(event) {
+    event.preventDefault();
+    
+    try {
+        await fetch('/api/adverse-events', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                patient_id: currentPatient.id,
+                episode_id: currentPatient.episode_id,
+                clinic_id: CLINIC_ID,
+                event_type: document.getElementById('aeEventType').value,
+                event_date: document.getElementById('aeEventDate').value,
+                facility: document.getElementById('aeFacility').value,
+                reason: document.getElementById('aeReason').value,
+                reported_by: document.getElementById('aeReportedBy').value
+            })
+        });
+        
+        closeAdverseEventModal();
+        await loadPatientAdverseEvents(currentPatient.id);
+        await loadStats();
+        alert('Adverse event logged.');
+    } catch (error) {
+        console.error('Error logging adverse event:', error);
+        alert('Error logging event. Please try again.');
+    }
+}
+
+// ============ SEED / CLEAR DEMO DATA ============
+async function seedDemoData() {
+    if (!confirm('This will add 6 demo patients with check-in history, preop assessments, and adverse events. Continue?')) return;
+    
+    try {
+        const response = await fetch('/api/seed-demo', { method: 'POST' });
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(data.message);
+            await loadPreopAssessments();
+            await loadStats();
+            await loadPatients();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error seeding demo data:', error);
+        alert('Error seeding demo data.');
+    }
+}
+
+async function clearDemoData() {
+    if (!confirm('This will remove all demo patients and their data. Your real patients will not be affected. Continue?')) return;
+    
+    try {
+        const response = await fetch('/api/clear-demo', { method: 'POST' });
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(data.message);
+            await loadPreopAssessments();
+            await loadStats();
+            await loadPatients();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error clearing demo data:', error);
     }
 }
 

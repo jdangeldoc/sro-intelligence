@@ -60,7 +60,7 @@
         </div>
         <div class="nav-links">
             <a href="/dashboard.html" class="nav-link active">Dashboard</a>
-            <a href="/preop-assessment.html" class="nav-link">Pre-Op</a>
+            <a href="/preop.html" class="nav-link">Pre-Op</a>
             <a href="/analytics.html" class="nav-link">Analytics</a>
             <a href="/rpm-report.html" class="nav-link">RPM Billing</a>
             <a href="/settings.html" class="nav-link">Settings</a>
@@ -91,6 +91,14 @@
                 <div class="stat-value" id="statOverdue">-</div>
                 <div class="stat-label">Overdue</div>
             </div>
+            <div class="stat-card" style="border-left: 4px solid #7c3aed;">
+                <div class="stat-value" id="statERVisits">-</div>
+                <div class="stat-label">ER Visits</div>
+            </div>
+            <div class="stat-card" style="border-left: 4px solid #6366f1;">
+                <div class="stat-value" id="statReadmissions">-</div>
+                <div class="stat-label">Readmissions</div>
+            </div>
         </div>
 
         <!-- Filters and Actions -->
@@ -107,8 +115,10 @@
                 </select>
             </div>
             <div class="actions">
+                <button class="btn btn-sm" style="background:#f59e0b;color:white;" onclick="seedDemoData()" title="Load demo patients for testing">🧪 Seed Demo</button>
+                <button class="btn btn-sm" style="background:#ef4444;color:white;" onclick="clearDemoData()" title="Remove demo patients">🗑️ Clear Demo</button>
                 <button class="btn btn-secondary" onclick="exportPatients()">Export CSV</button>
-                <a href="/preop-assessment.html" class="btn btn-preop">+ Pre-Op Assessment</a>
+                <a href="/preop.html" class="btn btn-preop">+ Pre-Op Assessment</a>
                 <button class="btn btn-primary" onclick="openAddPatientModal()">+ Add Patient</button>
             </div>
         </div>
@@ -180,6 +190,11 @@
                         <button class="btn btn-secondary btn-sm" style="margin-top: 10px; width: 100%;" onclick="openManualCheckinModal()">
                             📞 Log Phone/Manual Check-in
                         </button>
+                        <div style="display:flex;gap:6px;margin-top:8px;">
+                            <button class="btn btn-sm" style="flex:1;background:#2563eb;color:white;font-size:0.75rem;" onclick="sendPatientLink('checkin')">📋 Copy Check-in Link</button>
+                            <button class="btn btn-sm btn-preop" style="flex:1;font-size:0.75rem;" onclick="sendPatientLink('preop')">📋 Copy PreOp Link</button>
+                        </div>
+                        <p style="font-size:0.65rem;color:#6b7280;margin-top:4px;text-align:center;">No PHI in links — HIPAA safe. Paste into text or email.</p>
                     </div>
                 </div>
                 
@@ -206,6 +221,17 @@
                 <div class="checkins-section">
                     <h3>Recent Check-ins</h3>
                     <div id="checkinsList" class="checkins-list">Loading...</div>
+                </div>
+                
+                <!-- Adverse Events Section -->
+                <div style="margin-top: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3>⚠️ Adverse Events</h3>
+                        <button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="openAdverseEventModal()">+ Log Event</button>
+                    </div>
+                    <div id="adverseEventsList" style="background: #f8f9fa; border-radius: 8px; padding: 15px;">
+                        <p class="text-muted">No adverse events recorded.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -427,6 +453,57 @@
         </div>
     </div>
 
+    <!-- Adverse Event Log Modal -->
+    <div id="adverseEventModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚠️ Log Adverse Event</h2>
+                <button class="btn btn-close" onclick="closeAdverseEventModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="adverseEventForm" onsubmit="handleLogAdverseEvent(event)">
+                    <div class="form-group">
+                        <label>Event Type *</label>
+                        <select id="aeEventType" required>
+                            <option value="">Select...</option>
+                            <option value="er_visit">ER Visit</option>
+                            <option value="readmission">Hospital Readmission</option>
+                            <option value="complication">Complication</option>
+                            <option value="fall">Fall</option>
+                            <option value="infection">Infection</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Event Date *</label>
+                        <input type="date" id="aeEventDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Facility</label>
+                        <input type="text" id="aeFacility" placeholder="Hospital or clinic name">
+                    </div>
+                    <div class="form-group">
+                        <label>Reason / Description</label>
+                        <textarea id="aeReason" rows="3" placeholder="What happened..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Reported By</label>
+                        <select id="aeReportedBy">
+                            <option value="staff">Staff</option>
+                            <option value="patient">Patient</option>
+                            <option value="family">Family Member</option>
+                            <option value="other_provider">Other Provider</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeAdverseEventModal()">Cancel</button>
+                        <button type="submit" class="btn" style="background: #dc3545; color: white;">Log Event</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="js/dashboard.js"></script>
     <script>
         // ==========================================
@@ -481,14 +558,14 @@
                 
                 if (!data.hasPreop) {
                     preopDiv.innerHTML = `<p style="color: #9ca3af;">No pre-op assessment on file.</p>`;
-                    preopBtn.href = `/preop-assessment.html?patient=${patientId}`;
+                    preopBtn.href = `/preop.html?patient=${patientId}`;
                     preopBtn.textContent = '+ Complete Pre-Op';
                     preopBtn.style.display = 'inline-block';
                     return;
                 }
                 
                 // Hide the button if preop exists, or change to "View/Edit"
-                preopBtn.href = `/preop-assessment.html?patient=${patientId}`;
+                preopBtn.href = `/preop.html?patient=${patientId}`;
                 preopBtn.textContent = 'New Assessment';
                 
                 const preop = data.preop;
@@ -592,6 +669,28 @@
             addRiskColumnToTable();
         });
         
+        function sendPatientLink(type) {
+            var linkInput = document.getElementById('checkinLink');
+            if (!linkInput || !linkInput.value) { alert('Select a patient first.'); return; }
+            // Extract token from the existing check-in link
+            var match = linkInput.value.match(/[?&]t=([^&]+)/);
+            if (!match) { alert('No patient token found.'); return; }
+            var token = match[1];
+            var baseUrl = 'https://sro-cloud-relay.onrender.com';
+            var link;
+            if (type === 'checkin') {
+                link = baseUrl + '/checkin.html?t=' + token;
+            } else {
+                link = baseUrl + '/preop.html?t=' + token;
+            }
+            navigator.clipboard.writeText(link).then(function() {
+                var msg = type === 'checkin' ? 'Check-in' : 'PreOp intake';
+                alert(msg + ' link copied!\n\n' + link + '\n\nPaste into text or email.\nNo PHI in link (HIPAA safe).');
+            }).catch(function() {
+                prompt('Copy this link:', link);
+            });
+        }
+
         // Start observing when DOM is ready
         document.addEventListener('DOMContentLoaded', () => {
             // Load preop assessments
