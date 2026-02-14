@@ -9,6 +9,8 @@ let surgeons = [];
 let currentPatient = null;
 let currentEpisode = null;
 let preopAssessments = {}; // Cache for preop assessments
+let adverseEventsCache = {}; // Cache for adverse events per patient
+let promScheduleCache = {}; // Cache for PROM overdue per patient
 
 // RPM Timer State
 let rpmTimer = {
@@ -34,8 +36,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Load data
     await loadSurgeons();
     await loadPreopAssessments();
+    await loadAlertCaches();
     await loadStats();
     await loadPatients();
+    await loadPromCompliance();
 });
 
 // ============ PREOP ASSESSMENTS ============
@@ -63,6 +67,92 @@ function getRiskBadge(patientId) {
     }
     const tier = preop.risk_tier.toLowerCase();
     return `<span class="risk-badge risk-${tier}">${preop.risk_tier}</span>`;
+}
+
+// ============ ALERT CACHES ============
+async function loadAlertCaches() {
+    try {
+        const aeResp = await fetch(`/api/adverse-events?clinic_id=${CLINIC_ID}`);
+        const aeList = await aeResp.json();
+        adverseEventsCache = {};
+        aeList.forEach(ae => {
+            if (!adverseEventsCache[ae.patient_id]) adverseEventsCache[ae.patient_id] = [];
+            adverseEventsCache[ae.patient_id].push(ae);
+        });
+        
+        const promResp = await fetch(`/api/prom-schedule?clinic_id=${CLINIC_ID}&status=overdue`);
+        const promList = await promResp.json();
+        promScheduleCache = {};
+        promList.forEach(ps => {
+            if (!promScheduleCache[ps.patient_id]) promScheduleCache[ps.patient_id] = [];
+            promScheduleCache[ps.patient_id].push(ps);
+        });
+    } catch (error) {
+        console.error('Error loading alert caches:', error);
+    }
+}
+
+function getAlertBadges(patient) {
+    const badges = [];
+    
+    const events = adverseEventsCache[patient.id] || [];
+    const erCount = events.filter(e => e.event_type === 'er_visit').length;
+    const readmitCount = events.filter(e => e.event_type === 'readmission').length;
+    const otherEvents = events.filter(e => e.event_type !== 'er_visit' && e.event_type !== 'readmission').length;
+    
+    if (readmitCount > 0) badges.push(`<span title="Readmission" style="background:#7c3aed;color:white;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;cursor:help;">🏥 ${readmitCount}</span>`);
+    if (erCount > 0) badges.push(`<span title="ER Visit" style="background:#dc3545;color:white;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;cursor:help;">🚨 ${erCount}</span>`);
+    if (otherEvents > 0) badges.push(`<span title="Adverse Event" style="background:#f59e0b;color:white;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;cursor:help;">⚠️ ${otherEvents}</span>`);
+    
+    const overdueProms = promScheduleCache[patient.id] || [];
+    if (overdueProms.length > 0) badges.push(`<span title="PROMs Overdue" style="background:#2563eb;color:white;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;cursor:help;">📋 ${overdueProms.length}</span>`);
+    
+    if (patient.last_pain_level >= 7) badges.push(`<span title="High Pain" style="background:#ef4444;color:white;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;cursor:help;">🔥</span>`);
+    
+    return badges.length > 0 ? badges.join(' ') : '<span style="color:#ccc;">—</span>';
+}
+
+// Stat card filter state
+let activeStatFilter = null;
+
+function switchTab(tab) {
+    const patientsPanel = document.getElementById('panelPatients');
+    const promPanel = document.getElementById('panelProm');
+    const tabPatients = document.getElementById('tabPatients');
+    const tabProm = document.getElementById('tabProm');
+    
+    if (tab === 'patients') {
+        patientsPanel.style.display = 'block';
+        promPanel.style.display = 'none';
+        tabPatients.style.borderBottomColor = '#2c5aa0';
+        tabPatients.style.color = '#2c5aa0';
+        tabProm.style.borderBottomColor = 'transparent';
+        tabProm.style.color = '#6b7280';
+    } else {
+        patientsPanel.style.display = 'none';
+        promPanel.style.display = 'block';
+        tabProm.style.borderBottomColor = '#2c5aa0';
+        tabProm.style.color = '#2c5aa0';
+        tabPatients.style.borderBottomColor = 'transparent';
+        tabPatients.style.color = '#6b7280';
+        loadPromCompliance();
+    }
+}
+
+function filterByStat(filterType) {
+    // Toggle off if clicking same filter
+    if (activeStatFilter === filterType) {
+        activeStatFilter = null;
+        // Remove highlight from all stat cards
+        document.querySelectorAll('.stat-card').forEach(c => c.style.outline = 'none');
+    } else {
+        activeStatFilter = filterType;
+        // Highlight active card
+        document.querySelectorAll('.stat-card').forEach(c => c.style.outline = 'none');
+        const card = document.querySelector(`[data-stat-filter="${filterType}"]`);
+        if (card) card.style.outline = '3px solid #2c5aa0';
+    }
+    renderPatientTable();
 }
 
 // ============ DATA LOADING ============
@@ -140,11 +230,24 @@ function renderPatientTable() {
         // Surgeon filter
         if (filterSurgeon !== 'all' && p.surgeon_id !== filterSurgeon) return false;
         
+        // Stat card filter
+        if (activeStatFilter) {
+            const events = adverseEventsCache[p.id] || [];
+            const overdueProms = promScheduleCache[p.id] || [];
+            
+            if (activeStatFilter === 'er_visits' && !events.some(e => e.event_type === 'er_visit')) return false;
+            if (activeStatFilter === 'readmissions' && !events.some(e => e.event_type === 'readmission')) return false;
+            if (activeStatFilter === 'proms_overdue' && overdueProms.length === 0) return false;
+            if (activeStatFilter === 'attention' && status !== 'attention') return false;
+            if (activeStatFilter === 'overdue' && status !== 'overdue') return false;
+            if (activeStatFilter === 'on-track' && status !== 'on-track') return false;
+        }
+        
         return true;
     });
     
     if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="empty">No patients found</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="11" class="empty">No patients found ${activeStatFilter ? '— <a href="#" onclick="filterByStat(null);return false;">clear filter</a>' : ''}</td></tr>`;
         return;
     }
     
@@ -175,6 +278,7 @@ function renderPatientTable() {
                         '-'}
                 </td>
                 <td>${patient.last_pt_exercises === 1 ? '✅' : patient.last_pt_exercises === 0 ? '❌' : '-'}</td>
+                <td>${getAlertBadges(patient)}</td>
                 <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                 <td>
                     <button class="btn btn-sm" onclick="event.stopPropagation(); openPatientModal('${patient.id}')">View</button>
@@ -229,6 +333,7 @@ async function openPatientModal(patientId) {
     renderCheckinLink();
     await loadPatientCheckins(patientId);
     await loadPatientPreopInfo(patientId);
+    await loadPatientPromSchedule(patientId);
     await loadPatientAdverseEvents(patientId);
 }
 
@@ -750,6 +855,164 @@ async function handleQuickRpmLog(event) {
     }
 }
 
+// ============ PROM COMPLIANCE ============
+async function loadPromCompliance() {
+    try {
+        const response = await fetch(`/api/prom-compliance?clinic_id=${CLINIC_ID}`);
+        const data = await response.json();
+        
+        const panel = document.getElementById('promCompliancePanel');
+        if (!panel) return;
+        
+        // Overall stats
+        document.getElementById('promComplianceRate').textContent = data.compliance_rate + '%';
+        document.getElementById('promCompleted').textContent = data.completed;
+        document.getElementById('promDueSoon').textContent = data.due_soon;
+        document.getElementById('promOverdue').textContent = data.overdue;
+        document.getElementById('promPending').textContent = data.pending;
+        
+        // Color the compliance rate
+        const rateEl = document.getElementById('promComplianceRate');
+        if (data.compliance_rate >= 80) rateEl.style.color = '#16a34a';
+        else if (data.compliance_rate >= 50) rateEl.style.color = '#d97706';
+        else rateEl.style.color = '#dc2626';
+        
+        // Window breakdown
+        const windowNames = { '6_week': '6 Week', '3_month': '3 Month', '1_year': '1 Year' };
+        const windowDiv = document.getElementById('promByWindow');
+        windowDiv.innerHTML = data.by_window.map(w => {
+            const pct = w.total > 0 ? Math.round((w.completed / w.total) * 100) : 0;
+            const barColor = pct >= 80 ? '#16a34a' : pct >= 50 ? '#d97706' : '#dc2626';
+            return `
+                <div style="margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                        <span>${windowNames[w.window_name] || w.window_name}</span>
+                        <span>${w.completed}/${w.total} (${pct}%)</span>
+                    </div>
+                    <div style="background: #e5e7eb; border-radius: 4px; height: 8px;">
+                        <div style="background: ${barColor}; height: 100%; border-radius: 4px; width: ${pct}%;"></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        // Surgeon breakdown
+        const surgeonDiv = document.getElementById('promBySurgeon');
+        surgeonDiv.innerHTML = data.by_surgeon.map(s => {
+            const pct = s.total > 0 ? Math.round((s.completed / s.total) * 100) : 0;
+            const barColor = pct >= 80 ? '#16a34a' : pct >= 50 ? '#d97706' : '#dc2626';
+            return `
+                <div style="margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                        <span>Dr. ${s.surgeon_name}</span>
+                        <span>${s.completed}/${s.total} (${pct}%)${s.overdue > 0 ? ' <span style="color:#dc2626;">' + s.overdue + ' overdue</span>' : ''}</span>
+                    </div>
+                    <div style="background: #e5e7eb; border-radius: 4px; height: 8px;">
+                        <div style="background: ${barColor}; height: 100%; border-radius: 4px; width: ${pct}%;"></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        // Overdue list
+        const overdueDiv = document.getElementById('promOverdueList');
+        if (data.overdue_patients.length === 0) {
+            overdueDiv.innerHTML = '<p style="color: #999;">None — great job!</p>';
+        } else {
+            overdueDiv.innerHTML = data.overdue_patients.map(p => `
+                <div style="padding: 6px 0; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; cursor:pointer;" onclick="switchTab('patients');openPatientModal('${p.patient_id}')">
+                    <span><strong style="color:#2c5aa0;text-decoration:underline;">${p.last_name}, ${p.first_name}</strong> — ${p.assessment_type === 'koos_jr' ? 'KOOS Jr' : p.assessment_type === 'hoos_jr' ? 'HOOS Jr' : 'PROMIS-10'} (${(p.window_name || '').replace('_', ' ')})</span>
+                    <span style="color: #dc2626;">Due ${p.due_date}</span>
+                </div>
+            `).join('');
+        }
+        
+        // Due soon list
+        const dueSoonDiv = document.getElementById('promDueSoonList');
+        if (data.due_soon_patients.length === 0) {
+            dueSoonDiv.innerHTML = '<p style="color: #999;">No PROMs due in the next 14 days.</p>';
+        } else {
+            dueSoonDiv.innerHTML = data.due_soon_patients.map(p => `
+                <div style="padding: 6px 0; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center; cursor:pointer;" onclick="switchTab('patients');openPatientModal('${p.patient_id}')">
+                    <span><strong style="color:#2c5aa0;text-decoration:underline;">${p.last_name}, ${p.first_name}</strong> — ${p.assessment_type === 'koos_jr' ? 'KOOS Jr' : p.assessment_type === 'hoos_jr' ? 'HOOS Jr' : 'PROMIS-10'}</span>
+                    <span style="color: #d97706;">Due ${p.due_date}</span>
+                </div>
+            `).join('');
+        }
+        
+    } catch (error) {
+        console.error('Error loading PROM compliance:', error);
+    }
+}
+
+// Load PROM schedule for individual patient modal
+async function loadPatientPromSchedule(patientId) {
+    const div = document.getElementById('promScheduleList');
+    if (!div) return;
+    
+    try {
+        const response = await fetch(`/api/prom-schedule?patient_id=${patientId}`);
+        const schedule = await response.json();
+        
+        if (schedule.length === 0) {
+            div.innerHTML = '<p class="text-muted" style="text-align:center;">No PROM schedule generated yet.</p>';
+            return;
+        }
+        
+        div.innerHTML = schedule.map(item => {
+            const typeLabel = item.assessment_type === 'koos_jr' ? 'KOOS Jr' : item.assessment_type === 'hoos_jr' ? 'HOOS Jr' : 'PROMIS-10';
+            const windowLabel = (item.window_name || '').replace('_', ' ');
+            
+            let statusHtml = '';
+            if (item.status === 'completed') {
+                statusHtml = `<span style="color: #16a34a; font-weight: 600;">✅ Done ${item.completed_date || ''}</span>`;
+            } else if (item.status === 'overdue') {
+                statusHtml = `<span style="color: #dc2626; font-weight: 600;">🔴 Overdue</span>`;
+            } else {
+                const today = new Date();
+                const due = new Date(item.due_date);
+                const daysUntil = Math.ceil((due - today) / (1000*60*60*24));
+                if (daysUntil <= 14 && daysUntil >= 0) {
+                    statusHtml = `<span style="color: #d97706; font-weight: 600;">🟡 Due in ${daysUntil}d</span>`;
+                } else {
+                    statusHtml = `<span style="color: #6b7280;">⏳ ${item.due_date}</span>`;
+                }
+            }
+            
+            return `
+                <div style="padding: 8px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong>${typeLabel}</strong>
+                        <span style="color: #9ca3af; font-size: 0.8rem; margin-left: 8px;">${windowLabel}</span>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        ${statusHtml}
+                        ${item.status !== 'completed' ? `<button class="btn btn-sm" style="font-size:0.7rem;padding:3px 8px;" onclick="markPromComplete('${item.id}','${patientId}')">Mark Done</button>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Error loading PROM schedule:', error);
+        div.innerHTML = '<p style="color:#ef4444;">Error loading schedule</p>';
+    }
+}
+
+async function markPromComplete(scheduleId, patientId) {
+    try {
+        await fetch(`/api/prom-schedule/${scheduleId}/complete`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ completed_date: new Date().toISOString().split('T')[0] })
+        });
+        await loadPatientPromSchedule(patientId);
+        await loadPromCompliance();
+        await loadStats();
+    } catch (error) {
+        console.error('Error marking PROM complete:', error);
+    }
+}
+
 // ============ ADVERSE EVENTS ============
 async function loadPatientAdverseEvents(patientId) {
     const div = document.getElementById('adverseEventsList');
@@ -845,6 +1108,7 @@ async function seedDemoData() {
             await loadPreopAssessments();
             await loadStats();
             await loadPatients();
+            await loadPromCompliance();
         } else {
             alert('Error: ' + (data.error || 'Unknown error'));
         }
@@ -866,6 +1130,7 @@ async function clearDemoData() {
             await loadPreopAssessments();
             await loadStats();
             await loadPatients();
+            await loadPromCompliance();
         } else {
             alert('Error: ' + (data.error || 'Unknown error'));
         }

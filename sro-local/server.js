@@ -180,6 +180,23 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
+  -- PROM Schedule (tracks which PROMs are due and when)
+  CREATE TABLE IF NOT EXISTS prom_schedule (
+    id TEXT PRIMARY KEY,
+    patient_id TEXT REFERENCES patients(id),
+    episode_id TEXT REFERENCES episodes(id),
+    clinic_id TEXT REFERENCES clinics(id),
+    assessment_type TEXT NOT NULL,
+    window_name TEXT NOT NULL,
+    due_date DATE NOT NULL,
+    window_open DATE,
+    window_close DATE,
+    completed_date DATE,
+    pro_assessment_id TEXT REFERENCES pro_assessments(id),
+    status TEXT DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
   -- Create indexes
   CREATE INDEX IF NOT EXISTS idx_patients_clinic ON patients(clinic_id);
   CREATE INDEX IF NOT EXISTS idx_patients_token ON patients(token);
@@ -193,6 +210,10 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_preop_clinic ON preop_assessments(clinic_id);
   CREATE INDEX IF NOT EXISTS idx_adverse_patient ON adverse_events(patient_id);
   CREATE INDEX IF NOT EXISTS idx_adverse_episode ON adverse_events(episode_id);
+  CREATE INDEX IF NOT EXISTS idx_prom_schedule_patient ON prom_schedule(patient_id);
+  CREATE INDEX IF NOT EXISTS idx_prom_schedule_episode ON prom_schedule(episode_id);
+  CREATE INDEX IF NOT EXISTS idx_prom_schedule_status ON prom_schedule(status);
+  CREATE INDEX IF NOT EXISTS idx_prom_schedule_due ON prom_schedule(due_date);
 `);
 
 // Insert default clinic if none exists
@@ -221,6 +242,58 @@ if (clinicCount.count === 0) {
   `).run(uuid(), defaultClinicId);
   
   console.log('Created default clinic and demo surgeons');
+}
+
+// ============ PROM SCHEDULE HELPER ============
+// CMS TEAM Model standard collection windows:
+// Pre-op: before surgery (captured in preop.html)
+// 6 weeks: 42 days post-op (window: 35-56 days)
+// 3 months: 90 days post-op (window: 75-120 days)
+// 1 year: 365 days post-op (window: 335-395 days)
+
+function generatePromSchedule(episodeId, patientId, clinicId, surgeryType, surgeryDate) {
+  if (!surgeryDate) return;
+  
+  const surgery = new Date(surgeryDate);
+  const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r.toISOString().split('T')[0]; };
+  
+  // Determine which PROMs based on surgery type
+  const isHip = surgeryType && (surgeryType.toUpperCase().includes('THA') || surgeryType.toUpperCase().includes('HIP'));
+  const jointProm = isHip ? 'hoos_jr' : 'koos_jr';
+  
+  const windows = [
+    { name: '6_week', dueDays: 42, openDays: 35, closeDays: 56 },
+    { name: '3_month', dueDays: 90, openDays: 75, closeDays: 120 },
+    { name: '1_year', dueDays: 365, openDays: 335, closeDays: 395 }
+  ];
+  
+  // PROMs to schedule at each window
+  const promTypes = [jointProm, 'promis_10'];
+  
+  const insert = db.prepare(`
+    INSERT OR IGNORE INTO prom_schedule (id, patient_id, episode_id, clinic_id, assessment_type, window_name, due_date, window_open, window_close, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+  `);
+  
+  const scheduleTransaction = db.transaction(() => {
+    windows.forEach(w => {
+      promTypes.forEach(promType => {
+        const schedId = `${episodeId}-${w.name}-${promType}`;
+        insert.run(
+          schedId, patientId, episodeId, clinicId, promType, w.name,
+          addDays(surgery, w.dueDays),
+          addDays(surgery, w.openDays),
+          addDays(surgery, w.closeDays)
+        );
+      });
+    });
+  });
+  
+  try {
+    scheduleTransaction();
+  } catch (e) {
+    console.log('PROM schedule generation note:', e.message);
+  }
 }
 
 // ============ API ROUTES ============
@@ -481,6 +554,9 @@ app.post('/api/episodes', (req, res) => {
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `).run(id, patient_id, clinic_id, surgeon_id, surgery_type, surgery_date, surgery_location);
   
+  // Auto-generate PROM collection schedule
+  generatePromSchedule(id, patient_id, clinic_id, surgery_type, surgery_date);
+  
   res.json({ id, success: true });
 });
 
@@ -727,6 +803,164 @@ app.post('/api/adverse-event-by-token', (req, res) => {
   res.json({ id, success: true });
 });
 
+// --- PROM Schedule ---
+app.get('/api/prom-schedule', (req, res) => {
+  const { patient_id, episode_id, clinic_id, status, window_name } = req.query;
+  let query = `
+    SELECT ps.*, 
+      p.first_name, p.last_name, p.mrn,
+      e.surgery_type, e.surgery_date,
+      u.first_name as surgeon_first, u.last_name as surgeon_last
+    FROM prom_schedule ps
+    JOIN patients p ON ps.patient_id = p.id
+    LEFT JOIN episodes e ON ps.episode_id = e.id
+    LEFT JOIN users u ON e.surgeon_id = u.id
+    WHERE 1=1`;
+  const params = [];
+  
+  if (patient_id) { query += ' AND ps.patient_id = ?'; params.push(patient_id); }
+  if (episode_id) { query += ' AND ps.episode_id = ?'; params.push(episode_id); }
+  if (clinic_id) { query += ' AND ps.clinic_id = ?'; params.push(clinic_id); }
+  if (status) { query += ' AND ps.status = ?'; params.push(status); }
+  if (window_name) { query += ' AND ps.window_name = ?'; params.push(window_name); }
+  
+  query += ' ORDER BY ps.due_date ASC';
+  const schedule = db.prepare(query).all(...params);
+  res.json(schedule);
+});
+
+// Mark a PROM schedule item as complete
+app.put('/api/prom-schedule/:id/complete', (req, res) => {
+  const { completed_date, pro_assessment_id } = req.body;
+  db.prepare(`
+    UPDATE prom_schedule SET status = 'completed', completed_date = ?, pro_assessment_id = ?
+    WHERE id = ?
+  `).run(completed_date || new Date().toISOString().split('T')[0], pro_assessment_id || null, req.params.id);
+  res.json({ success: true });
+});
+
+// Mark a PROM schedule item as skipped
+app.put('/api/prom-schedule/:id/skip', (req, res) => {
+  db.prepare("UPDATE prom_schedule SET status = 'skipped' WHERE id = ?").run(req.params.id);
+  res.json({ success: true });
+});
+
+// Generate schedule for existing episode (manual trigger)
+app.post('/api/prom-schedule/generate', (req, res) => {
+  const { episode_id } = req.body;
+  const episode = db.prepare(`
+    SELECT e.*, p.id as pid FROM episodes e JOIN patients p ON e.patient_id = p.id WHERE e.id = ?
+  `).get(episode_id);
+  
+  if (!episode) return res.status(404).json({ error: 'Episode not found' });
+  
+  generatePromSchedule(episode.id, episode.patient_id, episode.clinic_id, episode.surgery_type, episode.surgery_date);
+  res.json({ success: true });
+});
+
+// Auto-update overdue statuses
+app.post('/api/prom-schedule/update-overdue', (req, res) => {
+  const today = new Date().toISOString().split('T')[0];
+  const result = db.prepare(`
+    UPDATE prom_schedule SET status = 'overdue'
+    WHERE status = 'pending' AND window_close < ?
+  `).run(today);
+  res.json({ success: true, updated: result.changes });
+});
+
+// --- PROM Compliance Summary ---
+app.get('/api/prom-compliance', (req, res) => {
+  const { clinic_id } = req.query;
+  const today = new Date().toISOString().split('T')[0];
+  
+  // First update overdue statuses
+  db.prepare(`
+    UPDATE prom_schedule SET status = 'overdue'
+    WHERE status = 'pending' AND window_close < ? AND clinic_id = ?
+  `).run(today, clinic_id);
+  
+  // Overall stats
+  const total = db.prepare('SELECT COUNT(*) as count FROM prom_schedule WHERE clinic_id = ?').get(clinic_id);
+  const completed = db.prepare("SELECT COUNT(*) as count FROM prom_schedule WHERE clinic_id = ? AND status = 'completed'").get(clinic_id);
+  const overdue = db.prepare("SELECT COUNT(*) as count FROM prom_schedule WHERE clinic_id = ? AND status = 'overdue'").get(clinic_id);
+  const pending = db.prepare("SELECT COUNT(*) as count FROM prom_schedule WHERE clinic_id = ? AND status = 'pending'").get(clinic_id);
+  const due_soon = db.prepare(`
+    SELECT COUNT(*) as count FROM prom_schedule 
+    WHERE clinic_id = ? AND status = 'pending' AND due_date <= date(?, '+14 days')
+  `).get(clinic_id, today);
+  
+  // Per-window breakdown
+  const byWindow = db.prepare(`
+    SELECT 
+      window_name,
+      COUNT(*) as total,
+      SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+      SUM(CASE WHEN status = 'overdue' THEN 1 ELSE 0 END) as overdue,
+      SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending
+    FROM prom_schedule WHERE clinic_id = ?
+    GROUP BY window_name
+    ORDER BY CASE window_name WHEN '6_week' THEN 1 WHEN '3_month' THEN 2 WHEN '1_year' THEN 3 END
+  `).all(clinic_id);
+  
+  // Per-surgeon breakdown
+  const bySurgeon = db.prepare(`
+    SELECT 
+      u.first_name || ' ' || u.last_name as surgeon_name,
+      COUNT(*) as total,
+      SUM(CASE WHEN ps.status = 'completed' THEN 1 ELSE 0 END) as completed,
+      SUM(CASE WHEN ps.status = 'overdue' THEN 1 ELSE 0 END) as overdue
+    FROM prom_schedule ps
+    JOIN episodes e ON ps.episode_id = e.id
+    JOIN users u ON e.surgeon_id = u.id
+    WHERE ps.clinic_id = ?
+    GROUP BY u.id
+    ORDER BY u.last_name
+  `).all(clinic_id);
+  
+  // Patients with overdue PROMs (for action list)
+  const overduePatients = db.prepare(`
+    SELECT DISTINCT
+      p.id as patient_id,
+      p.first_name, p.last_name, p.mrn,
+      ps.assessment_type, ps.window_name, ps.due_date, ps.window_close,
+      e.surgery_type
+    FROM prom_schedule ps
+    JOIN patients p ON ps.patient_id = p.id
+    JOIN episodes e ON ps.episode_id = e.id
+    WHERE ps.clinic_id = ? AND ps.status = 'overdue'
+    ORDER BY ps.due_date ASC
+    LIMIT 20
+  `).all(clinic_id);
+  
+  // Patients with PROMs due in next 14 days
+  const dueSoonPatients = db.prepare(`
+    SELECT DISTINCT
+      p.id as patient_id,
+      p.first_name, p.last_name, p.mrn, p.token,
+      ps.id as schedule_id, ps.assessment_type, ps.window_name, ps.due_date,
+      e.surgery_type
+    FROM prom_schedule ps
+    JOIN patients p ON ps.patient_id = p.id
+    JOIN episodes e ON ps.episode_id = e.id
+    WHERE ps.clinic_id = ? AND ps.status = 'pending' AND ps.due_date <= date(?, '+14 days')
+    ORDER BY ps.due_date ASC
+    LIMIT 20
+  `).all(clinic_id, today);
+  
+  res.json({
+    total: total.count,
+    completed: completed.count,
+    overdue: overdue.count,
+    pending: pending.count,
+    due_soon: due_soon.count,
+    compliance_rate: total.count > 0 ? Math.round((completed.count / total.count) * 100) : 0,
+    by_window: byWindow,
+    by_surgeon: bySurgeon,
+    overdue_patients: overduePatients,
+    due_soon_patients: dueSoonPatients
+  });
+});
+
 // --- Seed Demo Data ---
 app.post('/api/seed-demo', (req, res) => {
   const clinicId = '11111111-1111-1111-1111-111111111111';
@@ -817,12 +1051,50 @@ app.post('/api/seed-demo', (req, res) => {
       if (idx === 4) {
         insertAdverse.run(`demo-adverse-2`, patientId, episodeId, clinicId, 'readmission', fmt(daysAgo(5)), 'staff', 'University Hospital', 'Wound drainage, possible surgical site infection');
       }
+      
+      // Generate PROM schedule for each patient
+      generatePromSchedule(episodeId, patientId, clinicId, dp.surgery, surgeryDate);
     });
+    
+    // Now modify some PROM schedules for demo realism
+    // Patient 3 (Patricia, 21 days post-op): her 6-week PROMs are coming due soon - leave as pending
+    // Patient 5 (Linda, 30 days post-op): her 6-week PROMs should be due very soon
+    // For patients with older surgeries, let's add some completed ones
+    // We'll also add a couple patients with much older surgery dates for overdue demos
   });
   
   try {
     transaction();
-    res.json({ success: true, message: `Seeded ${demoPatients.length} demo patients with check-ins, preop assessments, and adverse events.` });
+    
+    // Add 2 extra demo patients with older surgery dates to show overdue/completed PROMs
+    const insertPatient2 = db.prepare('INSERT OR IGNORE INTO patients (id, clinic_id, first_name, last_name, date_of_birth, email, phone, mrn, token) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    const insertEpisode2 = db.prepare('INSERT OR IGNORE INTO episodes (id, patient_id, clinic_id, surgeon_id, surgery_type, surgery_date, status) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    const insertPreop2 = db.prepare(`INSERT OR IGNORE INTO preop_assessments (id, patient_id, clinic_id, surgeon_id, procedure_type, planned_surgery_date, risk_tier, age, sex, bmi, asa_class, joint_score_type, joint_score_preop, projected_postop_score, expected_improvement, promis_physical_tscore, promis_mental_tscore) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    
+    // Patient 7: 60 days post-op (6-week PROMs should be completed or overdue)
+    const surgeonId7 = surgeons[0].id;
+    const surgDate7 = fmt(daysAgo(60));
+    insertPatient2.run('demo-patient-7', clinicId, 'Dorothy', 'Martinez', '1962-04-18', 'dorothy.m@email.com', '555-201-0007', '10007', 'demo0007seed');
+    insertEpisode2.run('demo-episode-7', 'demo-patient-7', clinicId, surgeonId7, 'TKA', surgDate7, 'active');
+    insertPreop2.run('demo-preop-7', 'demo-patient-7', clinicId, surgeonId7, 'TKA', surgDate7, 'LOW', 63, 'F', 27.5, 2, 'koos_jr', 58, 76, 18, 42, 48);
+    generatePromSchedule('demo-episode-7', 'demo-patient-7', clinicId, 'TKA', surgDate7);
+    // Mark her 6-week KOOS Jr as completed
+    db.prepare("UPDATE prom_schedule SET status = 'completed', completed_date = ? WHERE id = ?").run(fmt(daysAgo(18)), 'demo-episode-7-6_week-koos_jr');
+    // Leave 6-week PROMIS-10 as overdue (window_close passed but not completed)
+    
+    // Patient 8: 100 days post-op (6-week done, 3-month coming due)
+    const surgeonId8 = surgeons[1 % surgeons.length].id;
+    const surgDate8 = fmt(daysAgo(100));
+    insertPatient2.run('demo-patient-8', clinicId, 'William', 'Garcia', '1957-08-30', 'william.g@email.com', '555-201-0008', '10008', 'demo0008seed');
+    insertEpisode2.run('demo-episode-8', 'demo-patient-8', clinicId, surgeonId8, 'THA', surgDate8, 'active');
+    insertPreop2.run('demo-preop-8', 'demo-patient-8', clinicId, surgeonId8, 'THA', surgDate8, 'MODERATE', 68, 'M', 31.2, 3, 'hoos_jr', 48, 66, 18, 38, 44);
+    generatePromSchedule('demo-episode-8', 'demo-patient-8', clinicId, 'THA', surgDate8);
+    // Mark both 6-week PROMs as completed
+    db.prepare("UPDATE prom_schedule SET status = 'completed', completed_date = ? WHERE id = ?").run(fmt(daysAgo(58)), 'demo-episode-8-6_week-hoos_jr');
+    db.prepare("UPDATE prom_schedule SET status = 'completed', completed_date = ? WHERE id = ?").run(fmt(daysAgo(58)), 'demo-episode-8-6_week-promis_10');
+    // 3-month PROMs are now in the due window - leave as pending
+    
+    res.json({ success: true, message: 'Seeded 8 demo patients with check-ins, preop assessments, adverse events, and PROM schedules.' });
   } catch (error) {
     console.error('Seed error:', error);
     res.json({ success: false, error: error.message });
@@ -832,10 +1104,11 @@ app.post('/api/seed-demo', (req, res) => {
 // Clear demo data
 app.post('/api/clear-demo', (req, res) => {
   const transaction = db.transaction(() => {
-    db.prepare("DELETE FROM adverse_events WHERE id LIKE 'demo-%'").run();
-    db.prepare("DELETE FROM checkins WHERE id LIKE 'demo-%'").run();
-    db.prepare("DELETE FROM pro_assessments WHERE id LIKE 'demo-%'").run();
-    db.prepare("DELETE FROM preop_assessments WHERE id LIKE 'demo-%'").run();
+    db.prepare("DELETE FROM prom_schedule WHERE episode_id LIKE 'demo-%'").run();
+    db.prepare("DELETE FROM adverse_events WHERE id LIKE 'demo-%' OR patient_id LIKE 'demo-%'").run();
+    db.prepare("DELETE FROM checkins WHERE id LIKE 'demo-%' OR patient_id LIKE 'demo-%'").run();
+    db.prepare("DELETE FROM pro_assessments WHERE id LIKE 'demo-%' OR patient_id LIKE 'demo-%'").run();
+    db.prepare("DELETE FROM preop_assessments WHERE id LIKE 'demo-%' OR patient_id LIKE 'demo-%'").run();
     db.prepare("DELETE FROM rpm_time_logs WHERE patient_id LIKE 'demo-%'").run();
     db.prepare("DELETE FROM episodes WHERE id LIKE 'demo-%'").run();
     db.prepare("DELETE FROM patients WHERE id LIKE 'demo-%'").run();
@@ -1036,13 +1309,31 @@ app.get('/api/dashboard-stats', (req, res) => {
     WHERE clinic_id = ? AND event_type = 'readmission'
   `).get(clinic_id);
   
+  // Update overdue PROM statuses
+  db.prepare(`
+    UPDATE prom_schedule SET status = 'overdue'
+    WHERE status = 'pending' AND window_close < ? AND clinic_id = ?
+  `).run(today, clinic_id);
+  
+  const promsOverdue = db.prepare(`
+    SELECT COUNT(*) as count FROM prom_schedule
+    WHERE clinic_id = ? AND status = 'overdue'
+  `).get(clinic_id);
+  
+  const promsDueSoon = db.prepare(`
+    SELECT COUNT(*) as count FROM prom_schedule
+    WHERE clinic_id = ? AND status = 'pending' AND due_date <= date(?, '+14 days')
+  `).get(clinic_id, today);
+  
   res.json({
     active_patients: activePatients.count,
     checked_in_today: checkedInToday.count,
     needs_attention: needsAttention.count,
     overdue: overdue.count,
     er_visits: erVisits.count,
-    readmissions: readmissions.count
+    readmissions: readmissions.count,
+    proms_overdue: promsOverdue.count,
+    proms_due_soon: promsDueSoon.count
   });
 });
 

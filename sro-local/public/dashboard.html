@@ -75,77 +75,150 @@
     <main class="main-content">
         <!-- Stats Cards -->
         <div class="stats-grid">
-            <div class="stat-card">
+            <div class="stat-card" style="cursor:pointer;" onclick="filterByStat(null)" data-stat-filter="all">
                 <div class="stat-value" id="statActive">-</div>
                 <div class="stat-label">Active Patients</div>
             </div>
-            <div class="stat-card stat-success">
+            <div class="stat-card stat-success" style="cursor:pointer;" onclick="filterByStat('on-track')" data-stat-filter="on-track">
                 <div class="stat-value" id="statOnTrack">-</div>
                 <div class="stat-label">On Track</div>
             </div>
-            <div class="stat-card stat-warning">
+            <div class="stat-card stat-warning" style="cursor:pointer;" onclick="filterByStat('attention')" data-stat-filter="attention">
                 <div class="stat-value" id="statAttention">-</div>
                 <div class="stat-label">Needs Attention</div>
             </div>
-            <div class="stat-card stat-danger">
+            <div class="stat-card stat-danger" style="cursor:pointer;" onclick="filterByStat('overdue')" data-stat-filter="overdue">
                 <div class="stat-value" id="statOverdue">-</div>
                 <div class="stat-label">Overdue</div>
             </div>
-            <div class="stat-card" style="border-left: 4px solid #7c3aed;">
+            <div class="stat-card" style="border-left: 4px solid #7c3aed; cursor:pointer;" onclick="filterByStat('er_visits')" data-stat-filter="er_visits">
                 <div class="stat-value" id="statERVisits">-</div>
                 <div class="stat-label">ER Visits</div>
             </div>
-            <div class="stat-card" style="border-left: 4px solid #6366f1;">
+            <div class="stat-card" style="border-left: 4px solid #6366f1; cursor:pointer;" onclick="filterByStat('readmissions')" data-stat-filter="readmissions">
                 <div class="stat-value" id="statReadmissions">-</div>
                 <div class="stat-label">Readmissions</div>
             </div>
         </div>
 
-        <!-- Filters and Actions -->
-        <div class="toolbar">
-            <div class="filters">
-                <select id="filterStatus" onchange="filterPatients()">
-                    <option value="all">All Status</option>
-                    <option value="on-track">On Track</option>
-                    <option value="attention">Needs Attention</option>
-                    <option value="overdue">Overdue</option>
-                </select>
-                <select id="filterSurgeon" onchange="filterPatients()">
-                    <option value="all">All Surgeons</option>
-                </select>
+        <!-- Dashboard Tabs -->
+        <div style="display: flex; gap: 0; margin-bottom: 0; border-bottom: 2px solid #e5e7eb;">
+            <button id="tabPatients" class="dashboard-tab active" onclick="switchTab('patients')" style="padding: 12px 24px; font-size: 1rem; font-weight: 600; border: none; background: none; cursor: pointer; border-bottom: 3px solid #2c5aa0; color: #2c5aa0; margin-bottom: -2px;">
+                👥 Patients
+            </button>
+            <button id="tabProm" class="dashboard-tab" onclick="switchTab('prom')" style="padding: 12px 24px; font-size: 1rem; font-weight: 600; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; color: #6b7280; margin-bottom: -2px;">
+                📋 PROM Compliance
+            </button>
+        </div>
+
+        <!-- PATIENTS TAB -->
+        <div id="panelPatients" style="margin-top: 20px;">
+            <!-- Filters and Actions -->
+            <div class="toolbar">
+                <div class="filters">
+                    <select id="filterStatus" onchange="filterPatients()">
+                        <option value="all">All Status</option>
+                        <option value="on-track">On Track</option>
+                        <option value="attention">Needs Attention</option>
+                        <option value="overdue">Overdue</option>
+                    </select>
+                    <select id="filterSurgeon" onchange="filterPatients()">
+                        <option value="all">All Surgeons</option>
+                    </select>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-sm" style="background:#f59e0b;color:white;" onclick="seedDemoData()" title="Load demo patients for testing">🧪 Seed Demo</button>
+                    <button class="btn btn-sm" style="background:#ef4444;color:white;" onclick="clearDemoData()" title="Remove demo patients">🗑️ Clear Demo</button>
+                    <button class="btn btn-secondary" onclick="exportPatients()">Export CSV</button>
+                    <a href="/preop.html" class="btn btn-preop">+ Pre-Op Assessment</a>
+                    <button class="btn btn-primary" onclick="openAddPatientModal()">+ Add Patient</button>
+                </div>
             </div>
-            <div class="actions">
-                <button class="btn btn-sm" style="background:#f59e0b;color:white;" onclick="seedDemoData()" title="Load demo patients for testing">🧪 Seed Demo</button>
-                <button class="btn btn-sm" style="background:#ef4444;color:white;" onclick="clearDemoData()" title="Remove demo patients">🗑️ Clear Demo</button>
-                <button class="btn btn-secondary" onclick="exportPatients()">Export CSV</button>
-                <a href="/preop.html" class="btn btn-preop">+ Pre-Op Assessment</a>
-                <button class="btn btn-primary" onclick="openAddPatientModal()">+ Add Patient</button>
+
+            <!-- Patient Table -->
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Patient</th>
+                            <th>Surgery</th>
+                            <th>Day</th>
+                            <th>Risk</th>
+                            <th>Surgeon</th>
+                            <th>Last Check-in</th>
+                            <th>Pain</th>
+                            <th>PT</th>
+                            <th>Alerts</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="patientTableBody">
+                        <tr>
+                            <td colspan="11" class="loading">Loading patients...</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <!-- Patient Table -->
-        <div class="table-container">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Patient</th>
-                        <th>Surgery</th>
-                        <th>Day</th>
-                        <th>Risk</th>
-                        <th>Surgeon</th>
-                        <th>Last Check-in</th>
-                        <th>Pain</th>
-                        <th>PT</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="patientTableBody">
-                    <tr>
-                        <td colspan="10" class="loading">Loading patients...</td>
-                    </tr>
-                </tbody>
-            </table>
+        <!-- PROM COMPLIANCE TAB -->
+        <div id="panelProm" style="margin-top: 20px; display: none;">
+            <div id="promCompliancePanel" class="table-container" style="padding: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h2 style="margin: 0;">📊 PROM Compliance</h2>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <span id="promComplianceRate" style="font-size: 1.5rem; font-weight: 700; color: #2c5aa0;">--%</span>
+                        <span style="color: #666; font-size: 0.85rem;">completion rate</span>
+                    </div>
+                </div>
+                
+                <!-- Compliance Stats Row -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px;">
+                    <div style="background: #f0fdf4; padding: 12px; border-radius: 8px; text-align: center;">
+                        <div id="promCompleted" style="font-size: 1.5rem; font-weight: 700; color: #16a34a;">0</div>
+                        <div style="font-size: 0.8rem; color: #666;">Completed</div>
+                    </div>
+                    <div style="background: #fef3c7; padding: 12px; border-radius: 8px; text-align: center;">
+                        <div id="promDueSoon" style="font-size: 1.5rem; font-weight: 700; color: #d97706;">0</div>
+                        <div style="font-size: 0.8rem; color: #666;">Due Soon</div>
+                    </div>
+                    <div style="background: #fef2f2; padding: 12px; border-radius: 8px; text-align: center;">
+                        <div id="promOverdue" style="font-size: 1.5rem; font-weight: 700; color: #dc2626;">0</div>
+                        <div style="font-size: 0.8rem; color: #666;">Overdue</div>
+                    </div>
+                    <div style="background: #f0f4ff; padding: 12px; border-radius: 8px; text-align: center;">
+                        <div id="promPending" style="font-size: 1.5rem; font-weight: 700; color: #2563eb;">0</div>
+                        <div style="font-size: 0.8rem; color: #666;">Pending</div>
+                    </div>
+                </div>
+                
+                <!-- Window Breakdown -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div>
+                        <h3 style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">By Collection Window</h3>
+                        <div id="promByWindow" style="font-size: 0.85rem;"></div>
+                    </div>
+                    <div>
+                        <h3 style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">By Surgeon</h3>
+                        <div id="promBySurgeon" style="font-size: 0.85rem;"></div>
+                    </div>
+                </div>
+                
+                <!-- Action Lists -->
+                <div style="margin-top: 20px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div>
+                            <h3 style="font-size: 0.9rem; color: #dc2626; margin-bottom: 8px;">🔴 Overdue PROMs</h3>
+                            <div id="promOverdueList" style="max-height: 300px; overflow-y: auto; font-size: 0.85rem;"></div>
+                        </div>
+                        <div>
+                            <h3 style="font-size: 0.9rem; color: #d97706; margin-bottom: 8px;">🟡 Due in Next 14 Days</h3>
+                            <div id="promDueSoonList" style="max-height: 300px; overflow-y: auto; font-size: 0.85rem;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -207,6 +280,12 @@
                     <div id="preopInfo" style="margin-top: 15px;">
                         Loading...
                     </div>
+                </div>
+                
+                <!-- PROM Schedule Section -->
+                <div style="background: #f8f9fa; border-radius: 8px; padding: 15px; margin-top: 20px;">
+                    <h3 style="margin: 0 0 10px 0;">📋 PROM Collection Schedule</h3>
+                    <div id="promScheduleList">Loading...</div>
                 </div>
                 
                 <!-- Pain Trend Chart -->
@@ -506,173 +585,9 @@
 
     <script src="js/dashboard.js"></script>
     <script>
-        // ==========================================
-        // PRE-OP ASSESSMENT INTEGRATION
-        // ==========================================
-        
-        // Cache for preop assessments
-        let preopAssessments = {};
-        
-        // Load preop assessments for all patients
-        async function loadPreopAssessments() {
-            try {
-                const clinicId = localStorage.getItem('clinicId') || '11111111-1111-1111-1111-111111111111';
-                const response = await fetch(`/api/preop-assessments?clinic_id=${clinicId}`);
-                const assessments = await response.json();
-                
-                // Index by patient_id (keep most recent)
-                preopAssessments = {};
-                assessments.forEach(a => {
-                    if (!preopAssessments[a.patient_id] || new Date(a.assessed_at) > new Date(preopAssessments[a.patient_id].assessed_at)) {
-                        preopAssessments[a.patient_id] = a;
-                    }
-                });
-                
-                // Re-render table if patients already loaded
-                if (typeof patients !== 'undefined' && patients.length > 0) {
-                    renderPatientTable();
-                }
-            } catch (error) {
-                console.error('Error loading preop assessments:', error);
-            }
-        }
-        
-        // Get risk badge HTML for a patient
-        function getRiskBadge(patientId) {
-            const preop = preopAssessments[patientId];
-            if (!preop || !preop.risk_tier) {
-                return '<span class="risk-badge risk-none">—</span>';
-            }
-            const tier = preop.risk_tier.toLowerCase();
-            return `<span class="risk-badge risk-${tier}">${preop.risk_tier}</span>`;
-        }
-        
-        // Load preop info for patient detail modal
-        async function loadPatientPreopInfo(patientId) {
-            const preopDiv = document.getElementById('preopInfo');
-            const preopBtn = document.getElementById('preopActionBtn');
-            
-            try {
-                const response = await fetch(`/api/preop-postop-comparison/${patientId}`);
-                const data = await response.json();
-                
-                if (!data.hasPreop) {
-                    preopDiv.innerHTML = `<p style="color: #9ca3af;">No pre-op assessment on file.</p>`;
-                    preopBtn.href = `/preop.html?patient=${patientId}`;
-                    preopBtn.textContent = '+ Complete Pre-Op';
-                    preopBtn.style.display = 'inline-block';
-                    return;
-                }
-                
-                // Hide the button if preop exists, or change to "View/Edit"
-                preopBtn.href = `/preop.html?patient=${patientId}`;
-                preopBtn.textContent = 'New Assessment';
-                
-                const preop = data.preop;
-                let html = `
-                    <div class="preop-grid">
-                        <div class="preop-stat">
-                            <div><span class="risk-badge risk-${preop.riskTier.toLowerCase()}">${preop.riskTier}</span></div>
-                            <div class="preop-stat-label">Risk Tier</div>
-                        </div>
-                        <div class="preop-stat">
-                            <div class="preop-stat-value">${preop.jointScore}</div>
-                            <div class="preop-stat-label">${preop.jointScoreType === 'koos_jr' ? 'KOOS Jr' : 'HOOS Jr'}</div>
-                        </div>
-                        <div class="preop-stat">
-                            <div class="preop-stat-value" style="color: #22c55e;">${preop.projectedScore}</div>
-                            <div class="preop-stat-label">Projected</div>
-                        </div>
-                        <div class="preop-stat">
-                            <div class="preop-stat-value" style="color: #8b5cf6;">+${preop.expectedImprovement}</div>
-                            <div class="preop-stat-label">Expected Δ</div>
-                        </div>
-                    </div>
-                `;
-                
-                if (data.hasPostop) {
-                    const postop = data.postop;
-                    html += `
-                        <hr style="border-color: #374151; margin: 15px 0;">
-                        <div class="preop-grid">
-                            <div class="preop-stat">
-                                <div class="preop-stat-value">${postop.jointScore}</div>
-                                <div class="preop-stat-label">Actual Post-Op</div>
-                            </div>
-                            <div class="preop-stat">
-                                <div class="preop-stat-value" style="color: ${postop.actualImprovement >= 0 ? '#22c55e' : '#ef4444'};">
-                                    ${postop.actualImprovement >= 0 ? '+' : ''}${postop.actualImprovement}
-                                </div>
-                                <div class="preop-stat-label">Actual Δ</div>
-                            </div>
-                            <div class="preop-stat">
-                                <div class="preop-stat-value">${postop.achievedSCB ? '✅' : '❌'}</div>
-                                <div class="preop-stat-label">SCB Achieved</div>
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                preopDiv.innerHTML = html;
-                
-            } catch (error) {
-                console.error('Error loading preop info:', error);
-                preopDiv.innerHTML = '<p style="color: #ef4444;">Error loading pre-op data</p>';
-            }
-        }
-        
-        // Store reference to original openPatientModal
-        const _originalOpenPatientModal = window.openPatientModal;
-        
-        // Override openPatientModal to also load preop info
-        window.openPatientModal = function(patientId) {
-            if (_originalOpenPatientModal) {
-                _originalOpenPatientModal(patientId);
-            }
-            loadPatientPreopInfo(patientId);
-        };
-        
-        // Store reference to original renderPatientRow
-        const _originalRenderPatientRow = window.renderPatientRow;
-        
-        // Override renderPatientRow to include risk column
-        window.renderPatientRow = function(patient) {
-            // If original function exists, we need to modify its output
-            // Since we can't easily modify, let's check if this function is called
-            // and inject risk data
-            
-            // Get base row (this won't work directly, so we'll use a different approach)
-            // We'll modify renderPatientTable instead via MutationObserver or post-processing
-        };
-        
-        // Modify the table after it's rendered to add risk column data
-        function addRiskColumnToTable() {
-            const rows = document.querySelectorAll('#patientTableBody tr[data-patient-id]');
-            rows.forEach(row => {
-                const patientId = row.getAttribute('data-patient-id');
-                if (patientId) {
-                    // Find or create risk cell (4th column)
-                    const cells = row.querySelectorAll('td');
-                    if (cells.length >= 4) {
-                        // Check if risk cell already has content
-                        const riskCell = cells[3];
-                        if (riskCell && !riskCell.querySelector('.risk-badge')) {
-                            riskCell.innerHTML = getRiskBadge(patientId);
-                        }
-                    }
-                }
-            });
-        }
-        
-        // Watch for table changes and add risk badges
-        const tableObserver = new MutationObserver((mutations) => {
-            addRiskColumnToTable();
-        });
-        
         function sendPatientLink(type) {
             var linkInput = document.getElementById('checkinLink');
             if (!linkInput || !linkInput.value) { alert('Select a patient first.'); return; }
-            // Extract token from the existing check-in link
             var match = linkInput.value.match(/[?&]t=([^&]+)/);
             if (!match) { alert('No patient token found.'); return; }
             var token = match[1];
@@ -690,18 +605,6 @@
                 prompt('Copy this link:', link);
             });
         }
-
-        // Start observing when DOM is ready
-        document.addEventListener('DOMContentLoaded', () => {
-            // Load preop assessments
-            loadPreopAssessments();
-            
-            // Start observing table for changes
-            const tableBody = document.getElementById('patientTableBody');
-            if (tableBody) {
-                tableObserver.observe(tableBody, { childList: true, subtree: true });
-            }
-        });
     </script>
 </body>
 </html>
