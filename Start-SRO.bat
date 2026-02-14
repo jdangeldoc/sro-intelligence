@@ -10,4 +10,4 @@ if not exist "node_modules" call npm install
 start "SRO Server" /min node server.js
 timeout /t 5 /nobreak >nul
 start http://localhost:3000/dashboard.html
-echo SRO is running!
+echo SRO is running!pause

@@ -228,31 +228,28 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_prom_schedule_due ON prom_schedule(due_date);
   CREATE INDEX IF NOT EXISTS idx_nursing_notes_patient ON nursing_notes(patient_id);
   CREATE INDEX IF NOT EXISTS idx_nursing_notes_episode ON nursing_notes(episode_id);
-`);
 
-// Migration: add CMS risk variable columns if missing
-const preopCols = db.pragma('table_info(preop_assessments)').map(c => c.name);
-if (!preopCols.includes('chronic_narcotics_use')) {
-  db.exec("ALTER TABLE preop_assessments ADD COLUMN chronic_narcotics_use INTEGER DEFAULT 0");
-}
-if (!preopCols.includes('total_painful_joint_count')) {
-  db.exec("ALTER TABLE preop_assessments ADD COLUMN total_painful_joint_count INTEGER DEFAULT 0");
-}
-if (!preopCols.includes('health_literacy_sils')) {
-  db.exec("ALTER TABLE preop_assessments ADD COLUMN health_literacy_sils INTEGER");
-}
-if (!preopCols.includes('low_back_pain')) {
-  db.exec("ALTER TABLE preop_assessments ADD COLUMN low_back_pain INTEGER DEFAULT 0");
-}
-if (!preopCols.includes('koos_jr_raw')) {
-  db.exec("ALTER TABLE preop_assessments ADD COLUMN koos_jr_raw INTEGER");
-}
-if (!preopCols.includes('hoos_jr_raw')) {
-  db.exec("ALTER TABLE preop_assessments ADD COLUMN hoos_jr_raw INTEGER");
-}
-if (!preopCols.includes('surgeon_justification')) {
-  db.exec("ALTER TABLE preop_assessments ADD COLUMN surgeon_justification TEXT");
-}
+  // Migration: add CMS risk variable columns if missing
+  const preopCols = db.pragma('table_info(preop_assessments)').map(c => c.name);
+  if (!preopCols.includes('chronic_narcotics_use')) {
+    db.exec("ALTER TABLE preop_assessments ADD COLUMN chronic_narcotics_use INTEGER DEFAULT 0");
+  }
+  if (!preopCols.includes('total_painful_joint_count')) {
+    db.exec("ALTER TABLE preop_assessments ADD COLUMN total_painful_joint_count INTEGER DEFAULT 0");
+  }
+  if (!preopCols.includes('health_literacy_sils')) {
+    db.exec("ALTER TABLE preop_assessments ADD COLUMN health_literacy_sils INTEGER");
+  }
+  if (!preopCols.includes('low_back_pain')) {
+    db.exec("ALTER TABLE preop_assessments ADD COLUMN low_back_pain INTEGER DEFAULT 0");
+  }
+  if (!preopCols.includes('koos_jr_raw')) {
+    db.exec("ALTER TABLE preop_assessments ADD COLUMN koos_jr_raw INTEGER");
+  }
+  if (!preopCols.includes('hoos_jr_raw')) {
+    db.exec("ALTER TABLE preop_assessments ADD COLUMN hoos_jr_raw INTEGER");
+  }
+`);
 
 // Insert default clinic if none exists
 const clinicCount = db.prepare('SELECT COUNT(*) as count FROM clinics').get();
@@ -736,7 +733,7 @@ app.post('/api/preop-assessments', (req, res) => {
     promis_physical_tscore, promis_mental_tscore,
     cms_back_pain, cms_health_literacy, cms_other_knee_pain, cms_other_hip_pain,
     low_back_pain, health_literacy_sils, total_painful_joint_count, chronic_narcotics_use,
-    koos_jr_raw, hoos_jr_raw, surgeon_justification
+    koos_jr_raw, hoos_jr_raw
   } = req.body;
   
   db.prepare(`
@@ -748,8 +745,8 @@ app.post('/api/preop-assessments', (req, res) => {
       promis_physical_tscore, promis_mental_tscore,
       cms_back_pain, cms_health_literacy, cms_other_knee_pain, cms_other_hip_pain,
       low_back_pain, health_literacy_sils, total_painful_joint_count, chronic_narcotics_use,
-      koos_jr_raw, hoos_jr_raw, surgeon_justification
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      koos_jr_raw, hoos_jr_raw
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id, patient_id, clinic_id, surgeon_id, assessment_type || 'preop', procedure_type, planned_surgery_date,
     mortality_risk, readmission_risk, prolonged_los_risk, risk_tier,
@@ -759,8 +756,7 @@ app.post('/api/preop-assessments', (req, res) => {
     cms_back_pain || low_back_pain ? 1 : 0, cms_health_literacy || null, cms_other_knee_pain ? 1 : 0, cms_other_hip_pain ? 1 : 0,
     low_back_pain ? 1 : 0, health_literacy_sils !== undefined ? health_literacy_sils : null,
     total_painful_joint_count || 0, chronic_narcotics_use ? 1 : 0,
-    koos_jr_raw !== undefined ? koos_jr_raw : null, hoos_jr_raw !== undefined ? hoos_jr_raw : null,
-    surgeon_justification || null
+    koos_jr_raw !== undefined ? koos_jr_raw : null, hoos_jr_raw !== undefined ? hoos_jr_raw : null
   );
   
   res.json({ id, success: true });

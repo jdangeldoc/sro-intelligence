@@ -153,6 +153,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
     <button class="tab-btn" onclick="switchTab(1)">2. Comorbidities / HCC</button>
     <button class="tab-btn" onclick="switchTab(2)">3. Workup Tracking</button>
     <button class="tab-btn" onclick="switchTab(3)">4. Decision Tool</button>
+    <button class="tab-btn" onclick="switchTab(4)">5. Patient View</button>
 </div>
 
 <!-- TAB 0: INTAKE RESULTS -->
@@ -191,16 +192,162 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
 <div class="tab-panel" id="panel3">
     <div class="dec-grid">
         <div class="dec-card" style="border-color:#3b82f6"><div class="dec-val" style="color:#1e40af" id="dPreop">--</div><div class="dec-label">Current Score</div><div class="dec-sub" id="dMeasure">KOOS-JR</div></div>
-        <div class="dec-card" style="border-color:#22c55e"><div class="dec-val" style="color:#16a34a" id="dPostop">--</div><div class="dec-label">Predicted Post-Op</div><div class="dec-sub">Average outcome</div></div>
+        <div class="dec-card" style="border-color:#22c55e"><div class="dec-val" style="color:#16a34a" id="dPostop">--</div><div class="dec-label">Predicted Post-Op</div><div class="dec-sub">1-Year Target</div></div>
         <div class="dec-card" style="border-color:#f59e0b"><div class="dec-val" style="color:#d97706" id="dImprove">--</div><div class="dec-label">Expected Improvement</div><div class="dec-sub" id="dRange"></div></div>
         <div class="dec-card" id="dReadCard"><div class="dec-val" id="dReadmit">4.5%</div><div class="dec-label">90-Day Readmission</div><div class="dec-sub">Avg: 4.5%</div></div>
     </div>
     <div class="card"><h3>Risk Factor Impact</h3><div class="risk-list" id="riskFactorList"><p style="color:#6b7280">Select comorbidities to see impact.</p></div></div>
     <div id="recBox" class="rec-box benefit" style="display:none;"></div>
+    <div id="surgeonJustifyBox" class="card" style="display:none;margin-top:12px;">
+        <h3 style="color:#d97706;">Surgeon Decision</h3>
+        <p style="font-size:0.85rem;color:#6b7280;margin-bottom:8px;">Pre-op score is high. If proceeding with surgery, document clinical rationale below:</p>
+        <textarea id="surgeonJustification" rows="3" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.95rem;resize:vertical;" placeholder="e.g., Mechanical symptoms, instability, failed conservative treatment, patient goals..."></textarea>
+    </div>
     <div class="card"><h3>Alerts</h3><div id="alertList"><p style="color:#6b7280">Complete intake for alerts.</p></div></div>
     <div style="text-align:center;padding:16px;">
         <button class="btn btn-success" onclick="saveAssessment()">Save Assessment</button>
         <button class="btn btn-outline" style="margin-left:8px;" onclick="printSummary()">Print Summary</button>
+    </div>
+</div>
+
+<!-- TAB 4: PATIENT VIEW (Shared Decision Aid) -->
+<div class="tab-panel" id="panel4">
+    <div style="background:#fff;border-radius:16px;padding:24px;max-width:900px;margin:0 auto;">
+        <h2 style="text-align:center;color:#1e40af;margin-bottom:4px;font-size:1.5rem;">Your Surgery Journey</h2>
+        <p style="text-align:center;color:#6b7280;margin-bottom:20px;" id="pvMeasureLabel">KOOS-JR Knee Health Score</p>
+        <div style="position:relative;width:100%;max-width:840px;margin:0 auto;">
+            <svg id="pvChart" viewBox="0 0 840 420" style="width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg">
+                <!-- Background -->
+                <defs>
+                    <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#dbeafe"/>
+                        <stop offset="100%" stop-color="#eff6ff"/>
+                    </linearGradient>
+                    <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stop-color="#f59e0b"/>
+                        <stop offset="100%" stop-color="#22c55e"/>
+                    </linearGradient>
+                </defs>
+                <rect x="0" y="0" width="840" height="420" rx="16" fill="url(#skyGrad)"/>
+
+                <!-- Y-axis labels and gridlines -->
+                <line x1="120" y1="60" x2="720" y2="60" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4"/>
+                <text x="110" y="65" text-anchor="end" fill="#9ca3af" font-size="13">100</text>
+                <line x1="120" y1="120" x2="720" y2="120" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4"/>
+                <text x="110" y="125" text-anchor="end" fill="#9ca3af" font-size="13">80</text>
+                <line x1="120" y1="180" x2="720" y2="180" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4"/>
+                <text x="110" y="185" text-anchor="end" fill="#9ca3af" font-size="13">60</text>
+                <line x1="120" y1="240" x2="720" y2="240" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4"/>
+                <text x="110" y="245" text-anchor="end" fill="#9ca3af" font-size="13">40</text>
+                <line x1="120" y1="300" x2="720" y2="300" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4"/>
+                <text x="110" y="305" text-anchor="end" fill="#9ca3af" font-size="13">20</text>
+
+                <!-- X-axis -->
+                <line x1="120" y1="360" x2="720" y2="360" stroke="#d1d5db" stroke-width="2"/>
+                <text x="170" y="390" text-anchor="middle" fill="#6b7280" font-size="13" font-weight="600">Before Surgery</text>
+                <text x="420" y="390" text-anchor="middle" fill="#6b7280" font-size="13">Recovery</text>
+                <text x="670" y="390" text-anchor="middle" fill="#6b7280" font-size="13" font-weight="600">1 Year After</text>
+
+                <!-- PASS zone -->
+                <rect id="pvPassZone" x="120" y="60" width="600" height="0" fill="#dcfce7" opacity="0.4" rx="4"/>
+                <text id="pvPassLabel" x="725" y="0" fill="#16a34a" font-size="11" font-weight="600" opacity="0">PASS</text>
+
+                <!-- Progress line (curved) -->
+                <path id="pvLine" d="" stroke="url(#lineGrad)" stroke-width="5" fill="none" stroke-linecap="round"/>
+
+                <!-- Pre-op dot and score -->
+                <circle id="pvPreDot" cx="170" cy="240" r="10" fill="#f59e0b" stroke="#fff" stroke-width="3"/>
+                <rect id="pvPreBg" x="135" y="200" width="70" height="30" rx="8" fill="#f59e0b"/>
+                <text id="pvPreScore" x="170" y="220" text-anchor="middle" fill="#fff" font-size="16" font-weight="700">40</text>
+
+                <!-- Post-op dot and score -->
+                <circle id="pvPostDot" cx="670" cy="120" r="10" fill="#22c55e" stroke="#fff" stroke-width="3"/>
+                <rect id="pvPostBg" x="635" y="80" width="70" height="30" rx="8" fill="#22c55e"/>
+                <text id="pvPostScore" x="670" y="100" text-anchor="middle" fill="#fff" font-size="16" font-weight="700">77</text>
+
+                <!-- Person with cane (LEFT - pre-op) -->
+                <g id="pvPersonPre" transform="translate(45, 260)">
+                    <!-- Head -->
+                    <circle cx="20" cy="10" r="12" fill="#fbbf24" stroke="#f59e0b" stroke-width="2"/>
+                    <!-- Frown -->
+                    <path d="M14 16 Q20 12 26 16" stroke="#92400e" stroke-width="1.5" fill="none"/>
+                    <!-- Eyes -->
+                    <circle cx="16" cy="9" r="1.5" fill="#92400e"/>
+                    <circle cx="24" cy="9" r="1.5" fill="#92400e"/>
+                    <!-- Body -->
+                    <rect x="12" y="22" width="16" height="30" rx="5" fill="#60a5fa"/>
+                    <!-- Left leg (bent) -->
+                    <rect x="10" y="50" width="8" height="28" rx="3" fill="#3b82f6" transform="rotate(-5, 14, 50)"/>
+                    <!-- Right leg -->
+                    <rect x="22" y="50" width="8" height="28" rx="3" fill="#3b82f6" transform="rotate(5, 26, 50)"/>
+                    <!-- Left arm to cane -->
+                    <rect x="3" y="26" width="10" height="6" rx="3" fill="#60a5fa" transform="rotate(-20, 8, 29)"/>
+                    <!-- Cane -->
+                    <line x1="-2" y1="25" x2="-8" y2="82" stroke="#78716c" stroke-width="4" stroke-linecap="round"/>
+                    <line x1="-8" y1="82" x2="2" y2="82" stroke="#78716c" stroke-width="4" stroke-linecap="round"/>
+                    <!-- Pain stars -->
+                    <text x="38" y="15" fill="#ef4444" font-size="14">✦</text>
+                    <text x="42" y="35" fill="#ef4444" font-size="10">✦</text>
+                </g>
+
+                <!-- Happy person walking (RIGHT - post-op) -->
+                <g id="pvPersonPost" transform="translate(740, 180)">
+                    <!-- Head -->
+                    <circle cx="20" cy="10" r="12" fill="#86efac" stroke="#22c55e" stroke-width="2"/>
+                    <!-- Smile -->
+                    <path d="M14 12 Q20 20 26 12" stroke="#166534" stroke-width="1.5" fill="none"/>
+                    <!-- Eyes -->
+                    <circle cx="16" cy="8" r="1.5" fill="#166534"/>
+                    <circle cx="24" cy="8" r="1.5" fill="#166534"/>
+                    <!-- Body (leaning forward, walking) -->
+                    <rect x="12" y="22" width="16" height="28" rx="5" fill="#60a5fa" transform="rotate(-5, 20, 36)"/>
+                    <!-- Left leg (forward stride) -->
+                    <rect x="10" y="48" width="8" height="28" rx="3" fill="#3b82f6" transform="rotate(-15, 14, 48)"/>
+                    <!-- Right leg (back stride) -->
+                    <rect x="22" y="48" width="8" height="28" rx="3" fill="#3b82f6" transform="rotate(15, 26, 48)"/>
+                    <!-- Right arm carrying box -->
+                    <rect x="28" y="28" width="12" height="6" rx="3" fill="#60a5fa" transform="rotate(10, 34, 31)"/>
+                    <!-- Small box -->
+                    <rect x="38" y="25" width="16" height="14" rx="2" fill="#fbbf24" stroke="#f59e0b" stroke-width="1.5"/>
+                    <line x1="38" y1="32" x2="54" y2="32" stroke="#f59e0b" stroke-width="1"/>
+                    <!-- Left arm swinging -->
+                    <rect x="0" y="28" width="12" height="6" rx="3" fill="#60a5fa" transform="rotate(-25, 6, 31)"/>
+                    <!-- Motion lines -->
+                    <line x1="-8" y1="40" x2="-18" y2="40" stroke="#86efac" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="-6" y1="50" x2="-16" y2="50" stroke="#86efac" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="-8" y1="60" x2="-15" y2="60" stroke="#86efac" stroke-width="2" stroke-linecap="round"/>
+                </g>
+            </svg>
+        </div>
+
+        <!-- Improvement summary below chart -->
+        <div style="display:flex;gap:16px;margin-top:20px;flex-wrap:wrap;justify-content:center;">
+            <div style="flex:1;min-width:200px;background:#fef3c7;border-radius:12px;padding:16px;text-align:center;">
+                <div style="font-size:0.85rem;color:#92400e;font-weight:600;">Your Score Now</div>
+                <div id="pvPreVal" style="font-size:2.2rem;font-weight:800;color:#d97706;">--</div>
+                <div style="font-size:0.8rem;color:#92400e;">out of 100</div>
+            </div>
+            <div style="flex:1;min-width:200px;background:#dbeafe;border-radius:12px;padding:16px;text-align:center;">
+                <div style="font-size:0.85rem;color:#1e40af;font-weight:600;">Expected Improvement</div>
+                <div id="pvDeltaVal" style="font-size:2.2rem;font-weight:800;color:#2563eb;">--</div>
+                <div style="font-size:0.8rem;color:#1e40af;">points better</div>
+            </div>
+            <div style="flex:1;min-width:200px;background:#dcfce7;border-radius:12px;padding:16px;text-align:center;">
+                <div style="font-size:0.85rem;color:#166534;font-weight:600;">Your Target Score</div>
+                <div id="pvPostVal" style="font-size:2.2rem;font-weight:800;color:#16a34a;">--</div>
+                <div style="font-size:0.8rem;color:#166534;">out of 100</div>
+            </div>
+        </div>
+
+        <div style="margin-top:20px;padding:16px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;">
+            <p style="text-align:center;color:#475569;font-size:0.95rem;line-height:1.6;margin:0;" id="pvNarrative">
+                Complete the Patient Intake to see your personalized surgery journey.
+            </p>
+        </div>
+
+        <div style="text-align:center;margin-top:16px;">
+            <button class="btn btn-primary" onclick="printPatientView()" style="background:#1e40af;">Print for Patient</button>
+        </div>
     </div>
 </div>
 
@@ -223,25 +370,25 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
 // HCC LIBRARY
 var HCC_LIB = {
 "comorbidities":{
-"diabetes_controlled":{"display_name":"Diabetes (Controlled, A1c < 8)","hcc_code":"HCC 37","hcc_weight":0.105,"category":"metabolic","workup_required":{"tests":["HbA1c","BMP"],"consults":[],"clearance_criteria":"A1c < 8.0, glucose controlled"},"surgical_risk_modifier":1.1,"outcome_impact":{"koos_reduction":3,"hoos_reduction":3,"readmission_increase":0.02}},
-"diabetes_uncontrolled":{"display_name":"Diabetes (Uncontrolled, A1c >= 8)","hcc_code":"HCC 36","hcc_weight":0.302,"category":"metabolic","workup_required":{"tests":["HbA1c","BMP","Fructosamine"],"consults":["Endocrinology"],"clearance_criteria":"A1c < 8.0 or Endocrine clearance"},"surgical_risk_modifier":1.4,"outcome_impact":{"koos_reduction":8,"hoos_reduction":8,"readmission_increase":0.05}},
-"chf":{"display_name":"Congestive Heart Failure","hcc_code":"HCC 85","hcc_weight":0.323,"category":"cardiac","workup_required":{"tests":["BNP","Echocardiogram","EKG"],"consults":["Cardiology"],"clearance_criteria":"EF > 40%, optimized on meds"},"surgical_risk_modifier":1.6,"outcome_impact":{"koos_reduction":5,"hoos_reduction":5,"readmission_increase":0.08}},
-"copd":{"display_name":"COPD / Chronic Lung Disease","hcc_code":"HCC 111","hcc_weight":0.335,"category":"pulmonary","workup_required":{"tests":["PFTs","Chest X-ray"],"consults":["Pulmonology if FEV1 < 50%"],"clearance_criteria":"FEV1 > 50% or Pulmonology clearance"},"surgical_risk_modifier":1.4,"outcome_impact":{"koos_reduction":4,"hoos_reduction":4,"readmission_increase":0.04}},
-"ckd_stage_3":{"display_name":"CKD Stage 3 (GFR 30-59)","hcc_code":"HCC 138","hcc_weight":0.069,"category":"renal","workup_required":{"tests":["BMP","GFR","Urinalysis"],"consults":[],"clearance_criteria":"Stable GFR, electrolytes normal"},"surgical_risk_modifier":1.2,"outcome_impact":{"koos_reduction":2,"hoos_reduction":2,"readmission_increase":0.02}},
-"ckd_stage_4":{"display_name":"CKD Stage 4 (GFR 15-29)","hcc_code":"HCC 137","hcc_weight":0.289,"category":"renal","workup_required":{"tests":["BMP","GFR","CBC","Phosphorus","PTH"],"consults":["Nephrology"],"clearance_criteria":"Nephrology clearance"},"surgical_risk_modifier":1.5,"outcome_impact":{"koos_reduction":6,"hoos_reduction":6,"readmission_increase":0.06}},
-"obesity_class_2":{"display_name":"Obesity Class II (BMI 35-39.9)","hcc_code":"HCC 48","hcc_weight":0.250,"category":"metabolic","workup_required":{"tests":["BMI","Fasting glucose","Lipid panel"],"consults":["Nutrition if BMI > 40"],"clearance_criteria":"Document BMI, assess for OSA"},"surgical_risk_modifier":1.3,"outcome_impact":{"koos_reduction":4,"hoos_reduction":4,"readmission_increase":0.03}},
-"obesity_class_3":{"display_name":"Obesity Class III / Morbid (BMI >= 40)","hcc_code":"HCC 48","hcc_weight":0.250,"category":"metabolic","workup_required":{"tests":["BMI","Fasting glucose","Lipid panel","HbA1c"],"consults":["Nutrition","Bariatric if BMI > 45"],"clearance_criteria":"BMI < 45 or bariatric clearance"},"surgical_risk_modifier":1.6,"outcome_impact":{"koos_reduction":7,"hoos_reduction":7,"readmission_increase":0.05}},
-"cad":{"display_name":"Coronary Artery Disease","hcc_code":"HCC 88","hcc_weight":0.140,"category":"cardiac","workup_required":{"tests":["EKG","Stress test if >2yr"],"consults":["Cardiology if active symptoms"],"clearance_criteria":"No active angina, stable on meds"},"surgical_risk_modifier":1.4,"outcome_impact":{"koos_reduction":3,"hoos_reduction":3,"readmission_increase":0.04}},
-"atrial_fibrillation":{"display_name":"Atrial Fibrillation","hcc_code":"HCC 96","hcc_weight":0.271,"category":"cardiac","workup_required":{"tests":["EKG","INR if warfarin","Echo"],"consults":["Cardiology for bridging"],"clearance_criteria":"Rate controlled, bridging plan"},"surgical_risk_modifier":1.3,"outcome_impact":{"koos_reduction":2,"hoos_reduction":2,"readmission_increase":0.03}},
-"sleep_apnea":{"display_name":"Obstructive Sleep Apnea","hcc_code":"HCC 108","hcc_weight":0.180,"category":"pulmonary","workup_required":{"tests":["Sleep study if needed"],"consults":["Sleep medicine if uncontrolled"],"clearance_criteria":"CPAP compliant >4hrs/night"},"surgical_risk_modifier":1.3,"outcome_impact":{"koos_reduction":3,"hoos_reduction":3,"readmission_increase":0.03}},
-"depression":{"display_name":"Major Depression","hcc_code":"HCC 155","hcc_weight":0.309,"category":"psychiatric","workup_required":{"tests":["PHQ-9"],"consults":["Psychiatry if severe"],"clearance_criteria":"Stable on treatment, PHQ-9 < 15"},"surgical_risk_modifier":1.2,"outcome_impact":{"koos_reduction":5,"hoos_reduction":5,"readmission_increase":0.03}},
-"malnutrition":{"display_name":"Protein-Calorie Malnutrition","hcc_code":"HCC 21","hcc_weight":0.250,"category":"metabolic","workup_required":{"tests":["Albumin","Prealbumin","Transferrin"],"consults":["Nutrition"],"clearance_criteria":"Albumin > 3.5, Prealbumin > 15"},"surgical_risk_modifier":1.6,"outcome_impact":{"koos_reduction":7,"hoos_reduction":7,"readmission_increase":0.06}},
-"smoking_current":{"display_name":"Current Smoker","hcc_code":null,"hcc_weight":0.100,"category":"lifestyle","workup_required":{"tests":["Cotinine if cessation claimed"],"consults":["Smoking cessation"],"clearance_criteria":"Quit > 4 weeks or counseling documented"},"surgical_risk_modifier":1.4,"outcome_impact":{"koos_reduction":5,"hoos_reduction":5,"readmission_increase":0.04}},
-"opioid_chronic":{"display_name":"Chronic Opioid Use (> 3 months)","hcc_code":"HCC 135","hcc_weight":0.309,"category":"pain_management","workup_required":{"tests":["Urine drug screen","PDMP check","MME calc"],"consults":["Pain management if MME > 90"],"clearance_criteria":"Pain management plan documented"},"surgical_risk_modifier":1.3,"outcome_impact":{"koos_reduction":10,"hoos_reduction":10,"readmission_increase":0.04}},
+"diabetes_controlled":{"display_name":"Diabetes (Controlled, A1c < 8)","hcc_code":"HCC 37","hcc_weight":0.105,"category":"metabolic","workup_required":{"tests":["HbA1c","BMP"],"consults":[],"clearance_criteria":"A1c < 8.0, glucose controlled"},"surgical_risk_modifier":1.1,"outcome_impact":{"koos_reduction":1,"hoos_reduction":1,"readmission_increase":0.02}},
+"diabetes_uncontrolled":{"display_name":"Diabetes (Uncontrolled, A1c >= 8)","hcc_code":"HCC 36","hcc_weight":0.302,"category":"metabolic","workup_required":{"tests":["HbA1c","BMP","Fructosamine"],"consults":["Endocrinology"],"clearance_criteria":"A1c < 8.0 or Endocrine clearance"},"surgical_risk_modifier":1.4,"outcome_impact":{"koos_reduction":2,"hoos_reduction":2,"readmission_increase":0.05}},
+"chf":{"display_name":"Congestive Heart Failure","hcc_code":"HCC 85","hcc_weight":0.323,"category":"cardiac","workup_required":{"tests":["BNP","Echocardiogram","EKG"],"consults":["Cardiology"],"clearance_criteria":"EF > 40%, optimized on meds"},"surgical_risk_modifier":1.6,"outcome_impact":{"koos_reduction":2,"hoos_reduction":2,"readmission_increase":0.08}},
+"copd":{"display_name":"COPD / Chronic Lung Disease","hcc_code":"HCC 111","hcc_weight":0.335,"category":"pulmonary","workup_required":{"tests":["PFTs","Chest X-ray"],"consults":["Pulmonology if FEV1 < 50%"],"clearance_criteria":"FEV1 > 50% or Pulmonology clearance"},"surgical_risk_modifier":1.4,"outcome_impact":{"koos_reduction":1,"hoos_reduction":1,"readmission_increase":0.04}},
+"ckd_stage_3":{"display_name":"CKD Stage 3 (GFR 30-59)","hcc_code":"HCC 138","hcc_weight":0.069,"category":"renal","workup_required":{"tests":["BMP","GFR","Urinalysis"],"consults":[],"clearance_criteria":"Stable GFR, electrolytes normal"},"surgical_risk_modifier":1.2,"outcome_impact":{"koos_reduction":1,"hoos_reduction":1,"readmission_increase":0.02}},
+"ckd_stage_4":{"display_name":"CKD Stage 4 (GFR 15-29)","hcc_code":"HCC 137","hcc_weight":0.289,"category":"renal","workup_required":{"tests":["BMP","GFR","CBC","Phosphorus","PTH"],"consults":["Nephrology"],"clearance_criteria":"Nephrology clearance"},"surgical_risk_modifier":1.5,"outcome_impact":{"koos_reduction":2,"hoos_reduction":2,"readmission_increase":0.06}},
+"obesity_class_2":{"display_name":"Obesity Class II (BMI 35-39.9)","hcc_code":"HCC 48","hcc_weight":0.250,"category":"metabolic","workup_required":{"tests":["BMI","Fasting glucose","Lipid panel"],"consults":["Nutrition if BMI > 40"],"clearance_criteria":"Document BMI, assess for OSA"},"surgical_risk_modifier":1.3,"outcome_impact":{"koos_reduction":1,"hoos_reduction":1,"readmission_increase":0.03}},
+"obesity_class_3":{"display_name":"Obesity Class III / Morbid (BMI >= 40)","hcc_code":"HCC 48","hcc_weight":0.250,"category":"metabolic","workup_required":{"tests":["BMI","Fasting glucose","Lipid panel","HbA1c"],"consults":["Nutrition","Bariatric if BMI > 45"],"clearance_criteria":"BMI < 45 or bariatric clearance"},"surgical_risk_modifier":1.6,"outcome_impact":{"koos_reduction":3,"hoos_reduction":3,"readmission_increase":0.05}},
+"cad":{"display_name":"Coronary Artery Disease","hcc_code":"HCC 88","hcc_weight":0.140,"category":"cardiac","workup_required":{"tests":["EKG","Stress test if >2yr"],"consults":["Cardiology if active symptoms"],"clearance_criteria":"No active angina, stable on meds"},"surgical_risk_modifier":1.4,"outcome_impact":{"koos_reduction":1,"hoos_reduction":1,"readmission_increase":0.04}},
+"atrial_fibrillation":{"display_name":"Atrial Fibrillation","hcc_code":"HCC 96","hcc_weight":0.271,"category":"cardiac","workup_required":{"tests":["EKG","INR if warfarin","Echo"],"consults":["Cardiology for bridging"],"clearance_criteria":"Rate controlled, bridging plan"},"surgical_risk_modifier":1.3,"outcome_impact":{"koos_reduction":1,"hoos_reduction":1,"readmission_increase":0.03}},
+"sleep_apnea":{"display_name":"Obstructive Sleep Apnea","hcc_code":"HCC 108","hcc_weight":0.180,"category":"pulmonary","workup_required":{"tests":["Sleep study if needed"],"consults":["Sleep medicine if uncontrolled"],"clearance_criteria":"CPAP compliant >4hrs/night"},"surgical_risk_modifier":1.3,"outcome_impact":{"koos_reduction":1,"hoos_reduction":1,"readmission_increase":0.03}},
+"depression":{"display_name":"Major Depression","hcc_code":"HCC 155","hcc_weight":0.309,"category":"psychiatric","workup_required":{"tests":["PHQ-9"],"consults":["Psychiatry if severe"],"clearance_criteria":"Stable on treatment, PHQ-9 < 15"},"surgical_risk_modifier":1.2,"outcome_impact":{"koos_reduction":3,"hoos_reduction":3,"readmission_increase":0.03}},
+"malnutrition":{"display_name":"Protein-Calorie Malnutrition","hcc_code":"HCC 21","hcc_weight":0.250,"category":"metabolic","workup_required":{"tests":["Albumin","Prealbumin","Transferrin"],"consults":["Nutrition"],"clearance_criteria":"Albumin > 3.5, Prealbumin > 15"},"surgical_risk_modifier":1.6,"outcome_impact":{"koos_reduction":3,"hoos_reduction":3,"readmission_increase":0.06}},
+"smoking_current":{"display_name":"Current Smoker","hcc_code":null,"hcc_weight":0.100,"category":"lifestyle","workup_required":{"tests":["Cotinine if cessation claimed"],"consults":["Smoking cessation"],"clearance_criteria":"Quit > 4 weeks or counseling documented"},"surgical_risk_modifier":1.4,"outcome_impact":{"koos_reduction":2,"hoos_reduction":2,"readmission_increase":0.04}},
+"opioid_chronic":{"display_name":"Chronic Opioid Use (> 3 months)","hcc_code":"HCC 135","hcc_weight":0.309,"category":"pain_management","workup_required":{"tests":["Urine drug screen","PDMP check","MME calc"],"consults":["Pain management if MME > 90"],"clearance_criteria":"Pain management plan documented"},"surgical_risk_modifier":1.3,"outcome_impact":{"koos_reduction":3,"hoos_reduction":3,"readmission_increase":0.04}},
 "anticoagulation":{"display_name":"On Anticoagulation","hcc_code":null,"hcc_weight":0.050,"category":"hematologic","workup_required":{"tests":["INR if warfarin","Renal function","CBC"],"consults":["Prescribing MD for bridging"],"clearance_criteria":"Bridging plan documented"},"surgical_risk_modifier":1.2,"outcome_impact":{"koos_reduction":1,"hoos_reduction":1,"readmission_increase":0.02}},
-"anemia":{"display_name":"Anemia","hcc_code":"HCC 48","hcc_weight":0.190,"category":"hematologic","workup_required":{"tests":["CBC","Iron studies","Retic count","B12/Folate"],"consults":["Hematology if Hgb < 10"],"clearance_criteria":"Hgb > 10 or Hematology clearance"},"surgical_risk_modifier":1.3,"outcome_impact":{"koos_reduction":3,"hoos_reduction":3,"readmission_increase":0.03}},
-"liver_disease":{"display_name":"Chronic Liver Disease","hcc_code":"HCC 28","hcc_weight":0.390,"category":"hepatic","workup_required":{"tests":["LFTs","Albumin","INR","Platelets","MELD"],"consults":["Hepatology"],"clearance_criteria":"MELD < 10 or Hepatology clearance"},"surgical_risk_modifier":1.8,"outcome_impact":{"koos_reduction":8,"hoos_reduction":8,"readmission_increase":0.08}},
-"pvd":{"display_name":"Peripheral Vascular Disease","hcc_code":"HCC 108","hcc_weight":0.288,"category":"vascular","workup_required":{"tests":["ABI","Arterial duplex if symptomatic"],"consults":["Vascular if ABI < 0.7"],"clearance_criteria":"ABI > 0.7 or Vascular clearance"},"surgical_risk_modifier":1.4,"outcome_impact":{"koos_reduction":4,"hoos_reduction":4,"readmission_increase":0.04}}
+"anemia":{"display_name":"Anemia","hcc_code":"HCC 48","hcc_weight":0.190,"category":"hematologic","workup_required":{"tests":["CBC","Iron studies","Retic count","B12/Folate"],"consults":["Hematology if Hgb < 10"],"clearance_criteria":"Hgb > 10 or Hematology clearance"},"surgical_risk_modifier":1.3,"outcome_impact":{"koos_reduction":1,"hoos_reduction":1,"readmission_increase":0.03}},
+"liver_disease":{"display_name":"Chronic Liver Disease","hcc_code":"HCC 28","hcc_weight":0.390,"category":"hepatic","workup_required":{"tests":["LFTs","Albumin","INR","Platelets","MELD"],"consults":["Hepatology"],"clearance_criteria":"MELD < 10 or Hepatology clearance"},"surgical_risk_modifier":1.8,"outcome_impact":{"koos_reduction":3,"hoos_reduction":3,"readmission_increase":0.08}},
+"pvd":{"display_name":"Peripheral Vascular Disease","hcc_code":"HCC 108","hcc_weight":0.288,"category":"vascular","workup_required":{"tests":["ABI","Arterial duplex if symptomatic"],"consults":["Vascular if ABI < 0.7"],"clearance_criteria":"ABI > 0.7 or Vascular clearance"},"surgical_risk_modifier":1.4,"outcome_impact":{"koos_reduction":1,"hoos_reduction":1,"readmission_increase":0.04}}
 },
 "social_determinants":{
 "transportation":{"display_name":"Transportation Barrier"},
@@ -251,8 +398,8 @@ var HCC_LIB = {
 "food_insecurity":{"display_name":"Food Insecurity"}
 },
 "cms_proms_deltas":{
-"TKA":{"measure":"KOOS-JR","expected_improvement_mean":20,"expected_improvement_range":[15,28],"mcid":8,"scb":16},
-"THA":{"measure":"HOOS-JR","expected_improvement_mean":23,"expected_improvement_range":[18,30],"mcid":8,"scb":18}
+"TKA":{"measure":"KOOS-JR","expected_postop":77,"scb":20,"pass":71},
+"THA":{"measure":"HOOS-JR","expected_postop":81,"scb":22,"pass":81}
 }
 };
 
@@ -277,7 +424,7 @@ function buildQuestions(joint) {
             if(jqs[i][2]==="freq")o=["Never","Monthly","Weekly","Daily","Always"];
             else if(jqs[i][2]==="amount")o=["Not at all","A little","Somewhat","A lot","Totally"];
             else o=["No problem","A little hard","Somewhat hard","Very hard","Extremely hard"];
-            qs.push({id:jqs[i][0],section:"Knee Function (KOOS-JR)",text:jqs[i][1],type:"choice",options:o,scoring:[4,3,2,1,0]});
+            qs.push({id:jqs[i][0],section:"Knee Function (KOOS-JR)",text:jqs[i][1],type:"choice",options:o,scoring:[0,1,2,3,4]});
         }
     } else {
         var hqs=[["hoos_1","Going DOWN STAIRS difficulty?","diff"],["hoos_2","GET IN/OUT of car difficulty?","diff"],["hoos_3","WALKING on flat ground?","diff"],["hoos_4","PUT ON socks/shoes?","diff"],["hoos_5","GETTING UP from chair?","diff"],["hoos_6","Morning hip STIFFNESS?","sev"]];
@@ -285,7 +432,7 @@ function buildQuestions(joint) {
             var o;
             if(hqs[i][2]==="sev")o=["None","Mild","Moderate","Severe","Extreme"];
             else o=["No problem","A little hard","Somewhat hard","Very hard","Extremely hard"];
-            qs.push({id:hqs[i][0],section:"Hip Function (HOOS-JR)",text:hqs[i][1],type:"choice",options:o,scoring:[4,3,2,1,0]});
+            qs.push({id:hqs[i][0],section:"Hip Function (HOOS-JR)",text:hqs[i][1],type:"choice",options:o,scoring:[0,1,2,3,4]});
         }
     }
     var pqs=[["promis_1","General HEALTH?"],["promis_2","QUALITY OF LIFE?"],["promis_3","PHYSICAL health?"],["promis_4","MENTAL health?"],["promis_5","SOCIAL life satisfaction?"]];
@@ -300,6 +447,15 @@ function buildQuestions(joint) {
     qs.push({id:"gad_1",section:"Mood Screening",text:"Past 2 weeks: felt NERVOUS or ANXIOUS?",type:"choice",options:["Not at all","Several days","More than half","Nearly every day"],scoring:[0,1,2,3]});
     qs.push({id:"gad_2",section:"Mood Screening",text:"Past 2 weeks: can't STOP WORRYING?",type:"choice",options:["Not at all","Several days","More than half","Nearly every day"],scoring:[0,1,2,3]});
     qs.push({id:"opioid",section:"Pain Medicine",text:"Takes OPIOID pain medicine?",type:"choice",options:["No","Yes - less than 3 months","Yes - more than 3 months"]});
+    qs.push({id:"cms_low_back_pain",section:"CMS Risk Variables",text:"Have you had LOW BACK PAIN in the past month?",type:"choice",options:["No","Yes"]});
+    qs.push({id:"cms_health_literacy",section:"CMS Risk Variables",text:"How comfortable are you FILLING OUT medical forms by yourself?",type:"choice",options:["Extremely","Quite a bit","Somewhat","A little bit","Not at all"],scoring:[4,3,2,1,0]});
+    if(joint==="knee"){
+        qs.push({id:"cms_other_joint_pain",section:"CMS Risk Variables",text:"Pain in your OTHER knee in the past week?",type:"choice",options:["None","Mild","Moderate","Severe","Extreme"],scoring:[0,1,2,3,4]});
+    } else {
+        qs.push({id:"cms_other_joint_pain",section:"CMS Risk Variables",text:"Pain in your OTHER hip in the past week?",type:"choice",options:["None","Mild","Moderate","Severe","Extreme"],scoring:[0,1,2,3,4]});
+    }
+    qs.push({id:"cms_narcotics_90d",section:"CMS Risk Variables",text:"Have you used NARCOTIC pain medicine for 90 or more days before surgery?",type:"choice",options:["No","Yes"]});
+    qs.push({id:"asa_class",section:"CMS Risk Variables",text:"ASA Physical Status (staff use)?",type:"choice",options:["ASA I - Healthy","ASA II - Mild disease","ASA III - Severe disease","ASA IV - Life-threatening"],scoring:[1,2,3,4]});
     qs.push({id:"living",section:"Home Situation",text:"Living situation?",type:"choice",options:["Lives ALONE","With spouse/partner","With family","Nursing home"]});
     qs.push({id:"help",section:"Home Situation",text:"Help at home for 2 weeks after surgery?",type:"choice",options:["Yes","No","Not sure"]});
     qs.push({id:"transport",section:"Home Situation",text:"Transportation to follow-up?",type:"choice",options:["Yes, has a ride","Needs help","Not sure"]});
@@ -404,12 +560,22 @@ function finishIntake() {
     switchTab(0);
 }
 
+// Official HSS Rasch Interval Conversion Tables
+var KOOS_JR_TABLE = {0:100,1:91.975,2:84.6,3:79.914,4:76.332,5:73.342,6:70.704,7:68.284,8:65.994,9:63.776,10:61.583,11:59.381,12:57.14,13:54.84,14:52.465,15:50.012,16:47.487,17:44.905,18:42.281,19:39.625,20:36.931,21:34.174,22:31.307,23:28.251,24:24.875,25:20.941,26:15.939,27:8.291,28:0};
+var HOOS_JR_TABLE = {0:100,1:92.34,2:85.257,3:80.55,4:76.776,5:73.472,6:70.426,7:67.516,8:64.664,9:61.815,10:58.93,11:55.985,12:52.965,13:49.858,14:46.652,15:43.335,16:39.902,17:36.363,18:32.735,19:29.009,20:25.103,21:20.805,22:15.633,23:8.104,24:0};
+
 function calculateScores() {
     var jointKeys = Object.keys(intakeResponses).filter(function(k){return k.startsWith('koos_')||k.startsWith('hoos_');});
-    var jointScores = jointKeys.map(function(k){return intakeResponses[k].score;}).filter(function(s){return s!==null;});
+    var jointScores = jointKeys.map(function(k){return intakeResponses[k].score;}).filter(function(s){return s!==null && s!==undefined;});
     var jointName = intakeJoint==='knee' ? 'KOOS-JR' : 'HOOS-JR';
-    var maxScore = intakeJoint==='knee' ? 28 : 24;
-    var jointPct = jointScores.length ? (jointScores.reduce(function(a,b){return a+b;},0) / maxScore * 100) : 50;
+    
+    // Raw sum: 0 (no problems) to 28/24 (max disability) per HSS standard
+    var rawSum = jointScores.length ? jointScores.reduce(function(a,b){return a+b;},0) : 0;
+    
+    // Convert raw sum to interval score via official Rasch table
+    var convTable = intakeJoint==='knee' ? KOOS_JR_TABLE : HOOS_JR_TABLE;
+    var jointPct = (rawSum in convTable) ? convTable[rawSum] : 50;
+    
     var promisScores = [];
     for(var i=1;i<=10;i++){var r=intakeResponses['promis_'+i];promisScores.push(r?r.score:3);}
     var gph = 30 + promisScores.slice(0,6).reduce(function(a,b){return a+b;},0) * 1.5;
@@ -418,11 +584,23 @@ function calculateScores() {
     var gad = (intakeResponses.gad_1?intakeResponses.gad_1.score:0) + (intakeResponses.gad_2?intakeResponses.gad_2.score:0);
     var bmi = 28;
     try { var hf=parseInt((intakeResponses.height_ft||{answer:"5 feet"}).answer); var hi=parseInt((intakeResponses.height_in||{answer:"6 in"}).answer); var wt=(intakeResponses.weight||{answer:180}).answer; bmi=(wt/Math.pow(hf*12+hi,2))*703; } catch(e){}
+    
+    // CMS risk variables
+    var cmsLowBackPain = ((intakeResponses.cms_low_back_pain||{}).answer||"") === "Yes" ? 1 : 0;
+    var cmsHealthLiteracy = (intakeResponses.cms_health_literacy||{}).score;
+    if(cmsHealthLiteracy===undefined) cmsHealthLiteracy = null;
+    var cmsOtherJointPain = (intakeResponses.cms_other_joint_pain||{}).score || 0;
+    var cmsNarcotics90d = ((intakeResponses.cms_narcotics_90d||{}).answer||"") === "Yes" ? 1 : 0;
+    var asaClass = (intakeResponses.asa_class||{}).score || null;
+    
     var alerts = [];
     if(phq>=3) alerts.push({text:"Depression screen positive (PHQ-2: "+phq+")",level:"danger"});
     if(gad>=3) alerts.push({text:"Anxiety screen positive (GAD-2: "+gad+")",level:"warn"});
     var opioid = (intakeResponses.opioid||{}).answer||"";
     if(opioid.indexOf("more than 3")>=0) alerts.push({text:"Chronic opioid use (>3 months)",level:"danger"});
+    if(cmsNarcotics90d) alerts.push({text:"Chronic narcotics >90 days (CMS risk factor)",level:"danger"});
+    if(cmsLowBackPain) alerts.push({text:"Low back pain reported (CMS risk factor)",level:"warn"});
+    if(cmsOtherJointPain>=3) alerts.push({text:"Significant pain in other joint (CMS risk factor)",level:"warn"});
     var living = (intakeResponses.living||{}).answer||"";
     var help = (intakeResponses.help||{}).answer||"";
     if(living.indexOf("ALONE")>=0 && help!=="Yes") alerts.push({text:"Lives alone - may need help after surgery",level:"warn"});
@@ -430,18 +608,34 @@ function calculateScores() {
     if(smoker.indexOf("Current")>=0) alerts.push({text:"Current smoker - higher surgical risk",level:"danger"});
     if(bmi>=40) alerts.push({text:"BMI "+bmi.toFixed(1)+" - morbid obesity risk",level:"danger"});
     else if(bmi>=35) alerts.push({text:"BMI "+bmi.toFixed(1)+" - obesity Class II",level:"warn"});
-    return {jointName:jointName,jointPct:Math.round(jointPct),gph:Math.min(Math.max(gph,20),80),gmh:Math.min(Math.max(gmh,20),80),phq:phq,gad:gad,bmi:bmi,alerts:alerts};
+    return {
+        jointName:jointName, jointPct:Math.round(jointPct*10)/10, jointRaw:rawSum,
+        gph:Math.min(Math.max(gph,20),80), gmh:Math.min(Math.max(gmh,20),80),
+        phq:phq, gad:gad, bmi:bmi, alerts:alerts,
+        cmsLowBackPain:cmsLowBackPain, cmsHealthLiteracy:cmsHealthLiteracy,
+        cmsOtherJointPain:cmsOtherJointPain, cmsNarcotics90d:cmsNarcotics90d,
+        asaClass:asaClass
+    };
 }
 
 function displayIntakeResults(s) {
+    var scbThreshold = s.jointName==='KOOS-JR' ? 20 : 22;
     var html = '<div class="results-grid">' +
-        '<div class="rc"><div class="rv" style="color:#1e40af">' + s.jointPct + '</div><div class="rl">' + s.jointName + ' Score</div></div>' +
+        '<div class="rc"><div class="rv" style="color:#1e40af">' + s.jointPct + '</div><div class="rl">' + s.jointName + ' Interval Score</div><div style="font-size:0.75rem;color:#6b7280;">Raw: ' + s.jointRaw + ' | SCB: ≥' + scbThreshold + ' pts</div></div>' +
         '<div class="rc"><div class="rv" style="color:#7c3aed">' + s.gph.toFixed(0) + '</div><div class="rl">PROMIS Physical</div></div>' +
         '<div class="rc"><div class="rv" style="color:#0891b2">' + s.gmh.toFixed(0) + '</div><div class="rl">PROMIS Mental</div></div>' +
         '<div class="rc"><div class="rv" style="color:' + (s.phq>=3?'#dc2626':'#16a34a') + '">' + s.phq + '</div><div class="rl">PHQ-2' + (s.phq>=3?' (Positive)':'') + '</div></div>' +
         '<div class="rc"><div class="rv" style="color:' + (s.gad>=3?'#dc2626':'#16a34a') + '">' + s.gad + '</div><div class="rl">GAD-2' + (s.gad>=3?' (Positive)':'') + '</div></div>' +
         '<div class="rc"><div class="rv" style="color:' + (s.bmi>=40?'#dc2626':s.bmi>=35?'#d97706':'#16a34a') + '">' + s.bmi.toFixed(1) + '</div><div class="rl">BMI</div></div>' +
         '</div>';
+    // CMS Risk Variables card
+    html += '<div class="card"><h3>CMS PRO-PM Risk Variables</h3><table style="width:100%;border-collapse:collapse;font-size:0.85rem;">' +
+        '<tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">Low Back Pain</td><td style="padding:6px 8px;border-bottom:1px solid #eee;font-weight:600;">' + (s.cmsLowBackPain?'<span style="color:#dc2626">Yes</span>':'No') + '</td></tr>' +
+        '<tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">Health Literacy (SILS-2)</td><td style="padding:6px 8px;border-bottom:1px solid #eee;font-weight:600;">' + (s.cmsHealthLiteracy!==null?s.cmsHealthLiteracy+'/4':'N/A') + '</td></tr>' +
+        '<tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">Other Joint Pain</td><td style="padding:6px 8px;border-bottom:1px solid #eee;font-weight:600;">' + s.cmsOtherJointPain + '/4' + (s.cmsOtherJointPain>=3?' <span style="color:#dc2626">(Significant)</span>':'') + '</td></tr>' +
+        '<tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">Chronic Narcotics ≥90d</td><td style="padding:6px 8px;border-bottom:1px solid #eee;font-weight:600;">' + (s.cmsNarcotics90d?'<span style="color:#dc2626">Yes</span>':'No') + '</td></tr>' +
+        '<tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">ASA Class</td><td style="padding:6px 8px;border-bottom:1px solid #eee;font-weight:600;">' + (s.asaClass?'ASA '+s.asaClass:'N/A') + '</td></tr>' +
+        '</table></div>';
     if (s.alerts.length) {
         html += '<div class="card"><h3>Alerts</h3>';
         for(var i=0;i<s.alerts.length;i++) html += '<div class="alert-item ' + s.alerts[i].level + '">' + s.alerts[i].text + '</div>';
@@ -539,17 +733,21 @@ function checkClearance(){
 function updateDecisionTool(){
     var proc=document.getElementById('procSelect').value;
     var cms=HCC_LIB.cms_proms_deltas[proc];
-    var preop=parseInt(document.getElementById('dPreop').textContent)||50;
+    var preop=parseFloat(document.getElementById('dPreop').textContent)||50;
     var key=proc==='TKA'?'koos_reduction':'hoos_reduction';
     var reduction=0,factors=[];
     for(var cid in comorbChecked){if(comorbChecked[cid].present||comorbChecked[cid].workup){var d=HCC_LIB.comorbidities[cid];if(d){var r=d.outcome_impact[key];if(r){reduction+=r;factors.push({name:d.display_name,pts:r,readmit:d.outcome_impact.readmission_increase});}}}}
-    var predicted=cms.expected_improvement_mean-reduction;
-    var postop=Math.min(Math.max(preop+predicted,0),100);
+    // Target-based model: expected post-op score minus comorbidity reductions
+    var targetPostop=cms.expected_postop-reduction;
+    var predicted=targetPostop-preop;
+    // If pre-op already above target, improvement is minimal
+    if(predicted<0) predicted=0;
+    var postop=Math.min(targetPostop,100);
     var readmit=Math.min((0.045+factors.reduce(function(a,f){return a+f.readmit;},0))*100, 25);
     document.getElementById('dMeasure').textContent=cms.measure;
     document.getElementById('dPostop').textContent=Math.round(postop);
     document.getElementById('dImprove').textContent=(predicted>=0?'+':'')+Math.round(predicted);
-    document.getElementById('dRange').textContent='Range: '+(cms.expected_improvement_range[0]-reduction)+' to +'+(cms.expected_improvement_range[1]-reduction);
+    document.getElementById('dRange').textContent='PASS: '+cms.pass+' | SCB: +'+cms.scb+' pts';
     document.getElementById('dReadmit').textContent=readmit.toFixed(1)+'%';
     document.getElementById('dReadCard').style.borderColor=readmit>7?'#ef4444':readmit>5?'#f59e0b':'#22c55e';
     var rfHtml='';
@@ -557,9 +755,21 @@ function updateDecisionTool(){
     else rfHtml='<p style="color:#6b7280">No risk factors - best expected outcomes.</p>';
     document.getElementById('riskFactorList').innerHTML=rfHtml;
     var rec=document.getElementById('recBox');
-    if(predicted>=cms.mcid){rec.className='rec-box benefit';rec.textContent='LIKELY TO BENEFIT - Expected improvement ('+Math.round(predicted)+' pts) exceeds MCID ('+cms.mcid+' pts)';}
-    else{rec.className='rec-box maybe';rec.textContent='MAY NOT MEET MCID - Expected improvement ('+Math.round(predicted)+' pts) below MCID ('+cms.mcid+' pts). Discuss expectations.';}
+    var justifyBox=document.getElementById('surgeonJustifyBox');
+    if(preop>=60){
+        rec.className='rec-box maybe';rec.textContent='CAUTION - Pre-op score '+Math.round(preop)+' is high. Limited room for improvement. 24% of high-score TKA patients decline post-surgery. Discuss expectations carefully.';
+        justifyBox.style.display='block';
+    } else if(predicted>=cms.scb){
+        rec.className='rec-box benefit';rec.textContent='LIKELY TO BENEFIT - Expected improvement (+'+Math.round(predicted)+' pts) exceeds CMS SCB threshold (+'+cms.scb+' pts). Target post-op: '+Math.round(postop)+'.';
+        justifyBox.style.display='none';
+    } else {
+        rec.className='rec-box maybe';rec.textContent='MAY NOT MEET SCB - Expected improvement (+'+Math.round(predicted)+' pts) below CMS threshold (+'+cms.scb+' pts). Discuss expectations with patient.';
+        justifyBox.style.display='none';
+    }
     rec.style.display='block';
+
+    // Update Patient View tab
+    updatePatientView(preop, postop, cms.measure);
 }
 
 function saveAssessment(){
@@ -587,21 +797,30 @@ function saveAssessment(){
         age:age,
         sex:sex?sex.charAt(0):null,
         bmi:scores.bmi,
+        asa_class:scores.asaClass,
         comorbidities:comorbList,
         joint_score_type:scores.jointName.toLowerCase().replace('-','_'),
         joint_score_preop:scores.jointPct,
         promis_physical_tscore:scores.gph,
         promis_mental_tscore:scores.gmh,
-        readmission_risk:parseFloat(document.getElementById('dReadmit').textContent)||4.5
+        readmission_risk:parseFloat(document.getElementById('dReadmit').textContent)||4.5,
+        low_back_pain:scores.cmsLowBackPain,
+        health_literacy_sils:scores.cmsHealthLiteracy,
+        total_painful_joint_count:scores.cmsOtherJointPain,
+        chronic_narcotics_use:scores.cmsNarcotics90d,
+        koos_jr_raw:scores.jointName==='KOOS-JR'?scores.jointRaw:null,
+        hoos_jr_raw:scores.jointName==='HOOS-JR'?scores.jointRaw:null,
+        surgeon_justification:(document.getElementById('surgeonJustification')||{}).value||null
     };
 
-    // Calculate projected
+    // Calculate projected using target-based model
     var cms=HCC_LIB.cms_proms_deltas[proc];
     var reduction=0;
     for(var i=0;i<comorbList.length;i++){var d=HCC_LIB.comorbidities[comorbList[i]];if(d)reduction+=d.outcome_impact[proc==='TKA'?'koos_reduction':'hoos_reduction'];}
-    var predicted=cms.expected_improvement_mean-reduction;
+    var targetPostop=cms.expected_postop-reduction;
+    var predicted=Math.max(targetPostop-scores.jointPct, 0);
     body.expected_improvement=predicted;
-    body.projected_postop_score=Math.min(Math.max(scores.jointPct+predicted,0),100);
+    body.projected_postop_score=Math.min(targetPostop, 100);
 
     fetch('/api/preop-assessments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
     .then(function(r){return r.json();})
@@ -622,6 +841,79 @@ function saveAssessment(){
     }).catch(function(e){alert('Save failed: '+e.message);});
 }
 function printSummary(){window.print();}
+
+function updatePatientView(preop, postop, measure) {
+    // Score to Y position: score 0 = y:360, score 100 = y:60
+    function scoreToY(s) { return 360 - (s / 100) * 300; }
+
+    var preY = scoreToY(preop);
+    var postY = scoreToY(postop);
+    var midY = scoreToY((preop + postop) / 2) - 15; // curve peak slightly above midpoint
+    var delta = Math.round(postop - preop);
+
+    // Update line (quadratic bezier curve)
+    document.getElementById('pvLine').setAttribute('d',
+        'M170,' + preY + ' Q420,' + midY + ' 670,' + postY);
+
+    // Pre-op dot and label
+    document.getElementById('pvPreDot').setAttribute('cy', preY);
+    document.getElementById('pvPreBg').setAttribute('y', preY - 40);
+    document.getElementById('pvPreScore').setAttribute('y', preY - 20);
+    document.getElementById('pvPreScore').textContent = Math.round(preop);
+
+    // Post-op dot and label
+    document.getElementById('pvPostDot').setAttribute('cy', postY);
+    document.getElementById('pvPostBg').setAttribute('y', postY - 40);
+    document.getElementById('pvPostScore').setAttribute('y', postY - 20);
+    document.getElementById('pvPostScore').textContent = Math.round(postop);
+
+    // Person with cane position (anchored to pre-op score)
+    document.getElementById('pvPersonPre').setAttribute('transform',
+        'translate(45,' + (preY - 100) + ')');
+
+    // Happy person position (anchored to post-op score)
+    document.getElementById('pvPersonPost').setAttribute('transform',
+        'translate(740,' + (postY - 100) + ')');
+
+    // PASS zone
+    var proc = document.getElementById('procSelect').value;
+    var cms = HCC_LIB.cms_proms_deltas[proc];
+    var passY = scoreToY(cms.pass);
+    document.getElementById('pvPassZone').setAttribute('y', '60');
+    document.getElementById('pvPassZone').setAttribute('height', passY - 60);
+    document.getElementById('pvPassLabel').setAttribute('y', passY - 4);
+    document.getElementById('pvPassLabel').setAttribute('opacity', '1');
+
+    // Summary cards
+    document.getElementById('pvPreVal').textContent = Math.round(preop);
+    document.getElementById('pvDeltaVal').textContent = '+' + delta;
+    document.getElementById('pvPostVal').textContent = Math.round(postop);
+
+    // Measure label
+    var joint = proc === 'TKA' ? 'Knee' : 'Hip';
+    document.getElementById('pvMeasureLabel').textContent = measure + ' ' + joint + ' Health Score';
+
+    // Narrative
+    var patName = '';
+    var sel = document.getElementById('patientSelect');
+    if (sel.selectedIndex > 0) patName = sel.options[sel.selectedIndex].textContent.split('(')[0].trim();
+    var narrative = '';
+    if (preop >= 60) {
+        narrative = (patName ? patName + ', your' : 'Your') + ' ' + joint.toLowerCase() + ' score is already ' + Math.round(preop) +
+            ' out of 100. Surgery may provide some improvement, but the benefit is smaller when you\'re already doing fairly well. ' +
+            'Let\'s discuss whether surgery is the right choice for your goals.';
+    } else {
+        narrative = (patName ? patName + ', your' : 'Your') + ' ' + joint.toLowerCase() + ' health score is currently ' + Math.round(preop) +
+            ' out of 100. After surgery and recovery, we expect your score to reach about ' + Math.round(postop) +
+            ' — an improvement of ' + delta + ' points. Most patients feel much better at this level and can return to activities they enjoy.';
+    }
+    document.getElementById('pvNarrative').textContent = narrative;
+}
+
+function printPatientView() {
+    switchTab(4);
+    setTimeout(function() { window.print(); }, 300);
+}
 
 function sendToPatient(type){
     var patSel=document.getElementById('patientSelect');
@@ -657,6 +949,10 @@ function loadPatientList(){
     fetch('/api/patients?clinic_id='+cid).then(function(r){return r.json();}).then(function(patients){
         var sel=document.getElementById('patientSelect');sel.innerHTML='<option value="">Select patient...</option>';
         for(var i=0;i<patients.length;i++){var p=patients[i];sel.innerHTML+='<option value="'+p.id+'" data-surg="'+(p.surgery_type||'TKA')+'" data-dt="'+(p.surgery_date||'')+'">'+((p.last_name||'')+', '+(p.first_name||''))+(p.surgery_type?' ('+p.surgery_type+')':'')+'</option>';}
+        // Auto-select patient from URL param
+        var urlParams=new URLSearchParams(window.location.search);
+        var pid=urlParams.get('patient');
+        if(pid){sel.value=pid;loadPatient();}
     }).catch(function(e){console.log('Patient load error:',e);});
 }
 function loadPatient(){

@@ -335,6 +335,242 @@ async function openPatientModal(patientId) {
     await loadPatientPreopInfo(patientId);
     await loadPatientPromSchedule(patientId);
     await loadPatientAdverseEvents(patientId);
+    await loadPatientNotes(patientId);
+    await loadComplianceScorecard(patientId);
+    await loadPromTrendChart(patientId);
+}
+
+// ============ COMPLIANCE SCORECARD ============
+async function loadComplianceScorecard(patientId) {
+    const checkinEl = document.getElementById('scorecardCheckin');
+    const promEl = document.getElementById('scorecardProm');
+    const workupEl = document.getElementById('scorecardWorkup');
+    if (!checkinEl) return;
+    
+    try {
+        // Check-in adherence: days with check-ins / days since surgery
+        const patient = patients.find(p => p.id === patientId);
+        if (!patient || !patient.surgery_date) {
+            checkinEl.textContent = 'N/A';
+            checkinEl.style.color = '#6b7280';
+        } else {
+            const daysSinceSurgery = Math.max(1, Math.floor((Date.now() - new Date(patient.surgery_date)) / (1000*60*60*24)));
+            const checkinsResp = await fetch(`/api/checkins?patient_id=${patientId}`);
+            const checkins = await checkinsResp.json();
+            const uniqueDays = new Set(checkins.map(c => c.checkin_date)).size;
+            const checkinPct = Math.min(100, Math.round((uniqueDays / daysSinceSurgery) * 100));
+            checkinEl.textContent = checkinPct + '%';
+            checkinEl.style.color = checkinPct >= 80 ? '#16a34a' : checkinPct >= 50 ? '#d97706' : '#dc2626';
+        }
+        
+        // PROM completion
+        const promResp = await fetch(`/api/prom-schedule?patient_id=${patientId}`);
+        const promSchedule = await promResp.json();
+        if (promSchedule.length === 0) {
+            promEl.textContent = 'N/A';
+            promEl.style.color = '#6b7280';
+        } else {
+            const dueOrDone = promSchedule.filter(p => p.status === 'completed' || p.status === 'overdue');
+            const completed = promSchedule.filter(p => p.status === 'completed').length;
+            if (dueOrDone.length === 0) {
+                promEl.textContent = 'Pending';
+                promEl.style.color = '#2563eb';
+            } else {
+                const promPct = Math.round((completed / dueOrDone.length) * 100);
+                promEl.textContent = promPct + '%';
+                promEl.style.color = promPct >= 80 ? '#16a34a' : promPct >= 50 ? '#d97706' : '#dc2626';
+            }
+        }
+        
+        // Workup status from preop
+        const preop = preopAssessments[patientId];
+        if (preop) {
+            workupEl.textContent = preop.risk_tier === 'LOW' ? '✅ Clear' : preop.risk_tier === 'HIGH' ? '⚠️ Review' : '📋 Done';
+            workupEl.style.color = preop.risk_tier === 'LOW' ? '#16a34a' : preop.risk_tier === 'HIGH' ? '#d97706' : '#2563eb';
+        } else {
+            workupEl.textContent = '—';
+            workupEl.style.color = '#6b7280';
+        }
+    } catch (error) {
+        console.error('Error loading scorecard:', error);
+    }
+}
+
+// ============ PROM TREND CHART ============
+async function loadPromTrendChart(patientId) {
+    const canvas = document.getElementById('promTrendCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    try {
+        // Get all PRO assessments for this patient
+        const resp = await fetch(`/api/pro-assessments?patient_id=${patientId}`);
+        const assessments = await resp.json();
+        
+        // Also get preop assessment for baseline
+        const preop = preopAssessments[patientId];
+        
+        // Build data points: {date, joint_score, promis_physical, promis_mental, label}
+        const dataPoints = [];
+        
+        if (preop) {
+            dataPoints.push({
+                date: new Date(preop.planned_surgery_date || preop.assessed_at),
+                joint_score: preop.joint_score_preop,
+                label: 'Pre-Op',
+                type: preop.joint_score_type
+            });
+        }
+        
+        assessments.forEach(a => {
+            if (a.koos_jr_score || a.hoos_jr_score) {
+                dataPoints.push({
+                    date: new Date(a.assessed_at || a.created_at),
+                    joint_score: a.koos_jr_score || a.hoos_jr_score,
+                    label: a.assessment_window || '',
+                    type: a.koos_jr_score ? 'koos_jr' : 'hoos_jr'
+                });
+            }
+        });
+        
+        // Sort by date
+        dataPoints.sort((a, b) => a.date - b.date);
+        
+        if (dataPoints.length === 0) {
+            ctx.font = '14px sans-serif';
+            ctx.fillStyle = '#999';
+            ctx.textAlign = 'center';
+            ctx.fillText('No PROM data yet — scores will appear after assessments', canvas.width / 2, canvas.height / 2);
+            
+            // Draw projected line if preop exists
+            if (preop && preop.projected_postop_score) {
+                ctx.font = '12px sans-serif';
+                ctx.fillStyle = '#8b5cf6';
+                ctx.fillText(`Projected: ${preop.joint_score_preop} → ${preop.projected_postop_score} (+${preop.expected_improvement})`, canvas.width / 2, canvas.height / 2 + 25);
+            }
+            return;
+        }
+        
+        // Draw chart
+        const padding = { top: 30, right: 30, bottom: 40, left: 50 };
+        const chartW = canvas.width - padding.left - padding.right;
+        const chartH = canvas.height - padding.top - padding.bottom;
+        
+        // Y range: 0-100 for joint scores
+        const yMin = 0, yMax = 100;
+        const toX = (i) => padding.left + (i / Math.max(1, dataPoints.length - 1)) * chartW;
+        const toY = (v) => padding.top + chartH - ((v - yMin) / (yMax - yMin)) * chartH;
+        
+        // Draw grid
+        ctx.strokeStyle = '#e5e7eb';
+        ctx.lineWidth = 1;
+        for (let v = 0; v <= 100; v += 20) {
+            const y = toY(v);
+            ctx.beginPath();
+            ctx.moveTo(padding.left, y);
+            ctx.lineTo(canvas.width - padding.right, y);
+            ctx.stroke();
+            ctx.fillStyle = '#999';
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText(v, padding.left - 5, y + 4);
+        }
+        
+        // Draw projected line if exists
+        if (preop && preop.projected_postop_score && dataPoints.length >= 1) {
+            ctx.setLineDash([6, 4]);
+            ctx.strokeStyle = '#c4b5fd';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(toX(0), toY(preop.joint_score_preop));
+            ctx.lineTo(toX(dataPoints.length - 1), toY(preop.projected_postop_score));
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+        
+        // Draw actual line
+        ctx.strokeStyle = '#2c5aa0';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        dataPoints.forEach((dp, i) => {
+            const x = toX(i);
+            const y = toY(dp.joint_score);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+        
+        // Draw points and labels
+        dataPoints.forEach((dp, i) => {
+            const x = toX(i);
+            const y = toY(dp.joint_score);
+            
+            // Point
+            ctx.fillStyle = '#2c5aa0';
+            ctx.beginPath();
+            ctx.arc(x, y, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(x, y, 3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Score label
+            ctx.fillStyle = '#1e3a5f';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(dp.joint_score, x, y - 12);
+            
+            // X label
+            ctx.fillStyle = '#666';
+            ctx.font = '11px sans-serif';
+            ctx.fillText(dp.label || dp.date.toLocaleDateString(), x, canvas.height - padding.bottom + 18);
+        });
+        
+        // Legend
+        const scoreType = dataPoints[0].type === 'koos_jr' ? 'KOOS Jr' : 'HOOS Jr';
+        const scbThreshold = dataPoints[0].type === 'koos_jr' ? 20 : 22;
+        
+        // Draw SCB target line if preop exists
+        if (preop && preop.joint_score_preop) {
+            const targetScore = preop.joint_score_preop + scbThreshold;
+            if (targetScore <= 100) {
+                const targetY = toY(targetScore);
+                ctx.setLineDash([4, 3]);
+                ctx.strokeStyle = '#16a34a';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(padding.left, targetY);
+                ctx.lineTo(canvas.width - padding.right, targetY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                ctx.fillStyle = '#16a34a';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.textAlign = 'right';
+                ctx.fillText(`SCB Target: ${targetScore}`, canvas.width - padding.right, targetY - 5);
+            }
+        }
+        
+        ctx.fillStyle = '#2c5aa0';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('● ' + scoreType, padding.left, 16);
+        if (preop && preop.projected_postop_score) {
+            ctx.fillStyle = '#c4b5fd';
+            ctx.fillText('--- Projected', padding.left + 80, 16);
+        }
+        ctx.fillStyle = '#16a34a';
+        ctx.fillText(`--- SCB (≥${scbThreshold} pts)`, padding.left + 180, 16);
+        
+    } catch (error) {
+        console.error('Error loading PROM trend chart:', error);
+        ctx.font = '14px sans-serif';
+        ctx.fillStyle = '#ef4444';
+        ctx.textAlign = 'center';
+        ctx.fillText('Error loading chart', canvas.width / 2, canvas.height / 2);
+    }
 }
 
 function renderPatientInfo() {
@@ -1094,6 +1330,89 @@ async function handleLogAdverseEvent(event) {
         alert('Error logging event. Please try again.');
     }
 }
+
+// ============ NURSING NOTES ============
+async function loadPatientNotes(patientId) {
+    const div = document.getElementById('nursingNotesList');
+    if (!div) return;
+    
+    try {
+        const response = await fetch(`/api/nursing-notes?patient_id=${patientId}`);
+        const notes = await response.json();
+        
+        if (notes.length === 0) {
+            div.innerHTML = '<p class="text-muted" style="text-align:center;">No notes yet.</p>';
+            return;
+        }
+        
+        const typeIcons = {
+            'phone_call': '📞', 'clinic_visit': '🏥', 'nurse_note': '📝',
+            'provider_note': '👨‍⚕️', 'care_coordination': '🤝', 'other': '📋'
+        };
+        const typeLabels = {
+            'phone_call': 'Phone Call', 'clinic_visit': 'Clinic Visit', 'nurse_note': 'Nurse Note',
+            'provider_note': 'Provider Note', 'care_coordination': 'Care Coordination', 'other': 'Other'
+        };
+        
+        div.innerHTML = notes.map(n => `
+            <div style="padding: 10px 0; border-bottom: 1px solid #eee;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <strong>${typeIcons[n.note_type] || '📋'} ${typeLabels[n.note_type] || n.note_type}</strong>
+                    <span style="color: #999; font-size: 12px;">${new Date(n.created_at).toLocaleString()}${n.author_last ? ' — ' + n.author_first + ' ' + n.author_last : ''}</span>
+                </div>
+                <div style="margin-top: 6px; color: #333; white-space: pre-wrap;">${n.note_text}</div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading notes:', error);
+        div.innerHTML = '<p style="color:#ef4444;">Error loading notes</p>';
+    }
+}
+
+function openNoteModal() {
+    if (!currentPatient) return;
+    document.getElementById('nursingNoteForm').reset();
+    document.getElementById('nursingNoteModal').style.display = 'flex';
+}
+
+function closeNoteModal() {
+    document.getElementById('nursingNoteModal').style.display = 'none';
+}
+
+async function handleSaveNote(event) {
+    event.preventDefault();
+    
+    try {
+        await fetch('/api/nursing-notes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                patient_id: currentPatient.id,
+                episode_id: currentPatient.episode_id,
+                clinic_id: CLINIC_ID,
+                user_id: USER_ID,
+                note_type: document.getElementById('noteType').value,
+                note_text: document.getElementById('noteText').value
+            })
+        });
+        
+        closeNoteModal();
+        await loadPatientNotes(currentPatient.id);
+    } catch (error) {
+        console.error('Error saving note:', error);
+        alert('Error saving note.');
+    }
+}
+
+// ============ AUTO-REFRESH ============
+setInterval(async () => {
+    // Only refresh if patient modal is NOT open
+    if (document.getElementById('patientModal').style.display !== 'flex') {
+        await loadStats();
+        await loadAlertCaches();
+        await loadPatients();
+    }
+}, 60000);
 
 // ============ SEED / CLEAR DEMO DATA ============
 async function seedDemoData() {
