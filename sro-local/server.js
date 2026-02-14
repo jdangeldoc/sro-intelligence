@@ -546,6 +546,44 @@ app.get('/api/patient-by-token/:token', (req, res) => {
   });
 });
 
+// --- Validate Token (alias for checkin.html compatibility) ---
+app.get('/api/validate-token/:token', (req, res) => {
+  const patient = db.prepare(`
+    SELECT 
+      p.id, p.first_name, p.clinic_id,
+      e.id as episode_id, e.surgery_type, e.surgery_date
+    FROM patients p
+    LEFT JOIN episodes e ON e.patient_id = p.id AND e.status = 'active'
+    WHERE p.token = ?
+  `).get(req.params.token);
+  
+  if (!patient) return res.status(404).json({ error: 'Invalid token' });
+  
+  let daysPostOp = null;
+  if (patient.surgery_date) {
+    daysPostOp = Math.floor((new Date() - new Date(patient.surgery_date)) / (1000 * 60 * 60 * 24));
+  }
+  
+  res.json({
+    patient_id: patient.id, first_name: patient.first_name, clinic_id: patient.clinic_id,
+    episode_id: patient.episode_id, surgery_type: patient.surgery_type, days_post_op: daysPostOp
+  });
+});
+
+// --- Check-in History (for progress chart in checkin.html) ---
+app.get('/api/checkin-history/:token', (req, res) => {
+  const patient = db.prepare('SELECT id FROM patients WHERE token = ?').get(req.params.token);
+  if (!patient) return res.status(404).json({ error: 'Invalid token' });
+  
+  const days = parseInt(req.query.days) || 7;
+  const history = db.prepare(`
+    SELECT checkin_date, pain_level, pt_exercises, medication_taken, swelling
+    FROM checkins WHERE patient_id = ? ORDER BY checkin_date DESC LIMIT ?
+  `).all(patient.id, days);
+  
+  res.json(history);
+});
+
 // --- Token-based Check-in (for patient-facing form - HIPAA safe, no PHI in request) ---
 app.post('/api/checkin', (req, res) => {
   const { token, checkin_date, pain_level, pt_exercises, medication_taken, swelling, rom_flexion, rom_extension, concerns_flags, concerns_text, surgery_type, er_visit, er_facility, er_reason, readmitted, readmit_facility, readmit_reason } = req.body;

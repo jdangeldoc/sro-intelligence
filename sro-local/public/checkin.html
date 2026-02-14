@@ -9,815 +9,661 @@
         html, body { height: 100%; overflow: hidden; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f0f2f5;
-            color: #1a1a2e;
+            background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
+            color: #f1f5f9;
             height: 100vh; height: 100dvh;
         }
 
-        /* ===== FULL SCREEN LAYOUT ===== */
-        .screen {
-            display: none;
-            flex-direction: column;
-            height: 100vh; height: 100dvh;
-            width: 100%;
-        }
-        .screen.active { display: flex; }
+        /* ===== SCREENS ===== */
+        .screen { display:none; flex-direction:column; align-items:center; justify-content:center; height:100vh; height:100dvh; width:100%; }
+        .screen.active { display:flex; }
 
-        /* TOP BAR */
-        .topbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 12px 24px;
-            flex-shrink: 0;
-        }
-        .back-btn {
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            padding: 10px 20px;
-            font-size: 1.05rem;
-            cursor: pointer;
-            font-weight: 600;
-            color: #333;
-        }
-        .back-btn:hover { background: #f5f5f5; }
-        .progress-bar-wrap {
-            flex: 1;
-            margin: 0 20px;
-            height: 10px;
-            background: #ddd;
-            border-radius: 5px;
-            overflow: hidden;
-        }
-        .progress-bar-fill {
-            height: 100%;
-            background: #2563eb;
-            border-radius: 5px;
-            transition: width 0.4s ease;
-        }
-        .question-count {
-            font-size: 0.95rem;
-            color: #666;
-            white-space: nowrap;
-            font-weight: 500;
-        }
-
-        /* CONTENT AREA */
-        .content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px 30px;
-            text-align: center;
-            min-height: 0;
-        }
-        .section-label {
-            font-size: 1.1rem;
-            color: #2563eb;
-            font-weight: 600;
-            margin-bottom: 12px;
-        }
-        .question-text {
-            font-size: 2.2rem;
-            font-weight: 700;
-            color: #1a1a2e;
-            line-height: 1.3;
-            margin-bottom: 30px;
-            max-width: 700px;
-        }
-
-        /* ANSWER AREA */
-        .answers {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 12px;
-            width: 100%;
-            max-width: 700px;
-        }
-
-        /* BIG OPTION BUTTONS */
-        .big-btn {
-            background: white;
-            border: 2px solid #e0e0e0;
-            border-radius: 16px;
-            padding: 20px 30px;
-            font-size: 1.3rem;
-            font-weight: 600;
-            color: #333;
-            cursor: pointer;
-            width: 100%;
-            max-width: 500px;
-            text-align: center;
-            transition: all 0.15s;
-        }
-        .big-btn:hover { background: #f0f4ff; border-color: #2563eb; }
-        .big-btn.selected { background: #e8f5e9; border-color: #4caf50; color: #2e7d32; }
-
-        /* TWO COLUMN BUTTONS */
-        .two-col {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 14px;
-            width: 100%;
-            max-width: 700px;
-        }
-        .two-col .big-btn { max-width: none; }
-
-        /* THREE COLUMN (for pain) */
-        .pain-row {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            width: 100%;
-            max-width: 700px;
-        }
-        .pain-cell {
-            background: white;
-            border: 2px solid #e0e0e0;
-            border-radius: 14px;
-            padding: 14px 8px;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.15s;
-        }
-        .pain-cell:hover { transform: scale(1.03); }
-        .pain-cell.selected { transform: scale(1.05); border-width: 3px; }
-        .pain-cell .num { font-size: 1.6rem; font-weight: 700; }
-        .pain-cell .face { font-size: 1.8rem; }
-        .pc-green { border-color: #4caf50; background: #f1f8e9; }
-        .pc-lime { border-color: #8bc34a; background: #f9fbe7; }
-        .pc-yellow { border-color: #ffc107; background: #fffde7; }
-        .pc-orange { border-color: #ff9800; background: #fff3e0; }
-        .pc-red { border-color: #f44336; background: #ffebee; }
-        .pc-darkred { border-color: #c62828; background: #fce4ec; }
-
-        /* CHECKBOXES - two column grid */
-        .cb-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            width: 100%;
-            max-width: 700px;
-        }
-        .cb-item {
-            background: white;
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            padding: 14px 16px;
-            font-size: 1.05rem;
-            font-weight: 500;
-            color: #333;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.15s;
-        }
-        .cb-item:hover { border-color: #999; }
-        .cb-item.checked { background: #ffebee; border-color: #f44336; color: #c62828; }
-        .cb-check {
-            width: 22px; height: 22px; border-radius: 5px;
-            border: 2px solid #ccc; display: flex; align-items: center;
-            justify-content: center; flex-shrink: 0; font-size: 0.85rem;
-        }
-        .cb-item.checked .cb-check { background: #f44336; border-color: #f44336; color: white; }
-
-        /* NUMBER INPUTS */
-        .num-row {
-            display: flex; gap: 20px; width: 100%; max-width: 600px;
-            justify-content: center;
-        }
-        .num-group { flex: 1; text-align: center; }
-        .num-label { font-size: 1rem; color: #666; margin-bottom: 8px; font-weight: 500; }
-        .num-input {
-            width: 100%; padding: 16px; font-size: 2rem; font-weight: 700;
-            text-align: center; border: 2px solid #ddd; border-radius: 14px;
-            color: #2563eb; background: white; font-family: inherit;
-        }
-        .num-input:focus { outline: none; border-color: #2563eb; }
-        .num-input::placeholder { color: #bbb; font-weight: 400; font-size: 1.2rem; }
-
-        /* TEXT INPUT */
-        .txt-area {
-            width: 100%; max-width: 600px; min-height: 120px;
-            padding: 16px; font-size: 1.2rem; border: 2px solid #ddd;
-            border-radius: 14px; resize: none; font-family: inherit; color: #333;
-        }
-        .txt-area:focus { outline: none; border-color: #2563eb; }
-        .txt-area::placeholder { color: #aaa; }
-
-        /* CHART */
-        .chart-wrap {
-            display: flex; align-items: flex-end; gap: 10px;
-            height: 160px; width: 100%; max-width: 500px;
-            padding: 0 10px;
-        }
-        .chart-col {
-            flex: 1; display: flex; flex-direction: column;
-            align-items: center; gap: 5px; height: 100%; justify-content: flex-end;
-        }
-        .chart-val { font-size: 0.85rem; font-weight: 600; color: #333; }
-        .chart-bar { width: 100%; border-radius: 6px 6px 3px 3px; min-height: 3px; }
-        .chart-day { font-size: 0.75rem; color: #888; }
-        .no-chart { color: #999; font-size: 1.1rem; }
-
-        /* SKIP LINK */
-        .skip-link {
-            background: none; border: none; color: #999;
-            font-size: 1rem; cursor: pointer; padding: 10px;
-            margin-top: 10px;
-        }
-        .skip-link:hover { color: #666; }
-
-        /* EXERCISE BUTTON */
-        .ex-btn {
-            background: #7c3aed; border: none; border-radius: 14px;
-            padding: 16px 30px; color: white; font-size: 1.15rem;
-            font-weight: 600; cursor: pointer; margin-top: 8px;
-        }
-
-        /* MED REMINDER */
-        .med-note {
-            background: #fff8e1; border: 1px solid #ffcc80; border-radius: 12px;
-            padding: 12px 18px; max-width: 500px; margin-bottom: 16px;
-            font-size: 0.95rem; color: #e65100; text-align: left; line-height: 1.5;
-        }
-
-        /* IPHONE ROM */
-        .iphone-btn {
-            background: #2563eb; border: none; border-radius: 14px;
-            padding: 14px 30px; color: white; font-size: 1.1rem;
-            font-weight: 600; cursor: pointer; margin-top: 6px;
-        }
-
-        /* CARTOON LEG ROM */
-        .leg-wrap {
-            display: flex; flex-direction: column; align-items: center;
-            width: 100%; max-width: 600px; overflow: visible;
-        }
-        .leg-container {
-            position: relative; width: 100%; max-width: 500px; height: 320px;
-            user-select: none; touch-action: none; overflow: visible;
-        }
-        .leg-svg { width: 100%; height: 100%; overflow: visible; }
-        .rom-numbers {
-            display: flex; justify-content: center; gap: 40px; margin: 10px 0;
-        }
-        .rom-num-box {
-            text-align: center; background: white; border: 2px solid #e0e0e0;
-            border-radius: 14px; padding: 10px 24px; min-width: 130px;
-        }
-        .rom-num-val { font-size: 2.8rem; font-weight: 800; color: #2563eb; line-height: 1; }
-        .rom-num-label { font-size: 0.85rem; color: #888; margin-top: 2px; }
-        .rom-feedback { font-size: 1rem; color: #666; margin: 6px 0 10px; }
-        .rom-drag-hint { font-size: 0.9rem; color: #aaa; margin-bottom: 10px; }
-        .rom-btns { display: flex; gap: 10px; width: 100%; max-width: 400px; }
-        .rom-btns button { flex: 1; }
-
-        /* ===== TOKEN ENTRY ===== */
+        /* TOKEN ENTRY */
         .token-box {
-            background: white; border-radius: 24px; padding: 40px;
-            max-width: 420px; width: 100%; text-align: center;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            background: rgba(255,255,255,0.07); border-radius: 24px; padding: 40px 30px;
+            max-width: 420px; width: 90%; text-align: center; border: 1px solid rgba(255,255,255,0.1);
         }
         .token-logo {
-            background: #2563eb; border-radius: 14px; width: 70px; height: 70px;
+            background: #3b5998; border-radius: 16px; width: 80px; height: 80px;
             display: flex; align-items: center; justify-content: center;
-            margin: 0 auto 16px; font-size: 1.4rem; font-weight: 700; color: white;
+            margin: 0 auto 20px; font-size: 1.5rem; font-weight: 700; color: white;
         }
-        .token-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 6px; }
-        .token-sub { color: #888; margin-bottom: 20px; }
         .token-input {
-            width: 100%; padding: 14px; font-size: 1.2rem; border: 2px solid #ddd;
-            border-radius: 12px; text-align: center; font-family: inherit;
+            width: 100%; padding: 16px; font-size: 1.2rem; border-radius: 14px;
+            border: 2px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05);
+            color: white; text-align: center; margin-bottom: 15px; font-family: inherit;
         }
-        .token-input:focus { outline: none; border-color: #2563eb; }
-        .token-go {
-            width: 100%; padding: 14px; font-size: 1.1rem; font-weight: 600;
-            border: none; border-radius: 12px; background: #2563eb;
-            color: white; cursor: pointer; margin-top: 12px;
+        .token-btn {
+            width: 100%; padding: 16px; font-size: 1.15rem; font-weight: 600;
+            border-radius: 14px; border: none; background: #3b5998; color: white; cursor: pointer;
         }
-        .token-hint { color: #aaa; font-size: 0.85rem; margin-top: 12px; }
 
-        /* LOADING / ERROR / SUCCESS */
-        .center-screen {
-            display: flex; flex-direction: column; align-items: center;
-            justify-content: center; height: 100vh; text-align: center; padding: 30px;
-        }
+        /* LOADING */
         .spinner {
-            width: 44px; height: 44px; border: 4px solid #ddd;
-            border-top-color: #2563eb; border-radius: 50%;
-            animation: spin 1s linear infinite;
+            width: 48px; height: 48px; border: 4px solid rgba(255,255,255,0.15);
+            border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .success-icon { font-size: 80px; animation: pop 0.5s; }
-        @keyframes pop { 0%{transform:scale(0)} 50%{transform:scale(1.2)} 100%{transform:scale(1)} }
-        .success-title { font-size: 2rem; font-weight: 700; color: #4caf50; margin: 16px 0 10px; }
-        .success-msg { font-size: 1.1rem; color: #666; max-width: 350px; }
-        .success-detail {
-            margin-top: 20px; padding: 16px 24px; background: #e8f5e9;
-            border-radius: 14px; font-size: 1rem; color: #2e7d32; max-width: 400px;
+
+        /* ===== MAIN CARD LAYOUT ===== */
+        .main-wrap {
+            display: none; flex-direction: column; height: 100vh; height: 100dvh; width: 100%;
+        }
+        .main-wrap.active { display: flex; }
+
+        /* HEADER */
+        .hdr {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 20px; flex-shrink: 0;
+        }
+        .hdr-logo { font-size: 0.95rem; font-weight: 700; color: #94a3b8; }
+        .hdr-greeting { font-size: 1rem; color: #cbd5e1; }
+        .hdr-day { font-size: 0.85rem; color: #64748b; }
+
+        /* CARDS VIEWPORT */
+        .cards-viewport {
+            flex: 1; overflow: hidden; position: relative;
+        }
+        .cards-track {
+            display: flex; height: 100%; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .card {
+            min-width: 100%; height: 100%; display: flex; flex-direction: column;
+            align-items: center; justify-content: flex-start; padding: 20px 20px 10px;
+            overflow-y: auto;
+        }
+        .card-icon { font-size: 3rem; margin-bottom: 8px; }
+        .card-question {
+            font-size: 1.5rem; font-weight: 700; text-align: center;
+            margin-bottom: 4px; line-height: 1.3;
+        }
+        .card-subtitle {
+            font-size: 0.95rem; color: #94a3b8; text-align: center; margin-bottom: 20px;
+        }
+        .card-body { width: 100%; max-width: 440px; }
+
+        /* BOTTOM NAV */
+        .bottom-nav {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 20px 20px; flex-shrink: 0;
+        }
+        .nav-btn {
+            padding: 14px 28px; border-radius: 14px; border: none;
+            font-size: 1.05rem; font-weight: 600; cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .nav-btn:disabled { opacity: 0.3; cursor: default; }
+        .nav-back { background: rgba(255,255,255,0.1); color: #cbd5e1; }
+        .nav-next { background: #3b82f6; color: white; }
+        .nav-submit { background: #22c55e; color: white; }
+
+        /* DOTS */
+        .dots {
+            display: flex; gap: 6px; align-items: center; justify-content: center;
+            flex-wrap: wrap; max-width: 260px;
+        }
+        .dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: rgba(255,255,255,0.2); transition: all 0.3s;
+        }
+        .dot.active { background: #3b82f6; transform: scale(1.4); }
+        .dot.done { background: #22c55e; }
+
+        /* ===== PAIN GRID ===== */
+        .pain-grid {
+            display: grid; grid-template-columns: repeat(5, 1fr);
+            gap: 8px; width: 100%;
+        }
+        .pain-cell {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 14px 4px; border-radius: 14px; cursor: pointer;
+            border: 2px solid transparent; transition: all 0.2s;
+            background: rgba(255,255,255,0.06);
+        }
+        .pain-cell:hover { transform: scale(1.05); }
+        .pain-cell.selected { transform: scale(1.08); border-width: 3px; box-shadow: 0 0 20px rgba(0,0,0,0.3); }
+        .pain-cell .face { font-size: 1.6rem; }
+        .pain-cell .num { font-size: 1.3rem; font-weight: 700; margin-top: 2px; }
+
+        /* ===== OPTION BUTTONS ===== */
+        .opt-btn {
+            display: flex; align-items: center; gap: 14px;
+            width: 100%; padding: 18px 20px; border-radius: 16px;
+            border: 2px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06);
+            color: #f1f5f9; font-size: 1.1rem; font-weight: 500; cursor: pointer;
+            margin-bottom: 10px; transition: all 0.2s; text-align: left;
+        }
+        .opt-btn:hover { background: rgba(255,255,255,0.12); }
+        .opt-btn.selected { border-color: #3b82f6; background: rgba(59,130,246,0.15); }
+        .opt-btn .opt-icon { font-size: 1.4rem; }
+
+        /* ===== TEXT INPUT ===== */
+        .text-input {
+            width: 100%; padding: 16px; font-size: 1.1rem; border-radius: 14px;
+            border: 2px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05);
+            color: #f1f5f9; font-family: inherit; resize: none; min-height: 120px;
+        }
+        .text-input::placeholder { color: #64748b; }
+
+        /* ===== CONCERNS CHECKBOXES ===== */
+        .cb-grid { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+        .cb-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 16px; border-radius: 14px; cursor: pointer;
+            border: 2px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06);
+            transition: all 0.2s; font-size: 1.05rem;
+        }
+        .cb-item.checked { border-color: #f59e0b; background: rgba(245,158,11,0.15); }
+        .cb-check {
+            width: 28px; height: 28px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.25);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; font-weight: 700; flex-shrink: 0;
+        }
+        .cb-item.checked .cb-check { background: #f59e0b; border-color: #f59e0b; color: #000; }
+
+        /* ===== ROM ===== */
+        .leg-wrap { display: flex; flex-direction: column; align-items: center; width: 100%; }
+        .leg-container {
+            width: 100%; max-width: 550px; touch-action: none;
+            background: rgba(255,255,255,0.04); border-radius: 16px;
+            padding: 8px; margin-bottom: 10px;
+        }
+        .leg-svg { width: 100%; height: auto; }
+        .rom-numbers {
+            display: flex; gap: 20px; justify-content: center; margin-bottom: 6px;
+        }
+        .rom-num-box {
+            text-align: center; padding: 10px 20px; border-radius: 12px;
+            border: 2px solid #3b82f6; background: rgba(59,130,246,0.1);
+        }
+        .rom-num-val { font-size: 2.4rem; font-weight: 800; color: #60a5fa; line-height: 1; }
+        .rom-num-label { font-size: 0.8rem; color: #94a3b8; margin-top: 2px; }
+        .rom-feedback { font-size: 0.95rem; color: #94a3b8; margin: 4px 0 8px; text-align: center; }
+        .rom-hint-box {
+            background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3);
+            border-radius: 12px; padding: 10px 16px; max-width: 440px;
+            color: #93c5fd; text-align: left; line-height: 1.5; font-size: 0.85rem; margin-bottom: 8px;
+        }
+        .rom-actions { display: flex; gap: 8px; width: 100%; max-width: 440px; }
+        .rom-actions button {
+            flex: 1; padding: 12px; border-radius: 12px; border: none;
+            font-size: 0.95rem; font-weight: 600; cursor: pointer;
+        }
+        .btn-reset { background: rgba(249,115,22,0.2); color: #fb923c; }
+        .btn-iphone { background: rgba(255,255,255,0.1); color: #cbd5e1; }
+        .skip-link {
+            background: none; border: none; color: #64748b; font-size: 0.95rem;
+            cursor: pointer; margin-top: 8px; text-decoration: underline;
         }
 
-        /* VOICE */
-        .voice-btn {
-            position: fixed; bottom: 20px; right: 20px;
-            width: 50px; height: 50px; border-radius: 50%;
-            background: #2563eb; color: white; border: none;
-            font-size: 22px; cursor: pointer; z-index: 100;
-            box-shadow: 0 3px 12px rgba(37,99,235,0.3);
+        /* ===== CHART ===== */
+        .chart-wrap {
+            display: flex; gap: 8px; align-items: flex-end; justify-content: center;
+            height: 180px; width: 100%; padding: 10px 0;
         }
+        .chart-col { display: flex; flex-direction: column; align-items: center; flex: 1; }
+        .chart-val { font-size: 0.85rem; font-weight: 700; color: #cbd5e1; margin-bottom: 4px; }
+        .chart-bar { width: 28px; border-radius: 6px 6px 0 0; min-height: 3px; transition: height 0.3s; }
+        .chart-day { font-size: 0.75rem; color: #64748b; margin-top: 4px; }
 
-        /* MODAL */
+        /* ===== EXERCISE MODAL ===== */
         .modal-bg {
-            display: none; position: fixed; top: 0; left: 0;
-            width: 100%; height: 100%; background: rgba(0,0,0,0.5);
-            z-index: 200; justify-content: center; align-items: center; padding: 20px;
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center;
+            padding: 20px;
         }
         .modal-bg.on { display: flex; }
         .modal-box {
-            background: white; border-radius: 20px; padding: 24px;
-            width: 100%; max-width: 500px; max-height: 80vh; overflow-y: auto;
+            background: #1e293b; border-radius: 20px; padding: 24px; max-width: 440px;
+            width: 100%; max-height: 80vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1);
         }
         .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
         .modal-title { font-size: 1.2rem; font-weight: 700; }
-        .modal-x { background: #eee; border: none; border-radius: 50%; width: 34px; height: 34px; font-size: 1.1rem; cursor: pointer; }
-        .ex-item { background: #f5f5f5; border-radius: 12px; padding: 12px; margin-bottom: 8px; }
-        .ex-name { font-weight: 600; font-size: 1.05rem; margin-bottom: 3px; }
-        .ex-detail { font-size: 0.9rem; color: #666; line-height: 1.4; }
+        .modal-x {
+            width: 36px; height: 36px; border-radius: 50%; border: none;
+            background: rgba(255,255,255,0.1); color: #cbd5e1; font-size: 1.3rem; cursor: pointer;
+        }
+        .ex-item { padding: 14px; background: rgba(255,255,255,0.05); border-radius: 12px; margin-bottom: 8px; }
+        .ex-name { font-weight: 600; margin-bottom: 4px; }
+        .ex-detail { font-size: 0.9rem; color: #94a3b8; }
 
-        /* ROM modal */
-        .rom-inst { font-size: 0.95rem; color: #666; line-height: 1.6; text-align: left; margin-bottom: 16px; }
-        .rom-inst ol { padding-left: 20px; }
-        .rom-inst li { margin-bottom: 6px; }
-        .rom-go { background: #4caf50; color: white; border: none; border-radius: 14px; padding: 14px; width: 100%; font-size: 1.1rem; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
-        .rom-res { display: none; text-align: center; padding: 16px; background: #e8f5e9; border-radius: 12px; margin-top: 12px; }
-        .rom-res-val { font-size: 2.5rem; font-weight: 700; color: #2e7d32; }
+        /* ===== ROM IPHONE MODAL ===== */
+        .rom-modal-inst { font-size: 0.95rem; color: #94a3b8; line-height: 1.6; text-align: left; margin-bottom: 16px; }
+        .rom-modal-inst ol { padding-left: 20px; }
+        .rom-modal-inst li { margin-bottom: 6px; }
+        .rom-go-btn {
+            background: #22c55e; color: white; border: none; border-radius: 14px;
+            padding: 14px; width: 100%; font-size: 1.1rem; font-weight: 600; cursor: pointer; margin-bottom: 8px;
+        }
+        .rom-result { display: none; text-align: center; padding: 16px; background: rgba(34,197,94,0.15); border-radius: 12px; margin-top: 12px; }
+        .rom-result-val { font-size: 2.5rem; font-weight: 700; color: #22c55e; }
 
-        .hid { display: none !important; }
+        /* ===== VOICE BTN ===== */
+        .voice-btn {
+            position: fixed; top: 14px; right: 14px; z-index: 50;
+            width: 44px; height: 44px; border-radius: 50%; border: none;
+            background: rgba(255,255,255,0.1); color: white; font-size: 1.3rem;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+
+        /* ===== SUCCESS ===== */
+        .success-icon { font-size: 5rem; margin-bottom: 16px; }
+        .success-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 8px; }
+        .success-msg { color: #94a3b8; font-size: 1.05rem; line-height: 1.6; max-width: 380px; text-align: center; }
     </style>
 </head>
 <body>
 
-<!-- TOKEN ENTRY -->
+<!-- ===== TOKEN ENTRY ===== -->
 <div class="screen active" id="scrToken">
-    <div class="center-screen">
-        <div class="token-box">
-            <div class="token-logo">SRO</div>
-            <div class="token-title">Patient Check-in</div>
-            <div class="token-sub">Enter the patient token to start check-in</div>
-            <input type="text" class="token-input" id="tokenInput" placeholder="Enter token here..." onkeydown="if(event.key==='Enter')startWithToken()">
-            <button class="token-go" onclick="startWithToken()">Start Check-in</button>
-            <div class="token-hint">Token is found in Dashboard &rarr; Patient Details</div>
+    <div class="token-box">
+        <div class="token-logo">SRO</div>
+        <h1 style="font-size:1.6rem;font-weight:700;margin-bottom:8px;">Patient Check-in</h1>
+        <p style="color:#94a3b8;margin-bottom:25px;font-size:1.05rem;">Enter your patient token to start</p>
+        <input type="text" id="tokenInput" class="token-input" placeholder="Enter token here..."
+            onkeydown="if(event.key==='Enter')startWithToken()">
+        <button onclick="startWithToken()" class="token-btn">Start Check-in</button>
+        <p style="color:#475569;margin-top:15px;font-size:0.85rem;">Token is found in Dashboard &rarr; Patient Details</p>
+    </div>
+</div>
+
+<!-- ===== LOADING ===== -->
+<div class="screen" id="scrLoad">
+    <div class="spinner"></div>
+    <p style="margin-top:20px;color:#94a3b8;">Loading your check-in...</p>
+</div>
+
+<!-- ===== ERROR ===== -->
+<div class="screen" id="scrError">
+    <div style="font-size:5rem;margin-bottom:16px;">&#x274C;</div>
+    <h1 style="font-size:1.8rem;margin-bottom:12px;">Invalid Link</h1>
+    <p style="color:#94a3b8;font-size:1.1rem;">This check-in link is not valid.<br>Please contact your care team.</p>
+</div>
+
+<!-- ===== SUCCESS ===== -->
+<div class="screen" id="scrSuccess">
+    <div class="success-icon">&#x2705;</div>
+    <div class="success-title">Check-in Complete!</div>
+    <div class="success-msg">Your care team will review it.</div>
+    <div class="success-msg" id="successDetail" style="margin-top:12px;"></div>
+</div>
+
+<!-- ===== MAIN CARD INTERFACE ===== -->
+<div class="main-wrap" id="mainWrap">
+    <!-- Header -->
+    <div class="hdr">
+        <div>
+            <div class="hdr-logo">SRO Intelligence</div>
+            <div class="hdr-greeting">Hello, <span id="patientName">there</span>!</div>
+        </div>
+        <div style="text-align:right;">
+            <div class="hdr-day">Day <span id="daysPostOp">0</span> Post-Op</div>
         </div>
     </div>
-</div>
 
-<!-- LOADING -->
-<div class="screen" id="scrLoad">
-    <div class="center-screen">
-        <div class="spinner"></div>
-        <p style="margin-top:16px;color:#888;">Loading your check-in...</p>
+    <!-- Cards Viewport -->
+    <div class="cards-viewport">
+        <div class="cards-track" id="cardsTrack">
+            <!-- Cards rendered by JS -->
+        </div>
+    </div>
+
+    <!-- Bottom Nav -->
+    <div class="bottom-nav">
+        <button class="nav-btn nav-back" id="btnBack" onclick="goBack()">&larr; Back</button>
+        <div class="dots" id="dotsWrap"></div>
+        <button class="nav-btn nav-next" id="btnNext" onclick="advance()">Next &rarr;</button>
     </div>
 </div>
 
-<!-- ERROR -->
-<div class="screen" id="scrError">
-    <div class="center-screen">
-        <div style="font-size:70px;">&#10060;</div>
-        <h2 style="margin-top:16px;">Invalid Link</h2>
-        <p style="color:#888;margin-top:8px;">This check-in link is not valid.<br>Please contact your care team.</p>
-    </div>
-</div>
-
-<!-- MAIN QUESTION SCREEN -->
-<div class="screen" id="scrMain">
-    <div class="topbar">
-        <button class="back-btn" id="backBtn" onclick="goBack()">&larr; Back</button>
-        <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressFill"></div></div>
-        <div class="question-count" id="qCount">Question 1 of 8</div>
-    </div>
-    <div class="content">
-        <div class="section-label" id="sectionLabel">Your Recovery</div>
-        <div class="question-text" id="questionText">How is your pain today?</div>
-        <div class="answers" id="answersArea"></div>
-    </div>
-</div>
-
-<!-- SUCCESS -->
-<div class="screen" id="scrSuccess">
-    <div class="center-screen">
-        <div class="success-icon">&#x2705;</div>
-        <div class="success-title">All Done!</div>
-        <div class="success-msg">Your check-in has been submitted. Your care team will review it.</div>
-        <div class="success-detail" id="successDetail"></div>
-    </div>
-</div>
-
-<!-- VOICE -->
+<!-- ===== VOICE BUTTON ===== -->
 <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()">&#x1F50A;</button>
 
-<!-- EXERCISE MODAL -->
+<!-- ===== EXERCISE MODAL ===== -->
 <div class="modal-bg" id="exModal">
     <div class="modal-box">
         <div class="modal-head">
-            <div class="modal-title">Today's Exercises</div>
+            <div class="modal-title">&#x1F4AA; Today's Exercises</div>
             <button class="modal-x" onclick="closeExModal()">&times;</button>
         </div>
         <div id="exList"></div>
     </div>
 </div>
 
-<!-- ROM MODAL -->
+<!-- ===== ROM iPHONE MODAL ===== -->
 <div class="modal-bg" id="romModal">
     <div class="modal-box" style="text-align:center;">
         <div style="font-size:3rem;margin-bottom:10px;">&#x1F4F1;</div>
         <div class="modal-title" style="margin-bottom:12px;">Measure ROM with iPhone</div>
-        <div class="rom-inst"><ol>
+        <div class="rom-modal-inst"><ol>
             <li>Place iPhone flat on your shin</li>
             <li>Slowly bend your knee as far as comfortable</li>
             <li>Hold for 3 seconds</li>
             <li>Phone sensors will measure the angle</li>
         </ol></div>
-        <div id="romStatus" style="color:#888;margin-bottom:10px;">Requires iOS Safari.</div>
-        <button class="rom-go" id="romGoBtn" onclick="startIphoneRom()">Start Measuring</button>
-        <button class="modal-x" style="width:100%;border-radius:12px;height:auto;padding:10px;" onclick="closeRomModal()">Cancel</button>
-        <div class="rom-res" id="romRes">
-            <div class="rom-res-val" id="romResVal">0&deg;</div>
-            <div style="color:#666;margin:6px 0;">Range of Motion</div>
-            <button class="rom-go" onclick="acceptRom()">Use This Measurement</button>
+        <div id="romStatus" style="color:#64748b;margin-bottom:10px;">Requires iOS Safari.</div>
+        <button class="rom-go-btn" id="romGoBtn" onclick="startIphoneRom()">Start Measuring</button>
+        <button class="modal-x" style="width:100%;border-radius:14px;height:auto;padding:12px;margin-top:4px;" onclick="closeRomModal()">Cancel</button>
+        <div class="rom-result" id="romRes">
+            <div class="rom-result-val" id="romResVal">0&deg;</div>
+            <div style="color:#94a3b8;margin:6px 0;">Range of Motion</div>
+            <button class="rom-go-btn" onclick="acceptRom()">Use This Measurement</button>
         </div>
     </div>
 </div>
 
 <script>
+    // ========== CONFIG ==========
     var RELAY = window.location.origin;
     var patientData = null, activeToken = null, voiceOn = true;
     var currentQ = 0, answers = {}, selectedConcerns = new Set();
     var surgeryType = 'TKA', checkinHistory = [], questions = [];
     var romMeasuring = false, romMax = 0;
-    var romPeakFlex = 0, romMinExt = 150; // track highest flex and lowest angle (extension)
+    var romPeakFlex = 0, romMinExt = 150;
 
+    // ========== EXERCISES ==========
     var exercises = {
         TKA: [
-            {n:'Ankle Pumps',d:'10 reps, 3x daily. Move foot up and down.'},
-            {n:'Quad Sets',d:'10 reps, hold 5 sec. Tighten thigh, push knee flat.'},
-            {n:'Straight Leg Raises',d:'10 reps. Lie flat, tighten quad, lift leg 12 inches.'},
-            {n:'Heel Slides',d:'10 reps. Slide heel toward buttock, bending knee.'},
-            {n:'Seated Knee Extension',d:'10 reps. Sit, straighten knee, hold 5 sec.'},
-            {n:'Standing Knee Bends',d:'10 reps. Hold counter, bend knee slowly.'}
+            {n:'Ankle Pumps', d:'10 reps, 3x daily. Move foot up and down.'},
+            {n:'Quad Sets', d:'10 reps, hold 5 sec. Tighten thigh, push knee flat.'},
+            {n:'Straight Leg Raises', d:'10 reps. Lie flat, tighten quad, lift leg 12 inches.'},
+            {n:'Heel Slides', d:'10 reps. Slide heel toward buttock, bending knee.'},
+            {n:'Seated Knee Extension', d:'10 reps. Sit, straighten knee, hold 5 sec.'},
+            {n:'Standing Knee Bends', d:'10 reps. Hold counter, bend knee slowly.'}
         ],
         THA: [
-            {n:'Ankle Pumps',d:'10 reps, 3x daily. Move foot up and down.'},
-            {n:'Quad Sets',d:'10 reps, hold 5 sec. Tighten thigh, push knee flat.'},
-            {n:'Gluteal Sets',d:'10 reps, hold 5 sec. Squeeze buttocks together.'},
-            {n:'Heel Slides',d:'10 reps. Slide heel toward buttock. No hip past 90 deg.'},
-            {n:'Standing Hip Abduction',d:'10 reps. Hold counter, lift leg to side.'},
-            {n:'Standing Hip Extension',d:'10 reps. Hold counter, move leg behind you.'}
+            {n:'Ankle Pumps', d:'10 reps, 3x daily. Move foot up and down.'},
+            {n:'Quad Sets', d:'10 reps, hold 5 sec. Tighten thigh, push knee flat.'},
+            {n:'Gluteal Sets', d:'10 reps, hold 5 sec. Squeeze buttocks together.'},
+            {n:'Heel Slides', d:'10 reps. Slide heel toward buttock. No hip past 90 deg.'},
+            {n:'Standing Hip Abduction', d:'10 reps. Hold counter, lift leg to side.'},
+            {n:'Standing Hip Extension', d:'10 reps. Hold counter, move leg behind you.'}
         ],
         TSA: [
-            {n:'Pendulum Exercises',d:'Lean forward, arm hangs, small circles. 10 each.'},
-            {n:'Passive Forward Elevation',d:'Use other arm to raise arm overhead. 10 reps.'},
-            {n:'Passive External Rotation',d:'Use stick to rotate forearm outward. 10 reps.'},
-            {n:'Elbow Flex/Extend',d:'10 reps. Bend and straighten elbow fully.'},
-            {n:'Hand Squeezes',d:'10 reps. Squeeze soft ball for grip strength.'},
-            {n:'Scapular Retraction',d:'10 reps. Squeeze shoulder blades, hold 5 sec.'}
+            {n:'Pendulum Exercises', d:'Lean forward, arm hangs, small circles. 10 each.'},
+            {n:'Passive Forward Elevation', d:'Use other arm to raise arm overhead. 10 reps.'},
+            {n:'Passive External Rotation', d:'Use stick to rotate forearm outward. 10 reps.'},
+            {n:'Elbow Flex/Extend', d:'10 reps. Bend and straighten elbow fully.'},
+            {n:'Hand Squeezes', d:'10 reps. Squeeze soft ball for grip strength.'},
+            {n:'Scapular Retraction', d:'10 reps. Squeeze shoulder blades, hold 5 sec.'}
         ]
     };
 
-    var concerns = [
-        {id:'redness',label:'Redness around incision'},
-        {id:'warmth',label:'Unusual warmth'},
-        {id:'fever',label:'Fever or chills'},
-        {id:'drainage',label:'Drainage from incision'},
-        {id:'stiffness',label:'Significant stiffness'},
-        {id:'clicking',label:'Clicking or popping'},
-        {id:'instability',label:'Feeling of instability'}
+    var concernsList = [
+        {id:'redness', label:'Redness around incision'},
+        {id:'warmth', label:'Unusual warmth'},
+        {id:'fever', label:'Fever or chills'},
+        {id:'drainage', label:'Drainage from incision'},
+        {id:'stiffness', label:'Significant stiffness'},
+        {id:'clicking', label:'Clicking or popping'},
+        {id:'instability', label:'Feeling of instability'}
     ];
 
+    // ========== BUILD QUESTIONS ==========
     function buildQuestions() {
+        var isKneeOrHip = (surgeryType === 'TKA' || surgeryType === 'THA');
         var qs = [
-            {id:'pain', section:'Pain Level', q:'How is your pain today?', type:'pain'},
-            {id:'medication', section:'Medication', q:'Did you take your medications?', type:'options', opts:[
-                {v:'yes',label:'Yes, as prescribed'},{v:'some',label:'Missed some doses'},{v:'no',label:'Did not take'}
+            { id:'pain', icon:'&#x1F4CA;', question:'How is your pain today?', subtitle:'Tap a number (0 = no pain, 10 = worst)', type:'pain' },
+            { id:'medication', icon:'&#x1F48A;', question:'Did you take your medications?', subtitle:'As prescribed by your care team', type:'options', opts:[
+                {v:'yes', label:'Yes, as prescribed', icon:'&#x2705;'},
+                {v:'some', label:'Missed some doses', icon:'&#x26A0;&#xFE0F;'},
+                {v:'no', label:'Did not take', icon:'&#x274C;'}
             ]},
-            {id:'pt_exercises', section:'Physical Therapy', q:'Did you do your exercises today?', type:'pt', opts:[
-                {v:'yes',label:'Yes, I did them!'},{v:'some',label:'Some of them'},{v:'no',label:'Not today'}
+            { id:'pt_exercises', icon:'&#x1F3CB;&#xFE0F;', question:'Did you do your exercises today?', subtitle:'Tap below to see today\'s exercises', type:'pt', opts:[
+                {v:'yes', label:'Yes, I did them!', icon:'&#x2705;'},
+                {v:'some', label:'Some of them', icon:'&#x1F504;'},
+                {v:'no', label:'Not today', icon:'&#x274C;'}
             ]},
-            {id:'swelling', section:'Swelling', q:'How is the swelling?', type:'two-col', opts:[
-                {v:'none',label:'No swelling'},{v:'mild',label:'A little'},{v:'moderate',label:'Moderate'},{v:'severe',label:'Very swollen'}
-            ]},
-            {id:'er_visit', section:'Safety Check', q:'Have you visited the ER since your last check-in?', type:'options', opts:[
-                {v:'no',label:'No'},{v:'yes',label:'Yes, I went to the ER'}
+            { id:'swelling', icon:'&#x1F9B5;', question:'How is the swelling?', type:'options', opts:[
+                {v:'none', label:'No swelling', icon:'&#x1F60A;'},
+                {v:'mild', label:'A little swelling', icon:'&#x1F642;'},
+                {v:'moderate', label:'Moderate swelling', icon:'&#x1F610;'},
+                {v:'severe', label:'Very swollen', icon:'&#x1F61F;'}
             ]}
         ];
-        // Conditionally add ER follow-up (handled dynamically in advance)
-        qs.push({id:'er_facility', section:'ER Visit Details', q:'Which facility did you go to?', type:'text_input', placeholder:'Hospital or ER name', conditional:'er_visit', condValue:'yes'});
-        qs.push({id:'er_reason', section:'ER Visit Details', q:'What was the reason for your ER visit?', type:'text_input', placeholder:'Describe what happened', conditional:'er_visit', condValue:'yes'});
-        qs.push({id:'readmitted', section:'Safety Check', q:'Have you been readmitted to the hospital?', type:'options', opts:[
-            {v:'no',label:'No'},{v:'yes',label:'Yes, I was readmitted'}
-        ]});
-        qs.push({id:'readmit_facility', section:'Readmission Details', q:'Which hospital were you readmitted to?', type:'text_input', placeholder:'Hospital name', conditional:'readmitted', condValue:'yes'});
-        qs.push({id:'readmit_reason', section:'Readmission Details', q:'What was the reason for readmission?', type:'text_input', placeholder:'Describe what happened', conditional:'readmitted', condValue:'yes'});
-        if (surgeryType==='TKA'||surgeryType==='THA') {
-            qs.push({id:'rom', section:'Range of Motion', q:'Enter your range of motion', type:'rom'});
+
+        // ROM for knee and hip
+        if (isKneeOrHip) {
+            qs.push({ id:'rom', icon:'&#x1F4D0;', question:'Range of Motion', subtitle:'Drag the leg to measure your bend', type:'rom' });
         }
-        qs.push({id:'concerns_flags', section:'Warning Signs', q:'Any warning signs?', type:'concerns'});
-        qs.push({id:'concerns_text', section:'Your Thoughts', q:'Anything else to share?', type:'text'});
-        qs.push({id:'progress', section:'Your Progress', q:'Your Recovery Progress', type:'chart'});
+
+        // ER Visit
+        qs.push({ id:'er_visit', icon:'&#x1F3E5;', question:'Have you visited the ER since your last check-in?', subtitle:'Emergency room or urgent care', type:'options', opts:[
+            {v:'no', label:'No', icon:'&#x2705;'},
+            {v:'yes', label:'Yes, I went to the ER', icon:'&#x1F6A8;'}
+        ]});
+        // Conditional ER follow-ups
+        qs.push({ id:'er_facility', icon:'&#x1F3E5;', question:'Which facility did you go to?', subtitle:'Hospital or ER name', type:'text_input', placeholder:'Enter facility name...', conditional:'er_visit', condValue:'yes' });
+        qs.push({ id:'er_reason', icon:'&#x1F4DD;', question:'What was the reason for your ER visit?', subtitle:'Briefly describe what happened', type:'text_input', placeholder:'Describe what happened...', conditional:'er_visit', condValue:'yes' });
+
+        // Readmission
+        qs.push({ id:'readmitted', icon:'&#x1F6CF;&#xFE0F;', question:'Have you been readmitted to the hospital?', subtitle:'Since your surgery', type:'options', opts:[
+            {v:'no', label:'No', icon:'&#x2705;'},
+            {v:'yes', label:'Yes, I was readmitted', icon:'&#x1F6A8;'}
+        ]});
+        // Conditional readmission follow-ups
+        qs.push({ id:'readmit_facility', icon:'&#x1F3E5;', question:'Which hospital were you readmitted to?', type:'text_input', placeholder:'Enter hospital name...', conditional:'readmitted', condValue:'yes' });
+        qs.push({ id:'readmit_reason', icon:'&#x1F4DD;', question:'What was the reason for readmission?', type:'text_input', placeholder:'Describe the reason...', conditional:'readmitted', condValue:'yes' });
+
+        // Warning signs
+        qs.push({ id:'concerns_flags', icon:'&#x1F6A9;', question:'Any warning signs?', subtitle:'Check any that apply (or skip)', type:'concerns' });
+
+        // Free text
+        qs.push({ id:'concerns_text', icon:'&#x1F4AC;', question:'Anything else to share?', subtitle:'Questions, concerns, or updates for your care team', type:'text_area', placeholder:'Type here or skip if nothing to add...' });
+
+        // Progress chart
+        qs.push({ id:'progress', icon:'&#x1F4C8;', question:'Your Recovery Progress', subtitle:'Last 7 days', type:'chart' });
+
         return qs;
     }
 
-    // INIT
-    document.addEventListener('DOMContentLoaded', function() {
-        var t = new URLSearchParams(window.location.search).get('t');
-        if (t) { activeToken=t; showScreen('scrLoad'); loadCheckin(t); }
-        else { showScreen('scrToken'); }
-    });
-
-    function startWithToken() {
-        var t = document.getElementById('tokenInput').value.trim();
-        if (!t) return;
-        activeToken = t;
-        showScreen('scrLoad');
-        loadCheckin(t);
-    }
-
-    async function loadCheckin(token) {
-        try {
-            var r = await fetch(RELAY+'/api/patient-by-token/'+token);
-            if (!r.ok) throw new Error('bad');
-            patientData = await r.json();
-            if (patientData.surgery_type) {
-                surgeryType = patientData.surgery_type.toUpperCase();
-                if (!exercises[surgeryType]) surgeryType='TKA';
+    // ========== FILTER CONDITIONAL QUESTIONS ==========
+    function getVisibleQuestions() {
+        return questions.filter(function(q) {
+            if (q.conditional) {
+                return answers[q.conditional] === q.condValue;
             }
-            try { var h=await fetch(RELAY+'/api/checkin-history/'+token+'?days=7'); if(h.ok) checkinHistory=await h.json(); } catch(e){}
-            questions = buildQuestions();
-            currentQ = 0;
-            renderQuestion();
-            showScreen('scrMain');
-            setTimeout(function(){speakQ();},300);
-        } catch(e) { showScreen('scrError'); }
-    }
-
-    function showScreen(id) {
-        document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
-        document.getElementById(id).classList.add('active');
-        document.getElementById('voiceBtn').style.display = (id==='scrMain')?'block':'none';
-    }
-
-    // RENDER
-    function renderQuestion() {
-        var q = questions[currentQ];
-        document.getElementById('sectionLabel').textContent = q.section;
-        document.getElementById('questionText').textContent = q.q;
-        var visibleQs = questions.filter(function(q){ return shouldShowQuestion(q); });
-        var visibleIdx = visibleQs.indexOf(q) + 1;
-        document.getElementById('qCount').textContent = 'Question '+visibleIdx+' of '+visibleQs.length;
-        document.getElementById('progressFill').style.width = ((visibleIdx/visibleQs.length)*100)+'%';
-        document.getElementById('backBtn').style.visibility = currentQ===0?'hidden':'visible';
-
-        var area = document.getElementById('answersArea');
-        if (q.type==='pain') area.innerHTML = renderPain();
-        else if (q.type==='options') area.innerHTML = renderOpts(q);
-        else if (q.type==='pt') area.innerHTML = renderPT(q);
-        else if (q.type==='two-col') area.innerHTML = renderTwoCol(q);
-        else if (q.type==='rom') { area.innerHTML = renderROM(); initLegVisual(); }
-        else if (q.type==='concerns') area.innerHTML = renderConcerns();
-        else if (q.type==='text') area.innerHTML = renderText();
-        else if (q.type==='text_input') area.innerHTML = renderTextInput(q);
-        else if (q.type==='chart') area.innerHTML = renderChart();
-    }
-
-    function renderPain() {
-        var faces = ['\uD83D\uDE0A','\uD83D\uDE42','\uD83D\uDE10','\uD83D\uDE15','\uD83D\uDE23','\uD83D\uDE2B'];
-        var h = '<div class="pain-row">';
-        for (var i=0;i<=10;i++) {
-            var fi = Math.min(Math.floor(i/2),5);
-            var c = i<=1?'pc-green':i<=3?'pc-lime':i<=5?'pc-yellow':i<=7?'pc-orange':i<=9?'pc-red':'pc-darkred';
-            var sel = answers.pain===i?' selected':'';
-            h+='<div class="pain-cell '+c+sel+'" onclick="pickPain('+i+')"><div class="face">'+faces[fi]+'</div><div class="num">'+i+'</div></div>';
-        }
-        h+='</div>';
-        return h;
-    }
-
-    function renderOpts(q) {
-        return q.opts.map(function(o){
-            var sel = answers[q.id]===o.v?' selected':'';
-            return '<button class="big-btn'+sel+'" onclick="pickOpt(\''+q.id+'\',\''+o.v+'\')">'+o.label+'</button>';
-        }).join('');
-    }
-
-    function renderPT(q) {
-        var h = q.opts.map(function(o){
-            var sel = answers[q.id]===o.v?' selected':'';
-            return '<button class="big-btn'+sel+'" onclick="pickOpt(\''+q.id+'\',\''+o.v+'\')">'+o.label+'</button>';
-        }).join('');
-        h += '<button class="ex-btn" onclick="openExModal()">&#x1F4AA; View Today\'s Exercises</button>';
-        return h;
-    }
-
-    function renderTwoCol(q) {
-        var h = '<div class="two-col">';
-        q.opts.forEach(function(o){
-            var sel = answers[q.id]===o.v?' selected':'';
-            h+='<button class="big-btn'+sel+'" onclick="pickOpt(\''+q.id+'\',\''+o.v+'\')">'+o.label+'</button>';
+            return true;
         });
-        h+='</div>';
+    }
+
+    // ========== RENDER ALL CARDS ==========
+    function renderCards() {
+        var visible = getVisibleQuestions();
+        var track = document.getElementById('cardsTrack');
+        var html = '';
+        visible.forEach(function(q, i) {
+            html += '<div class="card" data-qid="' + q.id + '">';
+            html += '<div class="card-icon">' + q.icon + '</div>';
+            html += '<div class="card-question">' + q.question + '</div>';
+            if (q.subtitle) html += '<div class="card-subtitle">' + q.subtitle + '</div>';
+            html += '<div class="card-body" id="body_' + q.id + '">';
+            html += renderCardBody(q);
+            html += '</div></div>';
+        });
+        track.innerHTML = html;
+        updateSlide();
+        renderDots();
+        updateNavButtons();
+        initRomDrag();
+    }
+
+    function renderCardBody(q) {
+        switch(q.type) {
+            case 'pain': return renderPain();
+            case 'options': return renderOptions(q);
+            case 'pt': return renderPT(q);
+            case 'rom': return renderROM();
+            case 'concerns': return renderConcerns();
+            case 'text_area': return renderTextArea(q);
+            case 'text_input': return renderTextInput(q);
+            case 'chart': return renderChart();
+            default: return '';
+        }
+    }
+
+    // ========== PAIN ==========
+    function renderPain() {
+        var faces = ['&#x1F60A;','&#x1F642;','&#x1F642;','&#x1F610;','&#x1F610;','&#x1F615;','&#x1F61F;','&#x1F623;','&#x1F629;','&#x1F631;','&#x1F635;'];
+        var colors = ['#22c55e','#4ade80','#86efac','#a3e635','#facc15','#fbbf24','#f97316','#ef4444','#dc2626','#b91c1c','#7f1d1d'];
+        var h = '<div class="pain-grid">';
+        for (var i = 0; i <= 10; i++) {
+            var sel = answers.pain === i ? ' selected' : '';
+            h += '<div class="pain-cell' + sel + '" style="border-color:' + colors[i] + ';' + (sel ? 'background:' + colors[i] + '22;' : '') + '" onclick="pickPain(' + i + ')">';
+            h += '<div class="face">' + faces[i] + '</div>';
+            h += '<div class="num">' + i + '</div>';
+            h += '</div>';
+        }
+        h += '</div>';
         return h;
     }
 
+    // ========== OPTIONS ==========
+    function renderOptions(q) {
+        var h = '';
+        q.opts.forEach(function(o) {
+            var sel = answers[q.id] === o.v ? ' selected' : '';
+            h += '<button class="opt-btn' + sel + '" onclick="pickOpt(\'' + q.id + '\',\'' + o.v + '\')">';
+            h += '<span class="opt-icon">' + o.icon + '</span> ' + o.label;
+            h += '</button>';
+        });
+        return h;
+    }
+
+    // ========== PT (with exercise link) ==========
+    function renderPT(q) {
+        var h = '';
+        q.opts.forEach(function(o) {
+            var sel = answers[q.id] === o.v ? ' selected' : '';
+            h += '<button class="opt-btn' + sel + '" onclick="pickOpt(\'' + q.id + '\',\'' + o.v + '\')">';
+            h += '<span class="opt-icon">' + o.icon + '</span> ' + o.label;
+            h += '</button>';
+        });
+        h += '<button class="opt-btn" style="border-color:#f59e0b;justify-content:center;" onclick="openExModal()">';
+        h += '&#x1F4AA; View Today\'s Exercises</button>';
+        return h;
+    }
+
+    // ========== ROM ==========
     function renderROM() {
         var isKnee = surgeryType === 'TKA';
         var joint = isKnee ? 'Knee' : 'Hip';
         var flex = answers.rom_flexion || 30;
-        var ext = answers.rom_extension || 30; // extension lag starts at 30, goes to 0 when straightened
-
-        // Lateral view of full leg. Pivot at knee or hip.
-        // For KNEE: hip at top-left, knee is pivot in middle, foot swings
-        // For HIP: pelvis at top, hip is pivot, whole leg swings
+        var ext = answers.rom_extension || 30;
 
         var svgW = 550, svgH = 320;
-        var pivX, pivY; // joint/pivot point
+        var pivX, pivY;
 
-        if (isKnee) {
-            pivX = 380; pivY = 110; // knee - far right
-        } else {
-            pivX = 380; pivY = 70; // hip - far right so leg stays in view
-        }
+        if (isKnee) { pivX = 380; pivY = 110; }
+        else { pivX = 380; pivY = 70; }
 
-        var seg1Len = 100; // upper segment length
-        var seg2Len = 110; // lower segment length
+        var seg1Len = 100, seg2Len = 110;
         var svg = '';
 
         if (isKnee) {
-            // === KNEE VERSION ===
-            // Upper thigh: goes up-left from knee (fixed)
-            var thighAng = 220 * Math.PI / 180; // angled up-left
+            // KNEE VERSION
+            var thighAng = 220 * Math.PI / 180;
             var thighX = pivX + Math.cos(thighAng) * seg1Len;
             var thighY = pivY + Math.sin(thighAng) * seg1Len;
-
-            // Hip circle at top of thigh
             svg += '<circle cx="'+thighX+'" cy="'+thighY+'" r="14" fill="#FFCC80" stroke="#D4A373" stroke-width="2"/>';
-            svg += '<text x="'+(thighX)+'" y="'+(thighY-20)+'" text-anchor="middle" fill="#5D4037" font-size="13" font-weight="800">HIP</text>';
-
-            // Thigh
+            svg += '<text x="'+thighX+'" y="'+(thighY-20)+'" text-anchor="middle" fill="#A1887F" font-size="13" font-weight="800">HIP</text>';
             svg += '<line x1="'+thighX+'" y1="'+thighY+'" x2="'+pivX+'" y2="'+pivY+'" stroke="#FFCC80" stroke-width="30" stroke-linecap="round"/>';
-            svg += '<text x="'+((thighX+pivX)/2+22)+'" y="'+((thighY+pivY)/2)+'" fill="#8D6E63" font-size="12" font-weight="700">THIGH</text>';
+            svg += '<text x="'+((thighX+pivX)/2+22)+'" y="'+((thighY+pivY)/2)+'" fill="#A1887F" font-size="12" font-weight="700">THIGH</text>';
 
-            // Lower leg (calf) — swings from knee
-            var calfAng = flex * Math.PI / 180; // 0=straight down from knee direction
-            // When flex=0, calf continues the thigh line (straight). As flex increases, calf bends.
-            var straightAng = thighAng + Math.PI; // direction continuing from thigh
-            var calfDir = straightAng + calfAng;
+            var straightAng = thighAng + Math.PI;
+            var calfDir = straightAng + flex * Math.PI / 180;
             var calfX = pivX + Math.cos(calfDir) * seg2Len;
             var calfY = pivY + Math.sin(calfDir) * seg2Len;
-
             svg += '<line x1="'+pivX+'" y1="'+pivY+'" x2="'+calfX+'" y2="'+calfY+'" stroke="#FFCC80" stroke-width="26" stroke-linecap="round" id="lowerLeg"/>';
-            // Calf label
             var cMidX = (pivX+calfX)/2, cMidY = (pivY+calfY)/2;
-            svg += '<text x="'+(cMidX+20)+'" y="'+(cMidY)+'" fill="#8D6E63" font-size="12" font-weight="700" id="calfLabel">CALF</text>';
+            svg += '<text x="'+(cMidX+20)+'" y="'+cMidY+'" fill="#A1887F" font-size="12" font-weight="700">CALF</text>';
 
             // Kneecap
             svg += '<ellipse cx="'+pivX+'" cy="'+pivY+'" rx="18" ry="20" fill="#FFE0B2" stroke="#D4A373" stroke-width="2.5"/>';
             svg += '<ellipse cx="'+pivX+'" cy="'+pivY+'" rx="9" ry="11" fill="#FFD180"/>';
-            svg += '<text x="'+(pivX-28)+'" y="'+(pivY+5)+'" text-anchor="end" fill="#BF360C" font-size="14" font-weight="800">KNEE</text>';
+            svg += '<text x="'+(pivX-28)+'" y="'+(pivY+5)+'" text-anchor="end" fill="#E65100" font-size="14" font-weight="800">KNEE</text>';
 
-            // Foot - proper lateral view (heel, arch, ball, toes)
-            // calfDir is the angle of the calf. Foot sits at end perpendicular.
+            // Foot
             var ankleX = calfX + Math.cos(calfDir) * 2;
             var ankleY = calfY + Math.sin(calfDir) * 2;
-            var footFwd = calfDir + Math.PI/2; // forward direction for toes
-            var footBack = calfDir - Math.PI/2; // backward for heel
-            var footDown = calfDir; // down from ankle
+            var footFwd = calfDir + Math.PI/2, footBack = calfDir - Math.PI/2, footDown = calfDir;
+            var heelX = ankleX + Math.cos(footBack)*16 + Math.cos(footDown)*18;
+            var heelY = ankleY + Math.sin(footBack)*16 + Math.sin(footDown)*18;
+            var heelBX = heelX + Math.cos(footDown)*12, heelBY = heelY + Math.sin(footDown)*12;
+            var archX = ankleX + Math.cos(footFwd)*16 + Math.cos(footDown)*28;
+            var archY = ankleY + Math.sin(footFwd)*16 + Math.sin(footDown)*28;
+            var ballX = ankleX + Math.cos(footFwd)*44 + Math.cos(footDown)*22;
+            var ballY = ankleY + Math.sin(footFwd)*44 + Math.sin(footDown)*22;
+            var toeTopX = ankleX + Math.cos(footFwd)*60 + Math.cos(footDown)*10;
+            var toeTopY = ankleY + Math.sin(footFwd)*60 + Math.sin(footDown)*10;
+            var toeTipX = ankleX + Math.cos(footFwd)*64 + Math.cos(footDown)*20;
+            var toeTipY = ankleY + Math.sin(footFwd)*64 + Math.sin(footDown)*20;
+            var ankTopX = ankleX + Math.cos(footFwd)*8 - Math.cos(footDown)*6;
+            var ankTopY = ankleY + Math.sin(footFwd)*8 - Math.sin(footDown)*6;
+            var ankBackX = ankleX + Math.cos(footBack)*14 - Math.cos(footDown)*3;
+            var ankBackY = ankleY + Math.sin(footBack)*14 - Math.sin(footDown)*3;
 
-            // Key points for foot shape
-            var heelX = ankleX + Math.cos(footBack) * 16 + Math.cos(footDown) * 18;
-            var heelY = ankleY + Math.sin(footBack) * 16 + Math.sin(footDown) * 18;
-            var heelBottomX = heelX + Math.cos(footDown) * 12;
-            var heelBottomY = heelY + Math.sin(footDown) * 12;
-            var archX = ankleX + Math.cos(footFwd) * 16 + Math.cos(footDown) * 28;
-            var archY = ankleY + Math.sin(footFwd) * 16 + Math.sin(footDown) * 28;
-            var ballX = ankleX + Math.cos(footFwd) * 44 + Math.cos(footDown) * 22;
-            var ballY = ankleY + Math.sin(footFwd) * 44 + Math.sin(footDown) * 22;
-            var toeTopX = ankleX + Math.cos(footFwd) * 60 + Math.cos(footDown) * 10;
-            var toeTopY = ankleY + Math.sin(footFwd) * 60 + Math.sin(footDown) * 10;
-            var toeTipX = ankleX + Math.cos(footFwd) * 64 + Math.cos(footDown) * 20;
-            var toeTipY = ankleY + Math.sin(footFwd) * 64 + Math.sin(footDown) * 20;
-            var ankleTopX = ankleX + Math.cos(footFwd) * 8 - Math.cos(footDown) * 6;
-            var ankleTopY = ankleY + Math.sin(footFwd) * 8 - Math.sin(footDown) * 6;
-            var ankleBackX = ankleX + Math.cos(footBack) * 14 - Math.cos(footDown) * 3;
-            var ankleBackY = ankleY + Math.sin(footBack) * 14 - Math.sin(footDown) * 3;
-
-            svg += '<path d="' +
-                'M'+ankleBackX+','+ankleBackY+' ' +
-                'L'+heelX+','+heelY+' ' +
-                'Q'+heelBottomX+','+heelBottomY+' '+archX+','+archY+' ' +
-                'Q'+ballX+','+ballY+' '+toeTipX+','+toeTipY+' ' +
-                'L'+toeTopX+','+toeTopY+' ' +
-                'Q'+ballX+','+(ballY - Math.sin(footDown)*6)+' '+ankleTopX+','+ankleTopY+' ' +
-                'Z" fill="#FFCC80" stroke="#D4A373" stroke-width="2" id="footShape"/>';
-
-            // Toe lines
-            for (var ti = 0; ti < 4; ti++) {
-                var tFrac = 0.6 + ti * 0.15;
-                var tlx1 = ankleX + Math.cos(footFwd) * (48+ti*4) + Math.cos(footDown) * 12;
-                var tly1 = ankleY + Math.sin(footFwd) * (48+ti*4) + Math.sin(footDown) * 12;
-                var tlx2 = tlx1 + Math.cos(footDown) * 8;
-                var tly2 = tly1 + Math.sin(footDown) * 8;
-                svg += '<line x1="'+tlx1+'" y1="'+tly1+'" x2="'+tlx2+'" y2="'+tly2+'" stroke="#D4A373" stroke-width="1.5" class="toeLine"/>';
+            svg += '<path d="M'+ankBackX+','+ankBackY+' L'+heelX+','+heelY+' Q'+heelBX+','+heelBY+' '+archX+','+archY+' Q'+ballX+','+ballY+' '+toeTipX+','+toeTipY+' L'+toeTopX+','+toeTopY+' Q'+ballX+','+(ballY-Math.sin(footDown)*6)+' '+ankTopX+','+ankTopY+' Z" fill="#FFCC80" stroke="#D4A373" stroke-width="2"/>';
+            for (var ti=0;ti<4;ti++) {
+                var tlx1=ankleX+Math.cos(footFwd)*(48+ti*4)+Math.cos(footDown)*12;
+                var tly1=ankleY+Math.sin(footFwd)*(48+ti*4)+Math.sin(footDown)*12;
+                var tlx2=tlx1+Math.cos(footDown)*8, tly2=tly1+Math.sin(footDown)*8;
+                svg += '<line x1="'+tlx1+'" y1="'+tly1+'" x2="'+tlx2+'" y2="'+tly2+'" stroke="#D4A373" stroke-width="1.5"/>';
             }
-
-            // Ankle bone bump
-            svg += '<circle cx="'+ankleX+'" cy="'+ankleY+'" r="8" fill="#FFE0B2" stroke="#D4A373" stroke-width="1.5" id="ankleBone"/>';
-
-            // Drag handle on ankle area
-            svg += '<circle cx="'+(ankleX)+'" cy="'+(ankleY)+'" r="18" fill="#1565C0" id="legHandle" style="cursor:grab;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.3));opacity:0.85;"/>';
-            svg += '<text x="'+ankleX+'" y="'+(ankleY+1)+'" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="9" font-weight="800" style="pointer-events:none;" id="handleText">DRAG</text>';
+            svg += '<circle cx="'+ankleX+'" cy="'+ankleY+'" r="8" fill="#FFE0B2" stroke="#D4A373" stroke-width="1.5"/>';
+            svg += '<circle cx="'+ankleX+'" cy="'+ankleY+'" r="18" fill="#1565C0" id="legHandle" style="cursor:grab;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.3));opacity:0.85;"/>';
+            svg += '<text x="'+ankleX+'" y="'+(ankleY+1)+'" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="9" font-weight="800" style="pointer-events:none;">DRAG</text>';
 
         } else {
-            // === HIP VERSION ===
-            // Torso/pelvis above hip (fixed)
+            // HIP VERSION
             svg += '<rect x="'+(pivX-25)+'" y="10" width="50" height="55" rx="12" fill="#FFCC80" stroke="#D4A373" stroke-width="2"/>';
-            svg += '<text x="'+pivX+'" y="35" text-anchor="middle" fill="#5D4037" font-size="12" font-weight="800">TORSO</text>';
-
-            // Hip socket
+            svg += '<text x="'+pivX+'" y="35" text-anchor="middle" fill="#A1887F" font-size="12" font-weight="800">TORSO</text>';
             svg += '<circle cx="'+pivX+'" cy="'+pivY+'" r="20" fill="#FFE0B2" stroke="#D4A373" stroke-width="2.5"/>';
             svg += '<circle cx="'+pivX+'" cy="'+pivY+'" r="10" fill="#FFD180"/>';
             svg += '<circle cx="'+pivX+'" cy="'+pivY+'" r="4" fill="#FFAB40"/>';
-            svg += '<text x="'+(pivX-28)+'" y="'+(pivY+5)+'" text-anchor="end" fill="#BF360C" font-size="14" font-weight="800">HIP</text>';
+            svg += '<text x="'+(pivX-28)+'" y="'+(pivY+5)+'" text-anchor="end" fill="#E65100" font-size="14" font-weight="800">HIP</text>';
 
-            // Thigh swings from hip
-            var thighDir = (90 + flex) * Math.PI / 180; // 90deg = straight down, increases = forward
+            var thighDir = (90 + flex) * Math.PI / 180;
             var thighEndX = pivX + Math.cos(thighDir) * seg1Len;
             var thighEndY = pivY + Math.sin(thighDir) * seg1Len;
-
             svg += '<line x1="'+pivX+'" y1="'+pivY+'" x2="'+thighEndX+'" y2="'+thighEndY+'" stroke="#FFCC80" stroke-width="30" stroke-linecap="round" id="lowerLeg"/>';
             var tMidX = (pivX+thighEndX)/2, tMidY = (pivY+thighEndY)/2;
-            svg += '<text x="'+(tMidX+22)+'" y="'+tMidY+'" fill="#8D6E63" font-size="12" font-weight="700" id="calfLabel">THIGH</text>';
+            svg += '<text x="'+(tMidX+22)+'" y="'+tMidY+'" fill="#A1887F" font-size="12" font-weight="700">THIGH</text>';
+            svg += '<ellipse cx="'+thighEndX+'" cy="'+thighEndY+'" rx="14" ry="16" fill="#FFE0B2" stroke="#D4A373" stroke-width="2"/>';
+            svg += '<text x="'+thighEndX+'" y="'+(thighEndY-20)+'" text-anchor="middle" fill="#A1887F" font-size="11" font-weight="700">KNEE</text>';
 
-            // Knee at end of thigh
-            svg += '<ellipse cx="'+thighEndX+'" cy="'+thighEndY+'" rx="14" ry="16" fill="#FFE0B2" stroke="#D4A373" stroke-width="2" id="kneeEl"/>';
-            svg += '<text x="'+(thighEndX)+'" y="'+(thighEndY-20)+'" text-anchor="middle" fill="#8D6E63" font-size="11" font-weight="700" id="kneeLabel">KNEE</text>';
+            var calfX2 = thighEndX + Math.cos(thighDir) * (seg2Len*0.9);
+            var calfY2 = thighEndY + Math.sin(thighDir) * (seg2Len*0.9);
+            svg += '<line x1="'+thighEndX+'" y1="'+thighEndY+'" x2="'+calfX2+'" y2="'+calfY2+'" stroke="#FFCC80" stroke-width="24" stroke-linecap="round"/>';
 
-            // Calf continues straight from thigh
-            var calfX = thighEndX + Math.cos(thighDir) * (seg2Len * 0.9);
-            var calfY = thighEndY + Math.sin(thighDir) * (seg2Len * 0.9);
-            svg += '<line x1="'+thighEndX+'" y1="'+thighEndY+'" x2="'+calfX+'" y2="'+calfY+'" stroke="#FFCC80" stroke-width="24" stroke-linecap="round" id="calfLine"/>';
+            var ankleX2 = calfX2, ankleY2 = calfY2;
+            var footFwd2 = thighDir + Math.PI/2, footBack2 = thighDir - Math.PI/2, footDown2 = thighDir;
+            var heelX2 = ankleX2 + Math.cos(footBack2)*14 + Math.cos(footDown2)*16;
+            var heelY2 = ankleY2 + Math.sin(footBack2)*14 + Math.sin(footDown2)*16;
+            var heelBX2 = heelX2 + Math.cos(footDown2)*10, heelBY2 = heelY2 + Math.sin(footDown2)*10;
+            var archX2 = ankleX2 + Math.cos(footFwd2)*14 + Math.cos(footDown2)*24;
+            var archY2 = ankleY2 + Math.sin(footFwd2)*14 + Math.sin(footDown2)*24;
+            var ballX2 = ankleX2 + Math.cos(footFwd2)*40 + Math.cos(footDown2)*20;
+            var ballY2 = ankleY2 + Math.sin(footFwd2)*40 + Math.sin(footDown2)*20;
+            var toeTopX2 = ankleX2 + Math.cos(footFwd2)*56 + Math.cos(footDown2)*8;
+            var toeTopY2 = ankleY2 + Math.sin(footFwd2)*56 + Math.sin(footDown2)*8;
+            var toeTipX2 = ankleX2 + Math.cos(footFwd2)*58 + Math.cos(footDown2)*18;
+            var toeTipY2 = ankleY2 + Math.sin(footFwd2)*58 + Math.sin(footDown2)*18;
+            var ankTopX2 = ankleX2 + Math.cos(footFwd2)*7 - Math.cos(footDown2)*5;
+            var ankTopY2 = ankleY2 + Math.sin(footFwd2)*7 - Math.sin(footDown2)*5;
+            var ankBackX2 = ankleX2 + Math.cos(footBack2)*12 - Math.cos(footDown2)*2;
+            var ankBackY2 = ankleY2 + Math.sin(footBack2)*12 - Math.sin(footDown2)*2;
 
-            // Foot - proper lateral view
-            var ankleX2 = calfX;
-            var ankleY2 = calfY;
-            var footFwd2 = thighDir + Math.PI/2;
-            var footBack2 = thighDir - Math.PI/2;
-            var footDown2 = thighDir;
-
-            var heelX2 = ankleX2 + Math.cos(footBack2) * 14 + Math.cos(footDown2) * 16;
-            var heelY2 = ankleY2 + Math.sin(footBack2) * 14 + Math.sin(footDown2) * 16;
-            var heelBtmX2 = heelX2 + Math.cos(footDown2) * 10;
-            var heelBtmY2 = heelY2 + Math.sin(footDown2) * 10;
-            var archX2 = ankleX2 + Math.cos(footFwd2) * 14 + Math.cos(footDown2) * 24;
-            var archY2 = ankleY2 + Math.sin(footFwd2) * 14 + Math.sin(footDown2) * 24;
-            var ballX2 = ankleX2 + Math.cos(footFwd2) * 40 + Math.cos(footDown2) * 20;
-            var ballY2 = ankleY2 + Math.sin(footFwd2) * 40 + Math.sin(footDown2) * 20;
-            var toeTopX2 = ankleX2 + Math.cos(footFwd2) * 56 + Math.cos(footDown2) * 8;
-            var toeTopY2 = ankleY2 + Math.sin(footFwd2) * 56 + Math.sin(footDown2) * 8;
-            var toeTipX2 = ankleX2 + Math.cos(footFwd2) * 58 + Math.cos(footDown2) * 18;
-            var toeTipY2 = ankleY2 + Math.sin(footFwd2) * 58 + Math.sin(footDown2) * 18;
-            var ankTopX2 = ankleX2 + Math.cos(footFwd2) * 7 - Math.cos(footDown2) * 5;
-            var ankTopY2 = ankleY2 + Math.sin(footFwd2) * 7 - Math.sin(footDown2) * 5;
-            var ankBackX2 = ankleX2 + Math.cos(footBack2) * 12 - Math.cos(footDown2) * 2;
-            var ankBackY2 = ankleY2 + Math.sin(footBack2) * 12 - Math.sin(footDown2) * 2;
-
-            svg += '<path d="' +
-                'M'+ankBackX2+','+ankBackY2+' ' +
-                'L'+heelX2+','+heelY2+' ' +
-                'Q'+heelBtmX2+','+heelBtmY2+' '+archX2+','+archY2+' ' +
-                'Q'+ballX2+','+ballY2+' '+toeTipX2+','+toeTipY2+' ' +
-                'L'+toeTopX2+','+toeTopY2+' ' +
-                'Q'+ballX2+','+(ballY2 - Math.sin(footDown2)*6)+' '+ankTopX2+','+ankTopY2+' ' +
-                'Z" fill="#FFCC80" stroke="#D4A373" stroke-width="2" id="footShape"/>';
-
-            // Toe lines
-            for (var ti2 = 0; ti2 < 4; ti2++) {
-                var tlx12 = ankleX2 + Math.cos(footFwd2) * (44+ti2*4) + Math.cos(footDown2) * 10;
-                var tly12 = ankleY2 + Math.sin(footFwd2) * (44+ti2*4) + Math.sin(footDown2) * 10;
-                var tlx22 = tlx12 + Math.cos(footDown2) * 7;
-                var tly22 = tly12 + Math.sin(footDown2) * 7;
-                svg += '<line x1="'+tlx12+'" y1="'+tly12+'" x2="'+tlx22+'" y2="'+tly22+'" stroke="#D4A373" stroke-width="1.5" class="toeLine"/>';
+            svg += '<path d="M'+ankBackX2+','+ankBackY2+' L'+heelX2+','+heelY2+' Q'+heelBX2+','+heelBY2+' '+archX2+','+archY2+' Q'+ballX2+','+ballY2+' '+toeTipX2+','+toeTipY2+' L'+toeTopX2+','+toeTopY2+' Q'+ballX2+','+(ballY2-Math.sin(footDown2)*6)+' '+ankTopX2+','+ankTopY2+' Z" fill="#FFCC80" stroke="#D4A373" stroke-width="2"/>';
+            for (var ti2=0;ti2<4;ti2++) {
+                var tlx12=ankleX2+Math.cos(footFwd2)*(44+ti2*4)+Math.cos(footDown2)*10;
+                var tly12=ankleY2+Math.sin(footFwd2)*(44+ti2*4)+Math.sin(footDown2)*10;
+                var tlx22=tlx12+Math.cos(footDown2)*7, tly22=tly12+Math.sin(footDown2)*7;
+                svg += '<line x1="'+tlx12+'" y1="'+tly12+'" x2="'+tlx22+'" y2="'+tly22+'" stroke="#D4A373" stroke-width="1.5"/>';
             }
-
-            svg += '<circle cx="'+ankleX2+'" cy="'+ankleY2+'" r="7" fill="#FFE0B2" stroke="#D4A373" stroke-width="1.5" id="ankleBone"/>';
-
-            // Drag handle
+            svg += '<circle cx="'+ankleX2+'" cy="'+ankleY2+'" r="7" fill="#FFE0B2" stroke="#D4A373" stroke-width="1.5"/>';
             svg += '<circle cx="'+ankleX2+'" cy="'+ankleY2+'" r="18" fill="#1565C0" id="legHandle" style="cursor:grab;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.3));opacity:0.85;"/>';
-            svg += '<text x="'+ankleX2+'" y="'+(ankleY2+1)+'" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="9" font-weight="800" style="pointer-events:none;" id="handleText">DRAG</text>';
+            svg += '<text x="'+ankleX2+'" y="'+(ankleY2+1)+'" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="9" font-weight="800" style="pointer-events:none;">DRAG</text>';
         }
 
         var fullSvg = '<svg width="'+svgW+'" height="'+svgH+'" id="legSvg" class="leg-svg" viewBox="0 0 '+svgW+' '+svgH+'">' + svg + '</svg>';
@@ -828,36 +674,190 @@
         else if (flex < 120) rangeText = 'Great range of motion!';
         else rangeText = 'Excellent flexibility!';
 
-        return '<div class="leg-wrap">' +
-            '<div class="leg-container" id="legArea">' + fullSvg + '</div>' +
-            '<div class="rom-numbers">' +
-                '<div class="rom-num-box"><div class="rom-num-val" id="romFlexVal">' + flex + '&deg;</div><div class="rom-num-label">Flexion (max bend)</div></div>' +
-                '<div class="rom-num-box" style="border-color:#ef5350;"><div class="rom-num-val" style="color:#e53935;" id="romExtVal">' + ext + '&deg;</div><div class="rom-num-label">Extension lag<br><span style="font-size:0.75rem;color:#aaa;">0&deg; = fully straight</span></div></div>' +
-            '</div>' +
-            '<div class="rom-feedback" id="romFeedback">' + rangeText + '</div>' +
-            '<div class="rom-drag-hint" style="background:#e3f2fd;border:1px solid #90caf9;border-radius:10px;padding:10px 16px;max-width:420px;color:#1565c0;text-align:left;line-height:1.5;font-size:0.9rem;margin-bottom:8px;">' +
-                (isKnee ?
-                    '<strong>How to use:</strong><br>1. Drag the foot <b>back</b> to match how far you can bend your knee<br>2. Then drag it <b>forward</b> to match how straight you can get it<br>The numbers will lock in your best range' :
-                    '<strong>How to use:</strong><br>1. Drag the foot <b>forward</b> to match how far you can bend your hip<br>2. Then drag it <b>back</b> to match how straight you can get it<br>The numbers will lock in your best range'
-                ) +
-            '</div>' +
-            '<div class="rom-btns">' +
-                '<button class="big-btn" style="max-width:none;padding:12px;background:#fff3e0;border-color:#ff9800;color:#e65100;" onclick="resetRom()">Reset</button>' +
-                '<button class="iphone-btn" onclick="openRomModal()" style="font-size:0.95rem;padding:10px;">&#x1F4F1; iPhone</button>' +
-                '<button class="big-btn" style="max-width:none;padding:12px;background:#e8f5e9;border-color:#4caf50;color:#2e7d32;" onclick="advance()">Next &rarr;</button>' +
-            '</div>' +
-            '<button class="skip-link" onclick="answers.rom_flexion=null;answers.rom_extension=null;advance()">Skip</button>' +
-        '</div>';
+        var h = '<div class="leg-wrap">';
+        h += '<div class="leg-container" id="legArea">' + fullSvg + '</div>';
+        h += '<div class="rom-numbers">';
+        h += '<div class="rom-num-box"><div class="rom-num-val" id="romFlexVal">' + flex + '&deg;</div><div class="rom-num-label">Flexion (max bend)</div></div>';
+        h += '<div class="rom-num-box" style="border-color:#ef4444;background:rgba(239,68,68,0.1);"><div class="rom-num-val" style="color:#f87171;" id="romExtVal">' + ext + '&deg;</div><div class="rom-num-label">Extension lag<br><span style="font-size:0.7rem;color:#64748b;">0&deg; = fully straight</span></div></div>';
+        h += '</div>';
+        h += '<div class="rom-feedback" id="romFeedback">' + rangeText + '</div>';
+        h += '<div class="rom-hint-box">';
+        h += isKnee ?
+            '<strong>How to use:</strong><br>1. Drag the foot <b>back</b> to match how far you can bend your knee<br>2. Then drag it <b>forward</b> to match how straight you can get it<br>The numbers will lock in your best range' :
+            '<strong>How to use:</strong><br>1. Drag the foot <b>forward</b> to match how far you can bend your hip<br>2. Then drag it <b>back</b> to match how straight you can get it<br>The numbers will lock in your best range';
+        h += '</div>';
+        h += '<div class="rom-actions">';
+        h += '<button class="btn-reset" onclick="resetRom()">Reset</button>';
+        h += '<button class="btn-iphone" onclick="openRomModal()">&#x1F4F1; iPhone</button>';
+        h += '</div>';
+        h += '<button class="skip-link" onclick="answers.rom_flexion=null;answers.rom_extension=null;advance();">Skip ROM</button>';
+        h += '</div>';
+        return h;
     }
 
-    // DRAG LOGIC
+    // ========== CONCERNS ==========
+    function renderConcerns() {
+        var h = '<div class="cb-grid">';
+        concernsList.forEach(function(c) {
+            var chk = selectedConcerns.has(c.id) ? ' checked' : '';
+            h += '<div class="cb-item' + chk + '" onclick="toggleCB(\'' + c.id + '\',this)">';
+            h += '<div class="cb-check">' + (selectedConcerns.has(c.id) ? '&#x2713;' : '') + '</div>';
+            h += c.label + '</div>';
+        });
+        h += '</div>';
+        h += '<button class="skip-link" onclick="answers.concerns_flags=\'\';advance();">None of these &mdash; Skip</button>';
+        return h;
+    }
+
+    // ========== TEXT AREA ==========
+    function renderTextArea(q) {
+        return '<textarea class="text-input" id="txtInput" placeholder="' + (q.placeholder || '') + '" oninput="answers[\'' + q.id + '\']=this.value">' + (answers[q.id] || '') + '</textarea>';
+    }
+
+    // ========== TEXT INPUT ==========
+    function renderTextInput(q) {
+        return '<input type="text" class="text-input" style="min-height:auto;height:56px;" placeholder="' + (q.placeholder || '') + '" value="' + (answers[q.id] || '') + '" oninput="answers[\'' + q.id + '\']=this.value">';
+    }
+
+    // ========== CHART ==========
+    function renderChart() {
+        var h = '';
+        if (!checkinHistory || checkinHistory.length === 0) {
+            h += '<div style="text-align:center;color:#64748b;padding:20px;">Your progress chart will appear here after a few check-ins.<br><br>Keep checking in daily!</div>';
+        } else {
+            var days = checkinHistory.slice(-7);
+            h += '<div class="chart-wrap">';
+            days.forEach(function(d) {
+                var p = d.pain_level || 0;
+                var ht = Math.max((p / 10) * 140, 3);
+                var col = p <= 3 ? '#22c55e' : p <= 6 ? '#fbbf24' : '#ef4444';
+                var lbl = new Date(d.checkin_date).toLocaleDateString('en-US', {weekday:'short'});
+                h += '<div class="chart-col"><div class="chart-val">' + p + '</div><div class="chart-bar" style="height:' + ht + 'px;background:' + col + ';"></div><div class="chart-day">' + lbl + '</div></div>';
+            });
+            h += '</div>';
+        }
+        return h;
+    }
+
+    // ========== ACTIONS ==========
+    function pickPain(n) {
+        answers.pain = n;
+        refreshCurrentCard();
+        speak('Pain level ' + n);
+        setTimeout(advance, 600);
+    }
+
+    function pickOpt(qid, v) {
+        answers[qid] = v;
+        // If this is an ER or readmission question, re-render all cards (conditionals may change)
+        if (qid === 'er_visit' || qid === 'readmitted') {
+            renderCards();
+        } else {
+            refreshCurrentCard();
+        }
+        setTimeout(advance, 500);
+    }
+
+    function refreshCurrentCard() {
+        var visible = getVisibleQuestions();
+        if (currentQ >= visible.length) return;
+        var q = visible[currentQ];
+        var body = document.getElementById('body_' + q.id);
+        if (body) {
+            body.innerHTML = renderCardBody(q);
+            if (q.type === 'rom') initRomDrag();
+        }
+    }
+
+    function toggleCB(id, el) {
+        if (selectedConcerns.has(id)) {
+            selectedConcerns.delete(id); el.classList.remove('checked');
+            el.querySelector('.cb-check').innerHTML = '';
+        } else {
+            selectedConcerns.add(id); el.classList.add('checked');
+            el.querySelector('.cb-check').innerHTML = '&#x2713;';
+        }
+        answers.concerns_flags = Array.from(selectedConcerns).join(',');
+    }
+
+    // ========== NAVIGATION ==========
+    function advance() {
+        var visible = getVisibleQuestions();
+        if (currentQ < visible.length - 1) {
+            currentQ++;
+            updateSlide();
+            renderDots();
+            updateNavButtons();
+            speakQ();
+        }
+    }
+
+    function goBack() {
+        if (currentQ > 0) {
+            currentQ--;
+            updateSlide();
+            renderDots();
+            updateNavButtons();
+        }
+    }
+
+    function updateSlide() {
+        var track = document.getElementById('cardsTrack');
+        if (track) track.style.transform = 'translateX(-' + (currentQ * 100) + '%)';
+    }
+
+    function renderDots() {
+        var visible = getVisibleQuestions();
+        var wrap = document.getElementById('dotsWrap');
+        var h = '';
+        visible.forEach(function(q, i) {
+            var cls = 'dot';
+            if (i === currentQ) cls += ' active';
+            else if (i < currentQ) cls += ' done';
+            h += '<div class="' + cls + '"></div>';
+        });
+        wrap.innerHTML = h;
+    }
+
+    function updateNavButtons() {
+        var visible = getVisibleQuestions();
+        var btnBack = document.getElementById('btnBack');
+        var btnNext = document.getElementById('btnNext');
+        btnBack.disabled = currentQ === 0;
+
+        if (currentQ === visible.length - 1) {
+            // Last card — show Submit
+            btnNext.innerHTML = 'Submit &#x2713;';
+            btnNext.className = 'nav-btn nav-submit';
+            btnNext.onclick = submitCheckin;
+        } else {
+            btnNext.innerHTML = 'Next &rarr;';
+            btnNext.className = 'nav-btn nav-next';
+            btnNext.onclick = advance;
+        }
+    }
+
+    // ========== ROM DRAG ==========
     var isDragging = false;
-    document.addEventListener('mousedown', function(e) { if (e.target.id==='legHandle'||e.target.closest&&e.target.closest('#legArea')) { isDragging=true; e.preventDefault(); } });
-    document.addEventListener('touchstart', function(e) { if (e.target.id==='legHandle'||e.target.closest&&e.target.closest('#legArea')) { isDragging=true; } }, {passive:true});
-    document.addEventListener('mouseup', function() { isDragging=false; });
-    document.addEventListener('touchend', function() { isDragging=false; });
-    document.addEventListener('mousemove', function(e) { if(isDragging) moveLeg(e.clientX, e.clientY); });
-    document.addEventListener('touchmove', function(e) { if(isDragging) moveLeg(e.touches[0].clientX, e.touches[0].clientY); }, {passive:true});
+
+    function initRomDrag() {
+        // Attach drag listeners (only need to do once, but safe to re-call)
+    }
+
+    document.addEventListener('mousedown', function(e) {
+        if (e.target.id === 'legHandle' || (e.target.closest && e.target.closest('#legArea'))) {
+            isDragging = true; e.preventDefault();
+        }
+    });
+    document.addEventListener('touchstart', function(e) {
+        if (e.target.id === 'legHandle' || (e.target.closest && e.target.closest('#legArea'))) {
+            isDragging = true;
+        }
+    }, {passive: true});
+    document.addEventListener('mouseup', function() { isDragging = false; });
+    document.addEventListener('touchend', function() { isDragging = false; });
+    document.addEventListener('mousemove', function(e) { if (isDragging) moveLeg(e.clientX, e.clientY); });
+    document.addEventListener('touchmove', function(e) { if (isDragging) moveLeg(e.touches[0].clientX, e.touches[0].clientY); }, {passive: true});
 
     function moveLeg(mx, my) {
         var svg = document.getElementById('legSvg');
@@ -875,8 +875,8 @@
             var ang = Math.atan2(dy, dx);
             var straightAng = (220 + 180) * Math.PI / 180;
             var flexAng = ang - straightAng;
-            while (flexAng < -Math.PI) flexAng += 2*Math.PI;
-            while (flexAng > Math.PI) flexAng -= 2*Math.PI;
+            while (flexAng < -Math.PI) flexAng += 2 * Math.PI;
+            while (flexAng > Math.PI) flexAng -= 2 * Math.PI;
             var flex = Math.round(flexAng * 180 / Math.PI);
             flex = Math.max(0, Math.min(150, flex));
         } else {
@@ -889,28 +889,22 @@
             flex = Math.max(0, Math.min(150, flex));
         }
 
-        answers.rom_flexion = flex;
-        
-        // Track peaks: highest flex sticks, lowest angle sticks as extension
+        // Track peaks
         if (flex > romPeakFlex) romPeakFlex = flex;
         if (flex < romMinExt) romMinExt = flex;
-        
-        // Save the peak values
+
         answers.rom_flexion = romPeakFlex;
         answers.rom_extension = romMinExt;
-        
-        // Re-render leg at CURRENT drag position, but show PEAK numbers
-        var area = document.getElementById('answersArea');
-        if (area) {
-            // Temporarily set flex to current for leg drawing
+
+        // Re-render ROM at current drag position but show peak numbers
+        var body = document.getElementById('body_rom');
+        if (body) {
             var savedFlex = answers.rom_flexion;
             var savedExt = answers.rom_extension;
-            answers.rom_flexion = flex; // draw leg at current position
-            area.innerHTML = renderROM();
-            // Restore peak values
+            answers.rom_flexion = flex;
+            body.innerHTML = renderROM();
             answers.rom_flexion = savedFlex;
             answers.rom_extension = savedExt;
-            // Override displayed numbers with peaks
             var flexEl = document.getElementById('romFlexVal');
             var extEl = document.getElementById('romExtVal');
             if (flexEl) flexEl.innerHTML = romPeakFlex + '&deg;';
@@ -918,165 +912,158 @@
         }
     }
 
-    function changeExt() { /* removed */ }
-
     function resetRom() {
-        romPeakFlex = 0;
-        romMinExt = 150;
-        answers.rom_flexion = 30;
-        answers.rom_extension = 30;
-        var area = document.getElementById('answersArea');
-        if (area) area.innerHTML = renderROM();
+        romPeakFlex = 0; romMinExt = 150;
+        answers.rom_flexion = 30; answers.rom_extension = 30;
+        var body = document.getElementById('body_rom');
+        if (body) body.innerHTML = renderROM();
     }
 
-    function updateLegPosition(flex) {
-        answers.rom_flexion = flex;
-        var area = document.getElementById('answersArea');
-        if (area) area.innerHTML = renderROM();
-    }
-
-    function initLegVisual() {
-        // Reset peak tracking
-        romPeakFlex = answers.rom_flexion || 0;
-        romMinExt = answers.rom_flexion || 150; // start high so first drag sets it
-    }
-
-    function updRomFromInput() {
-        // Not used in new version
-    }
-
-    function renderConcerns() {
-        var h = '<div class="cb-grid">';
-        concerns.forEach(function(c){
-            var chk = selectedConcerns.has(c.id)?' checked':'';
-            h+='<div class="cb-item'+chk+'" onclick="toggleCB(\''+c.id+'\',this)"><div class="cb-check">'+(selectedConcerns.has(c.id)?'\u2713':'')+'</div>'+c.label+'</div>';
-        });
-        h+='</div><button class="skip-link" onclick="answers.concerns_flags=\'\';advance();">None of these &mdash; Skip &rarr;</button>';
-        return h;
-    }
-
-    function renderText() {
-        return '<textarea class="txt-area" id="txtInput" placeholder="Questions, concerns, or updates for your care team..." oninput="answers.concerns_text=this.value">'+(answers.concerns_text||'')+'</textarea>'+
-            '<button class="skip-link" onclick="answers.concerns_text=\'\';advance();">Skip &rarr;</button>'+
-            '<button class="big-btn" style="margin-top:8px;max-width:300px;background:#e8f5e9;border-color:#4caf50;color:#2e7d32;" onclick="advance()">Next &rarr;</button>';
-    }
-
-    function renderTextInput(q) {
-        var val = answers[q.id] || '';
-        return '<input type="text" class="txt-area" id="txtInput" style="height:auto;padding:20px;font-size:1.3rem;" placeholder="'+(q.placeholder||'')+'" value="'+val+'" oninput="answers[\''+q.id+'\']=this.value">'+
-            '<button class="big-btn" style="margin-top:16px;max-width:300px;background:#e8f5e9;border-color:#4caf50;color:#2e7d32;" onclick="advance()">Next &rarr;</button>'+
-            '<button class="skip-link" onclick="answers[\''+q.id+'\']=\'\';advance();">Skip &rarr;</button>';
-    }
-
-    function renderChart() {
-        if (!checkinHistory||checkinHistory.length===0) {
-            return '<div class="no-chart">Your progress chart will appear here after a few check-ins.<br><br>Keep checking in daily!</div>'+
-                '<button class="big-btn" style="margin-top:20px;max-width:300px;background:#e8f5e9;border-color:#4caf50;color:#2e7d32;" onclick="submitCheckin()">Submit Check-in &rarr;</button>';
-        }
-        var days=checkinHistory.slice(-7);
-        var h='<div class="chart-wrap">';
-        days.forEach(function(d){
-            var p=d.pain_level||0, ht=Math.max((p/10)*140,3);
-            var col=p<=3?'#4caf50':p<=6?'#ffc107':'#f44336';
-            var lbl=new Date(d.checkin_date).toLocaleDateString('en-US',{weekday:'short'});
-            h+='<div class="chart-col"><div class="chart-val">'+p+'</div><div class="chart-bar" style="height:'+ht+'px;background:'+col+';"></div><div class="chart-day">'+lbl+'</div></div>';
-        });
-        h+='</div><button class="big-btn" style="margin-top:20px;max-width:300px;background:#e8f5e9;border-color:#4caf50;color:#2e7d32;" onclick="submitCheckin()">Submit Check-in &rarr;</button>';
-        return h;
-    }
-
-    // ACTIONS
-    function pickPain(n) { answers.pain=n; renderQuestion(); speak('Pain level '+n); setTimeout(advance,500); }
-    function pickOpt(qid,v) { answers[qid]=v; renderQuestion(); setTimeout(advance,500); }
-    function updRom() {
-        var f=document.getElementById('romF'), e=document.getElementById('romE');
-        answers.rom_flexion=parseInt(f?f.value:0)||0;
-        answers.rom_extension=parseInt(e?e.value:0)||0;
-    }
-    function toggleCB(id,el) {
-        if(selectedConcerns.has(id)){selectedConcerns.delete(id);el.classList.remove('checked');el.querySelector('.cb-check').textContent='';}
-        else{selectedConcerns.add(id);el.classList.add('checked');el.querySelector('.cb-check').textContent='\u2713';}
-        answers.concerns_flags=Array.from(selectedConcerns).join(',');
-    }
-
-    function shouldShowQuestion(q) {
-        if (!q.conditional) return true;
-        return answers[q.conditional] === q.condValue;
-    }
-
-    function advance() {
-        var next = currentQ + 1;
-        while (next < questions.length && !shouldShowQuestion(questions[next])) {
-            next++;
-        }
-        if (next < questions.length) { currentQ = next; renderQuestion(); speakQ(); }
-    }
-    function goBack() {
-        var prev = currentQ - 1;
-        while (prev >= 0 && !shouldShowQuestion(questions[prev])) {
-            prev--;
-        }
-        if (prev >= 0) { currentQ = prev; renderQuestion(); }
-    }
-
-    // EXERCISE MODAL
+    // ========== EXERCISE MODAL ==========
     function openExModal() {
-        var exs = exercises[surgeryType]||exercises.TKA;
-        document.getElementById('exList').innerHTML = exs.map(function(e){return '<div class="ex-item"><div class="ex-name">'+e.n+'</div><div class="ex-detail">'+e.d+'</div></div>';}).join('');
+        var exs = exercises[surgeryType] || exercises.TKA;
+        document.getElementById('exList').innerHTML = exs.map(function(e) {
+            return '<div class="ex-item"><div class="ex-name">' + e.n + '</div><div class="ex-detail">' + e.d + '</div></div>';
+        }).join('');
         document.getElementById('exModal').classList.add('on');
     }
     function closeExModal() { document.getElementById('exModal').classList.remove('on'); }
 
-    // ROM MODAL
-    function openRomModal(){document.getElementById('romModal').classList.add('on');document.getElementById('romRes').style.display='none';document.getElementById('romGoBtn').style.display='block';}
-    function closeRomModal(){document.getElementById('romModal').classList.remove('on');romMeasuring=false;}
-    function startIphoneRom(){
-        if(typeof DeviceMotionEvent!=='undefined'&&typeof DeviceMotionEvent.requestPermission==='function'){
-            DeviceMotionEvent.requestPermission().then(function(p){if(p==='granted')beginRom();else document.getElementById('romStatus').textContent='Motion denied.';}).catch(function(){document.getElementById('romStatus').textContent='Cannot access sensors.';});
-        } else if(window.DeviceOrientationEvent){beginRom();}
-        else{document.getElementById('romStatus').textContent='Sensors not available.';}
+    // ========== ROM iPHONE MODAL ==========
+    function openRomModal() { document.getElementById('romModal').classList.add('on'); document.getElementById('romRes').style.display = 'none'; document.getElementById('romGoBtn').style.display = 'block'; }
+    function closeRomModal() { document.getElementById('romModal').classList.remove('on'); romMeasuring = false; }
+    function startIphoneRom() {
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+            DeviceMotionEvent.requestPermission().then(function(p) { if (p === 'granted') beginRom(); else document.getElementById('romStatus').textContent = 'Motion denied.'; }).catch(function() { document.getElementById('romStatus').textContent = 'Cannot access sensors.'; });
+        } else if (window.DeviceOrientationEvent) { beginRom(); }
+        else { document.getElementById('romStatus').textContent = 'Sensors not available.'; }
     }
-    function beginRom(){
-        romMeasuring=true;romMax=0;
-        document.getElementById('romGoBtn').textContent='Measuring... Bend now!';
-        var startB=null;
-        function h(e){if(!romMeasuring){window.removeEventListener('deviceorientation',h);return;}if(startB===null)startB=e.beta;var a=Math.abs(e.beta-startB);if(a>romMax){romMax=Math.round(a);document.getElementById('romStatus').textContent='Current: '+romMax+'\u00B0';}}
-        window.addEventListener('deviceorientation',h);
-        setTimeout(function(){romMeasuring=false;window.removeEventListener('deviceorientation',h);document.getElementById('romGoBtn').style.display='none';document.getElementById('romRes').style.display='block';document.getElementById('romResVal').textContent=romMax+'\u00B0';},10000);
+    function beginRom() {
+        romMeasuring = true; romMax = 0;
+        document.getElementById('romGoBtn').textContent = 'Measuring... Bend now!';
+        var startB = null;
+        function h(e) { if (!romMeasuring) { window.removeEventListener('deviceorientation', h); return; } if (startB === null) startB = e.beta; var a = Math.abs(e.beta - startB); if (a > romMax) { romMax = Math.round(a); document.getElementById('romStatus').textContent = 'Current: ' + romMax + '\u00B0'; } }
+        window.addEventListener('deviceorientation', h);
+        setTimeout(function() { romMeasuring = false; window.removeEventListener('deviceorientation', h); document.getElementById('romGoBtn').style.display = 'none'; document.getElementById('romRes').style.display = 'block'; document.getElementById('romResVal').textContent = romMax + '\u00B0'; }, 10000);
     }
-    function acceptRom(){
-        answers.rom_flexion=romMax;
-        var inp=document.getElementById('romF');if(inp)inp.value=romMax;
+    function acceptRom() {
+        answers.rom_flexion = romMax;
+        romPeakFlex = romMax;
         closeRomModal();
+        refreshCurrentCard();
     }
 
-    // SUBMIT
-    async function submitCheckin(){
-        var data={token:activeToken,checkin_date:new Date().toISOString().split('T')[0],pain_level:answers.pain!=null?answers.pain:0,pt_exercises:answers.pt_exercises==='yes'?1:(answers.pt_exercises==='some'?0.5:0),medication_taken:answers.medication==='yes'?1:(answers.medication==='some'?0.5:0),swelling:answers.swelling||'none',rom_flexion:answers.rom_flexion||null,rom_extension:answers.rom_extension||null,concerns_flags:answers.concerns_flags||'',concerns_text:answers.concerns_text||'',surgery_type:surgeryType,er_visit:answers.er_visit||'no',er_facility:answers.er_facility||'',er_reason:answers.er_reason||'',readmitted:answers.readmitted||'no',readmit_facility:answers.readmit_facility||'',readmit_reason:answers.readmit_reason||''};
-        try{
-            var r=await fetch(RELAY+'/api/checkin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
-            if(!r.ok)throw new Error('fail');
+    // ========== SUBMIT ==========
+    async function submitCheckin() {
+        var data = {
+            token: activeToken,
+            checkin_date: new Date().toISOString().split('T')[0],
+            pain_level: answers.pain != null ? answers.pain : 0,
+            pt_exercises: answers.pt_exercises === 'yes' ? 1 : (answers.pt_exercises === 'some' ? 0.5 : 0),
+            medication_taken: answers.medication === 'yes' ? 1 : (answers.medication === 'some' ? 0.5 : 0),
+            swelling: answers.swelling || 'none',
+            rom_flexion: answers.rom_flexion || null,
+            rom_extension: answers.rom_extension || null,
+            concerns_flags: answers.concerns_flags || '',
+            concerns_text: answers.concerns_text || '',
+            surgery_type: surgeryType,
+            er_visit: answers.er_visit || 'no',
+            er_facility: answers.er_facility || '',
+            er_reason: answers.er_reason || '',
+            readmitted: answers.readmitted || 'no',
+            readmit_facility: answers.readmit_facility || '',
+            readmit_reason: answers.readmit_reason || ''
+        };
+        try {
+            var r = await fetch(RELAY + '/api/checkin', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+            if (!r.ok) throw new Error('fail');
             showSuccess();
-        }catch(e){alert('Problem submitting. Please try again.');}
+        } catch(e) { alert('Problem submitting. Please try again.'); }
     }
 
-    function showSuccess(){
-        var msg='Keep up the great work!';
-        if(answers.pain<=3)msg='Your pain is well controlled! Great progress!';
-        else if(answers.pain>=7)msg='Your care team has been alerted about your higher pain level.';
-        if(answers.pt_exercises==='yes')msg+='<br><br>Excellent job doing your exercises!';
-        if(selectedConcerns.size>0)msg+='<br><br>Your care team has been notified about your concerns.';
-        if(answers.er_visit==='yes')msg+='<br><br><strong style="color:#dc3545;">Your ER visit has been reported to your care team.</strong>';
-        if(answers.readmitted==='yes')msg+='<br><br><strong style="color:#dc3545;">Your readmission has been reported to your care team.</strong>';
-        document.getElementById('successDetail').innerHTML=msg;
+    function showSuccess() {
+        var msg = 'Keep up the great work!';
+        if (answers.pain <= 3) msg = 'Your pain is well controlled! Great progress!';
+        else if (answers.pain >= 7) msg = 'Your care team has been alerted about your higher pain level.';
+        if (answers.pt_exercises === 'yes') msg += '<br><br>Excellent job doing your exercises!';
+        if (selectedConcerns.size > 0) msg += '<br><br>Your care team has been notified about your concerns.';
+        if (answers.er_visit === 'yes') msg += '<br><br>Your ER visit has been reported to your care team.';
+        if (answers.readmitted === 'yes') msg += '<br><br>Your readmission has been reported to your care team.';
+        document.getElementById('successDetail').innerHTML = msg;
         showScreen('scrSuccess');
         speak('Thank you! Your check-in has been submitted.');
     }
 
-    // VOICE
-    function speak(t){if(!voiceOn||!window.speechSynthesis)return;window.speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(t);u.rate=0.85;window.speechSynthesis.speak(u);}
-    function speakQ(){speak(questions[currentQ].q);}
-    function toggleVoice(){voiceOn=!voiceOn;document.getElementById('voiceBtn').textContent=voiceOn?'\uD83D\uDD0A':'\uD83D\uDD07';if(voiceOn)speakQ();else window.speechSynthesis.cancel();}
+    // ========== VOICE / TTS ==========
+    function speak(t) { if (!voiceOn || !window.speechSynthesis) return; window.speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(t); u.rate = 0.85; window.speechSynthesis.speak(u); }
+    function speakQ() {
+        var visible = getVisibleQuestions();
+        if (currentQ < visible.length) speak(visible[currentQ].question);
+    }
+    function toggleVoice() {
+        voiceOn = !voiceOn;
+        document.getElementById('voiceBtn').textContent = voiceOn ? '\uD83D\uDD0A' : '\uD83D\uDD07';
+        if (voiceOn) speakQ(); else window.speechSynthesis.cancel();
+    }
+
+    // ========== SCREENS ==========
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+        document.getElementById('mainWrap').classList.remove('active');
+        if (id === 'mainWrap') {
+            document.getElementById('mainWrap').classList.add('active');
+        } else {
+            document.getElementById(id).classList.add('active');
+        }
+    }
+
+    // ========== TOKEN / INIT ==========
+    function startWithToken() {
+        var t = document.getElementById('tokenInput').value.trim();
+        if (!t) return;
+        activeToken = t;
+        showScreen('scrLoad');
+        loadCheckin(t);
+    }
+
+    async function loadCheckin(token) {
+        try {
+            var r = await fetch(RELAY + '/api/validate-token/' + token);
+            if (!r.ok) throw new Error('Invalid');
+            patientData = await r.json();
+
+            document.getElementById('patientName').textContent = patientData.first_name || 'there';
+            document.getElementById('daysPostOp').textContent = patientData.days_post_op || '0';
+
+            if (patientData.surgery_type) {
+                surgeryType = patientData.surgery_type.toUpperCase();
+                if (!exercises[surgeryType]) surgeryType = 'TKA';
+            }
+
+            // Load history for chart
+            try {
+                var hr = await fetch(RELAY + '/api/checkin-history/' + token + '?days=7');
+                if (hr.ok) checkinHistory = await hr.json();
+            } catch(e) { console.log('No history'); }
+
+            questions = buildQuestions();
+            currentQ = 0;
+            renderCards();
+            showScreen('mainWrap');
+            setTimeout(function() { speakQ(); }, 500);
+
+        } catch(e) {
+            console.error(e);
+            showScreen('scrError');
+        }
+    }
+
+    // ========== INIT ==========
+    document.addEventListener('DOMContentLoaded', function() {
+        var t = new URLSearchParams(window.location.search).get('t');
+        if (t) { activeToken = t; showScreen('scrLoad'); loadCheckin(t); }
+        else { showScreen('scrToken'); }
+    });
 </script>
 </body>
 </html>

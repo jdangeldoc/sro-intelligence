@@ -158,7 +158,10 @@ function filterByStat(filterType) {
 // ============ DATA LOADING ============
 async function loadStats() {
     try {
-        const response = await fetch(`/api/dashboard-stats?clinic_id=${CLINIC_ID}`);
+        const surgeonId = document.getElementById('filterSurgeon')?.value || 'all';
+        let url = `/api/dashboard-stats?clinic_id=${CLINIC_ID}`;
+        if (surgeonId !== 'all') url += `&surgeon_id=${surgeonId}`;
+        const response = await fetch(url);
         const stats = await response.json();
         
         document.getElementById('statActive').textContent = stats.active_patients || 0;
@@ -308,6 +311,7 @@ function getPainClass(level) {
 }
 
 function filterPatients() {
+    loadStats();
     renderPatientTable();
 }
 
