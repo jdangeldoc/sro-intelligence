@@ -65,21 +65,21 @@
 
         <!-- CMS OUTCOMES TAB -->
         <div id="panelCms">
-            <!-- SCB Rate Cards -->
+            <!-- Substantial Clinical Benefit (SCB) Rate Cards -->
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
                 <div class="rate-card">
                     <div class="rate-value" id="overallScbRate" style="color: #6b7280;">--%</div>
-                    <div class="rate-label">Overall SCB Rate</div>
+                    <div class="rate-label">Overall Substantial Clinical Benefit Rate</div>
                     <div class="rate-sub" id="overallScbSub">-- patients with outcomes</div>
                 </div>
                 <div class="rate-card">
                     <div class="rate-value" id="tkaScbRate" style="color: #6b7280;">--%</div>
-                    <div class="rate-label">TKA SCB Rate</div>
+                    <div class="rate-label">TKA Substantial Clinical Benefit Rate</div>
                     <div class="rate-sub">KOOS Jr ≥20 pts improvement</div>
                 </div>
                 <div class="rate-card">
                     <div class="rate-value" id="thaScbRate" style="color: #6b7280;">--%</div>
-                    <div class="rate-label">THA SCB Rate</div>
+                    <div class="rate-label">THA Substantial Clinical Benefit Rate</div>
                     <div class="rate-sub">HOOS Jr ≥22 pts improvement</div>
                 </div>
                 <div class="rate-card">
@@ -89,18 +89,18 @@
                 </div>
             </div>
 
-            <!-- Surgeon SCB Breakdown -->
+            <!-- Surgeon Substantial Clinical Benefit Breakdown -->
             <div class="section-card">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div class="section-title">SCB Rate by Surgeon</div>
-                    <div style="font-size: 0.75rem; color: #999;">CMS SCB threshold shown as dark line</div>
+                    <div class="section-title">Substantial Clinical Benefit Rate by Surgeon</div>
+                    <div style="font-size: 0.75rem; color: #999;">CMS Substantial Clinical Benefit threshold shown as dark line</div>
                 </div>
                 <div id="surgeonScbBars"></div>
             </div>
 
             <!-- Risk Tier Breakdown -->
             <div class="section-card">
-                <div class="section-title">SCB Rate by Risk Tier</div>
+                <div class="section-title">Substantial Clinical Benefit Rate by Risk Tier</div>
                 <div id="riskTierBars"></div>
             </div>
 
@@ -133,8 +133,8 @@
                                 <th>Pre-Op</th>
                                 <th>Post-Op</th>
                                 <th>Δ</th>
-                                <th>SCB Threshold</th>
-                                <th>SCB Met</th>
+                                <th>Substantial Clinical Benefit Threshold</th>
+                                <th>Substantial Clinical Benefit Met</th>
                             </tr>
                         </thead>
                         <tbody id="cmsTableBody">
@@ -223,7 +223,7 @@
     function renderSurgeonBars() {
         const div = document.getElementById('surgeonScbBars');
         if (!cmsData || cmsData.by_surgeon.length === 0) {
-            div.innerHTML = '<p style="color: #999; text-align: center;">No post-op outcome data yet. SCB rates will appear after 1-year follow-up assessments are completed.</p>';
+            div.innerHTML = '<p style="color: #999; text-align: center;">No post-op outcome data yet. Substantial Clinical Benefit rates will appear after 1-year follow-up assessments are completed.</p>';
             return;
         }
         div.innerHTML = cmsData.by_surgeon.map(s => `
@@ -306,7 +306,7 @@
             'Patient Name', 'MRN', 'DOB', 'Age', 'Sex', 'BMI', 'ASA Class',
             'Surgery Type', 'Surgery Date', 'Surgeon', 'Risk Tier',
             'Score Type', 'Pre-Op Score', 'Post-Op Score', 'Delta',
-            'SCB Threshold', 'SCB Met',
+            'Substantial Clinical Benefit Threshold', 'Substantial Clinical Benefit Met',
             'PROMIS Physical Pre', 'PROMIS Mental Pre',
             'PROMIS Physical Post', 'PROMIS Mental Post',
             'Low Back Pain', 'Health Literacy (SILS)', 'Painful Joint Count',
@@ -332,20 +332,20 @@
         rows.push(['With Pre-Op Assessment', s.with_preop]);
         rows.push(['With Post-Op Outcomes', s.with_postop]);
         rows.push(['PROM Completion Rate', s.completion_rate + '%']);
-        rows.push(['Overall SCB Rate', s.overall_scb_rate !== null ? s.overall_scb_rate + '%' : 'N/A']);
-        rows.push(['TKA SCB Rate (KOOS Jr ≥20)', s.tka_scb_rate !== null ? s.tka_scb_rate + '%' : 'N/A']);
-        rows.push(['THA SCB Rate (HOOS Jr ≥22)', s.tha_scb_rate !== null ? s.tha_scb_rate + '%' : 'N/A']);
+        rows.push(['Overall Substantial Clinical Benefit Rate', s.overall_scb_rate !== null ? s.overall_scb_rate + '%' : 'N/A']);
+        rows.push(['TKA Substantial Clinical Benefit Rate (KOOS Jr ≥20)', s.tka_scb_rate !== null ? s.tka_scb_rate + '%' : 'N/A']);
+        rows.push(['THA Substantial Clinical Benefit Rate (HOOS Jr ≥22)', s.tha_scb_rate !== null ? s.tha_scb_rate + '%' : 'N/A']);
         rows.push(['Avg TKA Delta', s.avg_delta_tka !== null ? s.avg_delta_tka : 'N/A']);
         rows.push(['Avg THA Delta', s.avg_delta_tha !== null ? s.avg_delta_tha : 'N/A']);
         rows.push([]);
         rows.push(['=== BY SURGEON ===']);
         cmsData.by_surgeon.forEach(sr => {
-            rows.push([sr.surgeon, `SCB: ${sr.scb_met}/${sr.total} (${sr.scb_rate}%)`]);
+            rows.push([sr.surgeon, `Substantial Clinical Benefit: ${sr.scb_met}/${sr.total} (${sr.scb_rate}%)`]);
         });
         rows.push([]);
         rows.push(['=== BY RISK TIER ===']);
         cmsData.by_risk_tier.forEach(rt => {
-            rows.push([rt.tier, `SCB: ${rt.scb_met}/${rt.total} (${rt.scb_rate}%)`]);
+            rows.push([rt.tier, `Substantial Clinical Benefit: ${rt.scb_met}/${rt.total} (${rt.scb_rate}%)`]);
         });
         
         const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');

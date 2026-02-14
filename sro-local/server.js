@@ -726,6 +726,25 @@ app.get('/api/preop-assessments/:id', (req, res) => {
   res.json(assessment);
 });
 
+// Surgery Not Indicated - update episode status
+app.post('/api/episodes/not-indicated', (req, res) => {
+  const { patient_id, clinic_id, status, reason } = req.body;
+  if (!patient_id) return res.status(400).json({ error: 'patient_id required' });
+  
+  const episode = db.prepare(
+    'SELECT id FROM episodes WHERE patient_id = ? AND status = ? ORDER BY created_at DESC LIMIT 1'
+  ).get(patient_id, 'active');
+  
+  if (episode) {
+    db.prepare('UPDATE episodes SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+      .run(status || 'not_indicated', episode.id);
+    res.json({ success: true, episode_id: episode.id, status: status || 'not_indicated' });
+  } else {
+    // No active episode found, still return success (patient may not have episode yet)
+    res.json({ success: true, message: 'No active episode found for patient' });
+  }
+});
+
 app.post('/api/preop-assessments', (req, res) => {
   const id = uuid();
   const {
@@ -1403,22 +1422,27 @@ app.get('/api/rpm-summary', (req, res) => {
 
 // --- Dashboard Stats ---
 app.get('/api/dashboard-stats', (req, res) => {
-  const { clinic_id } = req.query;
+  const { clinic_id, surgeon_id } = req.query;
   const today = new Date().toISOString().split('T')[0];
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  
+  // Build surgeon filter clause
+  const surgeonFilter = surgeon_id ? ' AND e.surgeon_id = ?' : '';
+  const surgeonParams = surgeon_id ? [surgeon_id] : [];
   
   const activePatients = db.prepare(`
     SELECT COUNT(DISTINCT p.id) as count
     FROM patients p
     JOIN episodes e ON e.patient_id = p.id
-    WHERE p.clinic_id = ? AND e.status = 'active'
-  `).get(clinic_id);
+    WHERE p.clinic_id = ? AND e.status = 'active'${surgeonFilter}
+  `).get(clinic_id, ...surgeonParams);
   
   const checkedInToday = db.prepare(`
-    SELECT COUNT(DISTINCT patient_id) as count
-    FROM checkins
-    WHERE clinic_id = ? AND checkin_date = ?
-  `).get(clinic_id, today);
+    SELECT COUNT(DISTINCT c.patient_id) as count
+    FROM checkins c
+    JOIN episodes e ON e.patient_id = c.patient_id AND e.status = 'active'
+    WHERE c.clinic_id = ? AND c.checkin_date = ?${surgeonFilter}
+  `).get(clinic_id, today, ...surgeonParams);
   
   const needsAttention = db.prepare(`
     SELECT COUNT(DISTINCT p.id) as count
@@ -1429,9 +1453,9 @@ app.get('/api/dashboard-stats', (req, res) => {
              ROW_NUMBER() OVER (PARTITION BY patient_id ORDER BY checkin_date DESC) as rn
       FROM checkins
     ) c ON c.patient_id = p.id AND c.rn = 1
-    WHERE p.clinic_id = ? AND e.status = 'active'
+    WHERE p.clinic_id = ? AND e.status = 'active'${surgeonFilter}
     AND (c.pain_level >= 7 OR c.pt_exercises = 0)
-  `).get(clinic_id);
+  `).get(clinic_id, ...surgeonParams);
   
   const overdue = db.prepare(`
     SELECT COUNT(DISTINCT p.id) as count
@@ -1442,19 +1466,21 @@ app.get('/api/dashboard-stats', (req, res) => {
       FROM checkins
       GROUP BY patient_id
     ) c ON c.patient_id = p.id
-    WHERE p.clinic_id = ? AND e.status = 'active'
+    WHERE p.clinic_id = ? AND e.status = 'active'${surgeonFilter}
     AND (c.last_checkin IS NULL OR c.last_checkin < ?)
-  `).get(clinic_id, sevenDaysAgo);
+  `).get(clinic_id, ...surgeonParams, sevenDaysAgo);
   
   const erVisits = db.prepare(`
-    SELECT COUNT(*) as count FROM adverse_events
-    WHERE clinic_id = ? AND event_type = 'er_visit'
-  `).get(clinic_id);
+    SELECT COUNT(*) as count FROM adverse_events ae
+    JOIN episodes e ON e.patient_id = ae.patient_id AND e.status = 'active'
+    WHERE ae.clinic_id = ? AND ae.event_type = 'er_visit'${surgeonFilter}
+  `).get(clinic_id, ...surgeonParams);
   
   const readmissions = db.prepare(`
-    SELECT COUNT(*) as count FROM adverse_events
-    WHERE clinic_id = ? AND event_type = 'readmission'
-  `).get(clinic_id);
+    SELECT COUNT(*) as count FROM adverse_events ae
+    JOIN episodes e ON e.patient_id = ae.patient_id AND e.status = 'active'
+    WHERE ae.clinic_id = ? AND ae.event_type = 'readmission'${surgeonFilter}
+  `).get(clinic_id, ...surgeonParams);
   
   // Update overdue PROM statuses
   db.prepare(`
@@ -1463,14 +1489,16 @@ app.get('/api/dashboard-stats', (req, res) => {
   `).run(today, clinic_id);
   
   const promsOverdue = db.prepare(`
-    SELECT COUNT(*) as count FROM prom_schedule
-    WHERE clinic_id = ? AND status = 'overdue'
-  `).get(clinic_id);
+    SELECT COUNT(*) as count FROM prom_schedule ps
+    JOIN episodes e ON e.patient_id = ps.patient_id AND e.status = 'active'
+    WHERE ps.clinic_id = ? AND ps.status = 'overdue'${surgeonFilter}
+  `).get(clinic_id, ...surgeonParams);
   
   const promsDueSoon = db.prepare(`
-    SELECT COUNT(*) as count FROM prom_schedule
-    WHERE clinic_id = ? AND status = 'pending' AND due_date <= date(?, '+14 days')
-  `).get(clinic_id, today);
+    SELECT COUNT(*) as count FROM prom_schedule ps
+    JOIN episodes e ON e.patient_id = ps.patient_id AND e.status = 'active'
+    WHERE ps.clinic_id = ? AND ps.status = 'pending' AND ps.due_date <= date(?, '+14 days')${surgeonFilter}
+  `).get(clinic_id, today, ...surgeonParams);
   
   res.json({
     active_patients: activePatients.count,
