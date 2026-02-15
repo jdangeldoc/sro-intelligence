@@ -388,6 +388,17 @@ async function openPatientModal(patientId) {
     document.getElementById('startReviewBtn').style.display = 'block';
     document.getElementById('rpmTimer').style.display = 'none';
     
+    // Show surgeon summary card if surgeon role
+    const summaryCard = document.getElementById('surgeonSummaryCard');
+    if (summaryCard) {
+        if (USER_ROLE === 'surgeon') {
+            summaryCard.style.display = 'block';
+            renderSurgeonSummary(patientId);
+        } else {
+            summaryCard.style.display = 'none';
+        }
+    }
+    
     // Load patient details
     renderPatientInfo();
     renderSurgeryInfo();
@@ -399,6 +410,160 @@ async function openPatientModal(patientId) {
     await loadPatientNotes(patientId);
     await loadComplianceScorecard(patientId);
     await loadPromTrendChart(patientId);
+}
+
+// ============ SURGEON QUICK SUMMARY CARD ============
+function renderSurgeonSummary(patientId) {
+    const patient = patients.find(p => p.id === patientId);
+    const preop = preopAssessments[patientId];
+    
+    // Pain (from latest check-in)
+    const painEl = document.getElementById('sumPain');
+    const painVal = patient?.last_pain_level;
+    if (painVal !== null && painVal !== undefined) {
+        painEl.textContent = painVal;
+        painEl.style.color = painVal <= 3 ? '#22c55e' : painVal <= 6 ? '#fbbf24' : '#ef4444';
+    } else {
+        painEl.textContent = '-';
+        painEl.style.color = '#64748b';
+    }
+    
+    // BMI
+    const bmiEl = document.getElementById('sumBMI');
+    if (preop?.bmi) {
+        bmiEl.textContent = parseFloat(preop.bmi).toFixed(1);
+        bmiEl.style.color = preop.bmi >= 40 ? '#ef4444' : preop.bmi >= 35 ? '#f97316' : preop.bmi >= 30 ? '#fbbf24' : '#22c55e';
+    } else {
+        bmiEl.textContent = '-';
+        bmiEl.style.color = '#64748b';
+    }
+    
+    // Joint Score
+    const scoreEl = document.getElementById('sumJointScore');
+    const labelEl = document.getElementById('sumJointLabel');
+    if (preop?.joint_score_preop) {
+        scoreEl.textContent = Math.round(preop.joint_score_preop);
+        labelEl.textContent = preop.joint_score_type === 'koos_jr' ? 'KOOS Jr' : preop.joint_score_type === 'hoos_jr' ? 'HOOS Jr' : 'SCORE';
+        scoreEl.style.color = '#60a5fa';
+    } else {
+        scoreEl.textContent = '-';
+        labelEl.textContent = 'SCORE';
+    }
+    
+    // Projected
+    const projEl = document.getElementById('sumProjected');
+    if (preop?.projected_postop_score) {
+        projEl.textContent = Math.round(preop.projected_postop_score);
+    } else {
+        projEl.textContent = '-';
+        projEl.style.color = '#64748b';
+    }
+    
+    // Risk badge
+    const riskEl = document.getElementById('sumRiskBadge');
+    if (preop?.risk_tier) {
+        const tier = preop.risk_tier.toUpperCase();
+        const colors = { LOW: '#22c55e', MODERATE: '#fbbf24', HIGH: '#ef4444' };
+        riskEl.innerHTML = '<span style="background:' + (colors[tier] || '#6b7280') + 
+            ';color:' + (tier === 'MODERATE' ? '#000' : '#fff') + 
+            ';padding:4px 14px;border-radius:12px;font-size:0.85rem;font-weight:700;">' + tier + '</span>';
+    } else {
+        riskEl.innerHTML = '<span style="color:#64748b;">N/A</span>';
+    }
+    
+    // Surgery + Days + Age
+    document.getElementById('sumSurgery').textContent = patient?.surgery_type || '-';
+    if (patient?.surgery_date) {
+        const days = Math.floor((Date.now() - new Date(patient.surgery_date)) / (1000*60*60*24));
+        document.getElementById('sumDays').textContent = days >= 0 ? 'Day ' + days + ' post-op' : Math.abs(days) + ' days to surgery';
+    } else {
+        document.getElementById('sumDays').textContent = 'No surgery date';
+    }
+    document.getElementById('sumAge').textContent = preop?.age ? preop.age + ' yo' : (patient?.date_of_birth ? Math.floor((Date.now() - new Date(patient.date_of_birth)) / (365.25*24*60*60*1000)) + ' yo' : '-');
+    
+    // Alert Badges
+    const badgesEl = document.getElementById('sumBadges');
+    let badges = [];
+    
+    // Parse comorbidities
+    let comorbidities = [];
+    if (preop?.comorbidities) {
+        try { comorbidities = JSON.parse(preop.comorbidities); } catch(e) {}
+    }
+    
+    // High-risk comorbidity badges
+    const highRiskConditions = {
+        'depression': '🧠 Depression',
+        'anxiety': '😰 Anxiety', 
+        'chf': '❤️ CHF',
+        'ckd': '🫘 CKD',
+        'copd': '🫁 COPD',
+        'diabetes_insulin': '💉 Insulin-Dep Diabetes',
+        'diabetes': '🩸 Diabetes',
+        'liver_disease': '🟤 Liver Disease',
+        'sleep_apnea': '😴 Sleep Apnea',
+        'afib': '💗 Afib'
+    };
+    
+    comorbidities.forEach(c => {
+        const key = typeof c === 'string' ? c : c.id || c.code || '';
+        const keyLower = key.toLowerCase();
+        for (const [match, label] of Object.entries(highRiskConditions)) {
+            if (keyLower.includes(match)) {
+                badges.push({ label: label, color: '#dc2626', bg: 'rgba(220,38,38,0.15)' });
+                break;
+            }
+        }
+    });
+    
+    // BMI flag
+    if (preop?.bmi >= 40) {
+        badges.push({ label: '⚠️ Morbid Obesity', color: '#ef4444', bg: 'rgba(239,68,68,0.15)' });
+    } else if (preop?.bmi >= 35) {
+        badges.push({ label: '⚠️ Obesity II', color: '#f97316', bg: 'rgba(249,115,22,0.15)' });
+    }
+    
+    // Opioid flag
+    if (preop?.chronic_narcotics_use === 1) {
+        badges.push({ label: '💊 Chronic Opioids', color: '#dc2626', bg: 'rgba(220,38,38,0.15)' });
+    }
+    
+    // Mental health (PROMIS Mental T-score < 42 = concern)
+    if (preop?.promis_mental_tscore && preop.promis_mental_tscore < 42) {
+        badges.push({ label: '🧠 Mental Health Flag', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' });
+    }
+    
+    // Low back pain
+    if (preop?.low_back_pain === 1) {
+        badges.push({ label: '🔙 Low Back Pain', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' });
+    }
+    
+    // ER visits / readmissions from cache
+    const ae = adverseEventsCache[patientId];
+    if (ae?.er > 0) {
+        badges.push({ label: '🏥 ER Visit (' + ae.er + ')', color: '#7c3aed', bg: 'rgba(124,58,237,0.15)' });
+    }
+    if (ae?.readmission > 0) {
+        badges.push({ label: '🔄 Readmission (' + ae.readmission + ')', color: '#6366f1', bg: 'rgba(99,102,241,0.15)' });
+    }
+    
+    // PROM overdue
+    const promStatus = promScheduleCache[patientId];
+    if (promStatus?.overdue > 0) {
+        badges.push({ label: '📋 PROM Overdue (' + promStatus.overdue + ')', color: '#dc2626', bg: 'rgba(220,38,38,0.15)' });
+    }
+    
+    // No issues
+    if (badges.length === 0 && preop) {
+        badges.push({ label: '✅ No Flags', color: '#22c55e', bg: 'rgba(34,197,94,0.1)' });
+    }
+    
+    badgesEl.innerHTML = badges.map(b => 
+        '<span style="display:inline-block;padding:4px 10px;border-radius:8px;font-size:0.75rem;font-weight:600;color:' + b.color + ';background:' + b.bg + ';border:1px solid ' + b.color + '22;">' + b.label + '</span>'
+    ).join('');
+    
+    // PreOp link
+    document.getElementById('sumPreopLink').href = '/preop.html?patient=' + patientId;
 }
 
 // ============ COMPLIANCE SCORECARD ============

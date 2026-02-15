@@ -252,6 +252,54 @@
                 </div>
             </div>
             <div class="modal-body" style="overflow-y: auto; flex: 1;">
+                <!-- Surgeon Quick Summary Card -->
+                <div id="surgeonSummaryCard" style="display:none; margin-bottom: 20px;">
+                    <div style="background: linear-gradient(135deg, #0f172a, #1e293b); border-radius: 12px; padding: 20px; color: white;">
+                        <!-- Row 1: Key Vitals -->
+                        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; text-align: center;">
+                            <div>
+                                <div id="sumPain" style="font-size: 2.2rem; font-weight: 700;">-</div>
+                                <div style="font-size: 0.7rem; color: #94a3b8;">PAIN</div>
+                            </div>
+                            <div>
+                                <div id="sumBMI" style="font-size: 2.2rem; font-weight: 700;">-</div>
+                                <div style="font-size: 0.7rem; color: #94a3b8;">BMI</div>
+                            </div>
+                            <div>
+                                <div id="sumJointScore" style="font-size: 2.2rem; font-weight: 700;">-</div>
+                                <div id="sumJointLabel" style="font-size: 0.7rem; color: #94a3b8;">SCORE</div>
+                            </div>
+                            <div>
+                                <div id="sumProjected" style="font-size: 2.2rem; font-weight: 700; color: #22c55e;">-</div>
+                                <div style="font-size: 0.7rem; color: #94a3b8;">PROJECTED</div>
+                            </div>
+                            <div>
+                                <div id="sumRiskBadge" style="margin-top: 8px;"></div>
+                                <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 6px;">RISK</div>
+                            </div>
+                        </div>
+
+                        <!-- Row 2: Surgery + Days -->
+                        <div style="display: flex; justify-content: center; gap: 20px; margin-top: 14px; font-size: 0.85rem; color: #94a3b8;">
+                            <span id="sumSurgery">-</span>
+                            <span>•</span>
+                            <span id="sumDays">-</span>
+                            <span>•</span>
+                            <span id="sumAge">-</span>
+                        </div>
+
+                        <!-- Row 3: Alert Badges -->
+                        <div id="sumBadges" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 14px;"></div>
+
+                        <!-- Row 4: Quick Actions -->
+                        <div style="display: flex; gap: 10px; margin-top: 16px; justify-content: center;">
+                            <a id="sumPreopLink" href="#" class="btn btn-sm" style="background: #8b5cf6; color: white; text-decoration: none; padding: 8px 16px; border-radius: 6px; font-size: 0.8rem;">Open PreOp</a>
+                            <button class="btn btn-sm" style="background: #3b82f6; color: white; padding: 8px 16px; border-radius: 6px; font-size: 0.8rem;" onclick="document.getElementById('painChartCanvas').scrollIntoView({behavior:'smooth'})">Pain Trend</button>
+                            <button class="btn btn-sm" style="background: #059669; color: white; padding: 8px 16px; border-radius: 6px; font-size: 0.8rem;" onclick="document.getElementById('promTrendCanvas').scrollIntoView({behavior:'smooth'})">PROM Trend</button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="patient-detail-grid">
                     <!-- Patient Info -->
                     <div class="detail-section">
