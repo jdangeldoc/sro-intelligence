@@ -113,6 +113,19 @@
             </div>
         </div>
 
+        <!-- Nurse Action Panel (only visible for nurse role) -->
+        <div id="nursePanel" style="display:none; margin-bottom: 20px;">
+            <div style="background: linear-gradient(135deg, #064e3b, #065f46); border-radius: 12px; padding: 20px; color: white;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h2 style="margin: 0; font-size: 1.2rem;">🩺 Today's Priorities</h2>
+                    <span id="nursePanelCount" style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 12px; font-size: 0.85rem;">0 items</span>
+                </div>
+                <div id="nurseActionQueue" style="max-height: 400px; overflow-y: auto;">
+                    <div style="text-align: center; padding: 20px; color: #a7f3d0;">Loading priorities...</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Dashboard Tabs -->
         <div style="display: flex; gap: 0; margin-bottom: 0; border-bottom: 2px solid #e5e7eb;">
             <button id="tabPatients" class="dashboard-tab active" onclick="switchTab('patients')" style="padding: 12px 24px; font-size: 1rem; font-weight: 600; border: none; background: none; cursor: pointer; border-bottom: 3px solid #2c5aa0; color: #2c5aa0; margin-bottom: -2px;">
