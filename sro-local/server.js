@@ -253,6 +253,18 @@ if (!preopCols.includes('hoos_jr_raw')) {
 if (!preopCols.includes('surgeon_justification')) {
   db.exec("ALTER TABLE preop_assessments ADD COLUMN surgeon_justification TEXT");
 }
+if (!preopCols.includes('status')) {
+  db.exec("ALTER TABLE preop_assessments ADD COLUMN status TEXT DEFAULT 'complete'");
+}
+if (!preopCols.includes('intake_responses')) {
+  db.exec("ALTER TABLE preop_assessments ADD COLUMN intake_responses TEXT");
+}
+if (!preopCols.includes('comorb_data')) {
+  db.exec("ALTER TABLE preop_assessments ADD COLUMN comorb_data TEXT");
+}
+if (!preopCols.includes('workup_data')) {
+  db.exec("ALTER TABLE preop_assessments ADD COLUMN workup_data TEXT");
+}
 
 // Insert default clinic if none exists
 const clinicCount = db.prepare('SELECT COUNT(*) as count FROM clinics').get();
@@ -818,7 +830,8 @@ app.post('/api/preop-assessments', (req, res) => {
     promis_physical_tscore, promis_mental_tscore,
     cms_back_pain, cms_health_literacy, cms_other_knee_pain, cms_other_hip_pain,
     low_back_pain, health_literacy_sils, total_painful_joint_count, chronic_narcotics_use,
-    koos_jr_raw, hoos_jr_raw, surgeon_justification
+    koos_jr_raw, hoos_jr_raw, surgeon_justification,
+    status, intake_responses, comorb_data, workup_data
   } = req.body;
   
   db.prepare(`
@@ -830,8 +843,9 @@ app.post('/api/preop-assessments', (req, res) => {
       promis_physical_tscore, promis_mental_tscore,
       cms_back_pain, cms_health_literacy, cms_other_knee_pain, cms_other_hip_pain,
       low_back_pain, health_literacy_sils, total_painful_joint_count, chronic_narcotics_use,
-      koos_jr_raw, hoos_jr_raw, surgeon_justification
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      koos_jr_raw, hoos_jr_raw, surgeon_justification,
+      status, intake_responses, comorb_data, workup_data
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id, patient_id, clinic_id, surgeon_id, assessment_type || 'preop', procedure_type, planned_surgery_date,
     mortality_risk, readmission_risk, prolonged_los_risk, risk_tier,
@@ -842,7 +856,8 @@ app.post('/api/preop-assessments', (req, res) => {
     low_back_pain ? 1 : 0, health_literacy_sils !== undefined ? health_literacy_sils : null,
     total_painful_joint_count || 0, chronic_narcotics_use ? 1 : 0,
     koos_jr_raw !== undefined ? koos_jr_raw : null, hoos_jr_raw !== undefined ? hoos_jr_raw : null,
-    surgeon_justification || null
+    surgeon_justification || null,
+    status || 'complete', intake_responses || null, comorb_data || null, workup_data || null
   );
   
   res.json({ id, success: true });
@@ -851,6 +866,48 @@ app.post('/api/preop-assessments', (req, res) => {
 app.delete('/api/preop-assessments/:id', (req, res) => {
   db.prepare('DELETE FROM preop_assessments WHERE id = ?').run(req.params.id);
   res.json({ success: true });
+});
+
+// Update existing preop assessment (for draft save/edit)
+app.put('/api/preop-assessments/:id', (req, res) => {
+  const {
+    procedure_type, planned_surgery_date, risk_tier,
+    age, sex, bmi, asa_class, comorbidities,
+    joint_score_type, joint_score_preop, projected_postop_score, expected_improvement,
+    promis_physical_tscore, promis_mental_tscore,
+    readmission_risk, mortality_risk,
+    low_back_pain, health_literacy_sils, total_painful_joint_count, chronic_narcotics_use,
+    koos_jr_raw, hoos_jr_raw, surgeon_justification,
+    status, intake_responses, comorb_data, workup_data
+  } = req.body;
+
+  db.prepare(`
+    UPDATE preop_assessments SET
+      procedure_type=?, planned_surgery_date=?, risk_tier=?,
+      age=?, sex=?, bmi=?, asa_class=?, comorbidities=?,
+      joint_score_type=?, joint_score_preop=?, projected_postop_score=?, expected_improvement=?,
+      promis_physical_tscore=?, promis_mental_tscore=?,
+      readmission_risk=?, mortality_risk=?,
+      low_back_pain=?, health_literacy_sils=?, total_painful_joint_count=?, chronic_narcotics_use=?,
+      koos_jr_raw=?, hoos_jr_raw=?, surgeon_justification=?,
+      status=?, intake_responses=?, comorb_data=?, workup_data=?,
+      assessed_at=CURRENT_TIMESTAMP
+    WHERE id=?
+  `).run(
+    procedure_type, planned_surgery_date, risk_tier,
+    age, sex, bmi, asa_class, Array.isArray(comorbidities) ? JSON.stringify(comorbidities) : comorbidities,
+    joint_score_type, joint_score_preop, projected_postop_score, expected_improvement,
+    promis_physical_tscore, promis_mental_tscore,
+    readmission_risk, mortality_risk,
+    low_back_pain ? 1 : 0, health_literacy_sils !== undefined ? health_literacy_sils : null,
+    total_painful_joint_count || 0, chronic_narcotics_use ? 1 : 0,
+    koos_jr_raw !== undefined ? koos_jr_raw : null, hoos_jr_raw !== undefined ? hoos_jr_raw : null,
+    surgeon_justification || null,
+    status || 'complete', intake_responses || null, comorb_data || null, workup_data || null,
+    req.params.id
+  );
+
+  res.json({ id: req.params.id, success: true });
 });
 
 // Get pre-op and post-op comparison for a patient (SCB calculation)

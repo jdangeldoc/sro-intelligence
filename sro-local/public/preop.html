@@ -118,6 +118,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
     <div>
         <a href="dashboard.html">Dashboard</a>
         <a href="preop.html" style="color:white;font-weight:700;">PreOp</a>
+        <a href="surgical-prep.html">Surg Prep</a>
         <a href="analytics.html">Analytics</a>
         <a href="rpm-report.html">RPM</a>
         <a href="settings.html">Settings</a>
@@ -141,7 +142,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
         <div class="ph-label">HCC Score</div>
         <span id="hccTopVal" style="font-weight:700;font-size:1.1rem;color:#1e40af;">0.000</span>
     </div>
-    <div style="margin-left:auto;display:flex;gap:8px;">
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+        <span id="draftBadge" style="display:none;background:#f59e0b;color:white;padding:4px 10px;border-radius:10px;font-size:0.75rem;font-weight:700;">DRAFT LOADED</span>
         <button class="btn btn-primary" onclick="launchPatientIntake()">Launch Patient Intake</button>
         <button class="btn btn-outline" onclick="sendToPatient('checkin')" title="Copy check-in link">Send Check-in Link</button>
         <button class="btn btn-outline" onclick="sendToPatient('preop')" title="Copy preop intake link">Send PreOp Link</button>
@@ -248,8 +250,20 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
     </div>
     <div class="card"><h3>Alerts</h3><div id="alertList"><p style="color:#6b7280">Complete intake for alerts.</p></div></div>
     <div style="text-align:center;padding:16px;">
-        <button class="btn btn-success" onclick="saveAssessment()">Save Assessment</button>
+        <button class="btn" style="background:#6b7280;color:white;margin-right:8px;" onclick="saveAssessment('draft')">💾 Save Draft</button>
+        <button class="btn btn-success" onclick="saveAssessment('complete')">✅ Save &amp; Complete</button>
         <button class="btn btn-outline" style="margin-left:8px;" onclick="printSummary()">Print Summary</button>
+    </div>
+    <div id="surgPrepLaunchBox" style="display:none;text-align:center;padding:12px;margin-top:4px;">
+        <div style="background:linear-gradient(135deg,#312e81,#4338ca);border-radius:12px;padding:16px;display:inline-block;">
+            <span style="color:#e0e7ff;font-size:0.9rem;margin-right:12px;">Assessment saved.</span>
+            <button class="btn" style="background:#22c55e;color:white;font-size:1rem;padding:10px 24px;" onclick="launchSurgPrep()">🦴 Launch Surgical Prep →</button>
+        </div>
+    </div>
+    <div id="draftSavedMsg" style="display:none;text-align:center;padding:12px;">
+        <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:12px;display:inline-block;font-size:0.9rem;color:#92400e;">
+            💾 Draft saved — you can close and return later to finish.
+        </div>
     </div>
 </div>
 
@@ -621,6 +635,7 @@ var sdohChecked = {};
 var workupItems = [];
 var customWorkupItems = [];
 var selectedASA = null;
+var existingAssessmentId = null;  // Track if editing existing assessment
 
 // TAB SWITCHING
 function switchTab(n) {
@@ -1116,7 +1131,8 @@ function updateDecisionTool(){
     updatePatientView(preop, postop, cms.measure);
 }
 
-function saveAssessment(){
+function saveAssessment(saveStatus){
+    if(!saveStatus) saveStatus = 'complete';
     var patSel=document.getElementById('patientSelect');
     var patId=patSel.value;
     if(!patId){alert('Select a patient first.');return;}
@@ -1154,7 +1170,11 @@ function saveAssessment(){
         chronic_narcotics_use:scores.cmsNarcotics90d,
         koos_jr_raw:scores.jointName==='KOOS-JR'?scores.jointRaw:null,
         hoos_jr_raw:scores.jointName==='HOOS-JR'?scores.jointRaw:null,
-        surgeon_justification:(document.getElementById('surgeonJustification')||{}).value||null
+        surgeon_justification:(document.getElementById('surgeonJustification')||{}).value||null,
+        status:saveStatus,
+        intake_responses:JSON.stringify(intakeResponses),
+        comorb_data:JSON.stringify(comorbChecked),
+        workup_data:JSON.stringify({items:workupItems,custom:customWorkupItems,asa:selectedASA})
     };
 
     // Calculate projected using target-based model
@@ -1166,23 +1186,101 @@ function saveAssessment(){
     body.expected_improvement=predicted;
     body.projected_postop_score=Math.min(targetPostop, 100);
 
-    fetch('/api/preop-assessments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    var method = existingAssessmentId ? 'PUT' : 'POST';
+    var url = existingAssessmentId ? '/api/preop-assessments/' + existingAssessmentId : '/api/preop-assessments';
+
+    fetch(url,{method:method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
     .then(function(r){return r.json();})
     .then(function(data){
         if(data.success){
-            alert('Assessment saved successfully!');
-            // Also save PROM scores
-            if(Object.keys(intakeResponses).length>0){
-                fetch('/api/pro-assessments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-                    patient_id:patId,clinic_id:'11111111-1111-1111-1111-111111111111',
-                    assessment_type:scores.jointName.toLowerCase().replace('-','_'),
-                    assessment_date:new Date().toISOString().split('T')[0],
-                    score:scores.jointPct,
-                    responses:intakeResponses
-                })});
+            existingAssessmentId = data.id;
+            if(saveStatus === 'draft'){
+                document.getElementById('draftSavedMsg').style.display = 'block';
+                document.getElementById('surgPrepLaunchBox').style.display = 'none';
+                document.getElementById('draftBadge').style.display = 'inline';
+                setTimeout(function(){document.getElementById('draftSavedMsg').style.display='none';},4000);
+            } else {
+                document.getElementById('surgPrepLaunchBox').style.display = 'block';
+                document.getElementById('draftSavedMsg').style.display = 'none';
+                document.getElementById('draftBadge').style.display = 'none';
+                // Also save PROM scores
+                if(Object.keys(intakeResponses).length>0){
+                    fetch('/api/pro-assessments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+                        patient_id:patId,clinic_id:'11111111-1111-1111-1111-111111111111',
+                        assessment_type:scores.jointName.toLowerCase().replace('-','_'),
+                        assessment_date:new Date().toISOString().split('T')[0],
+                        score:scores.jointPct,
+                        responses:intakeResponses
+                    })});
+                }
             }
         } else {alert('Error saving: '+JSON.stringify(data));}
     }).catch(function(e){alert('Save failed: '+e.message);});
+}
+
+function launchSurgPrep(){
+    var patId = document.getElementById('patientSelect').value;
+    if(patId) window.location.href = '/surgical-prep.html?patient=' + patId;
+}
+
+function loadDraft(assessment){
+    existingAssessmentId = assessment.id;
+    
+    // Restore procedure and surgery date
+    if(assessment.procedure_type){
+        document.getElementById('procSelect').value = assessment.procedure_type;
+        onProcChange();
+    }
+    if(assessment.planned_surgery_date) document.getElementById('surgDate').value = assessment.planned_surgery_date;
+    
+    // Restore intake responses
+    if(assessment.intake_responses){
+        try { intakeResponses = JSON.parse(assessment.intake_responses); } catch(e){ intakeResponses = {}; }
+        if(Object.keys(intakeResponses).length > 0){
+            var scores = calculateScores();
+            displayIntakeResults(scores);
+            autoPopulateComorbidities();
+        }
+    }
+    
+    // Restore comorbidity checkboxes
+    if(assessment.comorb_data){
+        try { 
+            var saved = JSON.parse(assessment.comorb_data);
+            for(var cid in saved){
+                comorbChecked[cid] = saved[cid];
+            }
+            // renderComorbTable reads from comorbChecked, so just re-render
+            renderComorbTable();
+            updateScores();
+        } catch(e){}
+    }
+    
+    // Restore workup data
+    if(assessment.workup_data){
+        try {
+            var wk = JSON.parse(assessment.workup_data);
+            if(wk.items) workupItems = wk.items;
+            if(wk.custom) customWorkupItems = wk.custom;
+            if(wk.asa !== null && wk.asa !== undefined) selectedASA = wk.asa;
+        } catch(e){}
+    }
+    
+    // Restore surgeon justification
+    if(assessment.surgeon_justification){
+        var justBox = document.getElementById('surgeonJustification');
+        if(justBox) justBox.value = assessment.surgeon_justification;
+    }
+    
+    // Show draft badge if draft
+    if(assessment.status === 'draft'){
+        document.getElementById('draftBadge').style.display = 'inline';
+        document.getElementById('draftBadge').textContent = 'DRAFT LOADED';
+    } else {
+        document.getElementById('draftBadge').style.display = 'inline';
+        document.getElementById('draftBadge').textContent = 'SAVED — ' + (assessment.assessed_at || '').split('T')[0];
+        document.getElementById('draftBadge').style.background = '#059669';
+    }
 }
 function printSummary(){window.print();}
 
@@ -1407,10 +1505,36 @@ function loadPatientList(){
 }
 function loadPatient(){
     var sel=document.getElementById('patientSelect');var opt=sel.options[sel.selectedIndex];if(!opt||!opt.value)return;
+    var patId=opt.value;
     var s=opt.getAttribute('data-surg')||'TKA';var d=opt.getAttribute('data-dt')||'';
     document.getElementById('procSelect').value=(s==='THA'?'THA':'TKA');
     if(d)document.getElementById('surgDate').value=d;
+    
+    // Reset state for new patient
+    existingAssessmentId = null;
+    intakeResponses = {};
+    comorbChecked = {};
+    workupItems = [];
+    customWorkupItems = [];
+    selectedASA = null;
+    document.getElementById('draftBadge').style.display = 'none';
+    document.getElementById('surgPrepLaunchBox').style.display = 'none';
+    document.getElementById('draftSavedMsg').style.display = 'none';
+    
     onProcChange();
+    
+    // Check for existing assessment (most recent)
+    fetch('/api/preop-assessments?patient_id='+patId)
+    .then(function(r){return r.json();})
+    .then(function(list){
+        if(list.length > 0){
+            // Sort by date, take most recent
+            list.sort(function(a,b){return new Date(b.assessed_at||b.created_at) - new Date(a.assessed_at||a.created_at);});
+            var latest = list[0];
+            // Load it — whether draft or complete
+            loadDraft(latest);
+        }
+    }).catch(function(e){console.log('No existing assessment:',e);});
 }
 
 // INIT
