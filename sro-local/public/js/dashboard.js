@@ -56,6 +56,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         await renderNursePanel();
     }
     
+    // Render admin panel if admin role
+    if (USER_ROLE === 'admin') {
+        document.getElementById('adminPanel').style.display = 'block';
+        await renderAdminPanel();
+    }
+    
     // For surgeons, auto-select their own name in filter
     if (USER_ROLE === 'surgeon' && USER_ID) {
         const filterSurgeon = document.getElementById('filterSurgeon');
@@ -78,9 +84,9 @@ function applyRoleBasedView() {
     document.querySelectorAll('.nav-link').forEach(link => {
         const href = link.getAttribute('href');
         if (USER_ROLE === 'nurse') {
-            // Nurses: hide Analytics (surgeon tool), Settings (admin tool)
+            // Nurses: hide Analytics (surgeon tool), Surg Prep (surgeon tool), Settings (admin tool)
             // Nurses KEEP: Dashboard, Pre-Op (data entry), RPM Billing (they log monitoring time)
-            if (href === '/analytics.html' || href === '/settings.html') link.style.display = 'none';
+            if (href === '/analytics.html' || href === '/settings.html' || href === '/surgical-prep.html') link.style.display = 'none';
         } else if (USER_ROLE === 'surgeon') {
             // Surgeons: hide RPM Billing (nurse does this), Settings (admin tool)
             // Surgeons KEEP: Dashboard, Pre-Op (decision tool), Analytics (outcomes)
@@ -294,6 +300,117 @@ function nurseQuickNote(patientId) {
             openNoteModal();
         }, 500);
     });
+}
+
+// ============ ADMIN METRICS PANEL ============
+async function renderAdminPanel() {
+    const today = new Date();
+    const dateEl = document.getElementById('adminPanelDate');
+    if (dateEl) dateEl.textContent = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    
+    // PROM compliance rate
+    try {
+        const promResp = await fetch(`/api/prom-compliance?clinic_id=${CLINIC_ID}`);
+        const promData = await promResp.json();
+        
+        const rateEl = document.getElementById('adminPromRate');
+        rateEl.textContent = promData.compliance_rate + '%';
+        rateEl.style.color = promData.compliance_rate >= 80 ? '#86efac' : promData.compliance_rate >= 50 ? '#fde68a' : '#fca5a5';
+        
+        // Surgeon PROM bars
+        const surgeonDiv = document.getElementById('adminPromBySurgeon');
+        if (promData.by_surgeon && promData.by_surgeon.length > 0) {
+            surgeonDiv.innerHTML = promData.by_surgeon.map(s => {
+                const pct = s.total > 0 ? Math.round((s.completed / s.total) * 100) : 0;
+                const barColor = pct >= 80 ? '#86efac' : pct >= 50 ? '#fde68a' : '#fca5a5';
+                return `
+                    <div style="margin-bottom: 8px;">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:2px;color:#e0e7ff;">
+                            <span>Dr. ${s.surgeon_name}</span>
+                            <span>${s.completed}/${s.total} (${pct}%)${s.overdue > 0 ? ' · <span style="color:#fca5a5;">' + s.overdue + ' overdue</span>' : ''}</span>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.15);border-radius:4px;height:6px;">
+                            <div style="background:${barColor};height:100%;border-radius:4px;width:${pct}%;"></div>
+                        </div>
+                    </div>`;
+            }).join('');
+        } else {
+            surgeonDiv.innerHTML = '<div style="color:#a5b4fc;">No PROM data yet</div>';
+        }
+    } catch(e) { console.error('Admin PROM load error:', e); }
+    
+    // Check-in rate (patients who checked in within last 3 days / total active)
+    const activePatients = patients.filter(p => p.episode_id);
+    const recentCheckins = activePatients.filter(p => {
+        if (!p.last_checkin_date) return false;
+        const days = Math.floor((Date.now() - new Date(p.last_checkin_date)) / (1000*60*60*24));
+        return days <= 3;
+    });
+    const checkinRate = activePatients.length > 0 ? Math.round((recentCheckins.length / activePatients.length) * 100) : 0;
+    const checkinEl = document.getElementById('adminCheckinRate');
+    checkinEl.textContent = checkinRate + '%';
+    checkinEl.style.color = checkinRate >= 80 ? '#86efac' : checkinRate >= 50 ? '#fde68a' : '#fca5a5';
+    
+    // Average pain
+    const painPatients = activePatients.filter(p => p.last_pain_level !== null && p.last_pain_level !== undefined);
+    const avgPain = painPatients.length > 0 ? (painPatients.reduce((s, p) => s + p.last_pain_level, 0) / painPatients.length).toFixed(1) : '-';
+    const avgPainEl = document.getElementById('adminAvgPain');
+    avgPainEl.textContent = avgPain;
+    if (avgPain !== '-') avgPainEl.style.color = parseFloat(avgPain) <= 4 ? '#86efac' : parseFloat(avgPain) <= 6 ? '#fde68a' : '#fca5a5';
+    
+    // Alert count
+    let alertCount = 0;
+    activePatients.forEach(p => {
+        if (p.last_pain_level >= 7) alertCount++;
+        if (!p.last_checkin_date || Math.floor((Date.now() - new Date(p.last_checkin_date)) / (1000*60*60*24)) > 3) alertCount++;
+        const ae = adverseEventsCache[p.id] || [];
+        if (ae.length > 0) alertCount++;
+        const od = promScheduleCache[p.id] || [];
+        if (od.length > 0) alertCount++;
+    });
+    const alertEl = document.getElementById('adminAlertCount');
+    alertEl.textContent = alertCount;
+    alertEl.style.color = alertCount === 0 ? '#86efac' : alertCount <= 5 ? '#fde68a' : '#fca5a5';
+    
+    // RPM eligible (patients with ≥20 min logged this month = 99457 billable)
+    const billingMonth = today.toISOString().slice(0, 7);
+    try {
+        const rpmResp = await fetch(`/api/rpm-summary?clinic_id=${CLINIC_ID}&billing_month=${billingMonth}`);
+        const rpmData = await rpmResp.json();
+        
+        const eligible99457 = rpmData.filter(r => r.total_seconds >= 1200).length; // ≥20 min
+        const eligible99458 = rpmData.filter(r => r.total_seconds >= 2400).length; // ≥40 min
+        const rpmEl = document.getElementById('adminRpmEligible');
+        rpmEl.textContent = eligible99457;
+        rpmEl.style.color = '#86efac';
+        
+        // RPM summary
+        const rpmDiv = document.getElementById('adminRpmSummary');
+        const totalMin = rpmData.reduce((s, r) => s + (r.total_seconds || 0), 0) / 60;
+        const patientsWithTime = rpmData.filter(r => r.total_seconds > 0).length;
+        
+        rpmDiv.innerHTML = `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+                <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:10px;text-align:center;">
+                    <div style="font-size:1.4rem;font-weight:700;color:#86efac;">${eligible99457}</div>
+                    <div style="font-size:0.65rem;color:#c7d2fe;">99457 Eligible (≥20m)</div>
+                </div>
+                <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:10px;text-align:center;">
+                    <div style="font-size:1.4rem;font-weight:700;color:#86efac;">${eligible99458}</div>
+                    <div style="font-size:0.65rem;color:#c7d2fe;">99458 Eligible (≥40m)</div>
+                </div>
+            </div>
+            <div style="color:#e0e7ff;font-size:0.8rem;">
+                ${Math.round(totalMin)} total minutes logged · ${patientsWithTime} patients tracked
+            </div>
+            <div style="color:#a5b4fc;font-size:0.75rem;margin-top:4px;">
+                Est. revenue: $${(eligible99457 * 51 + eligible99458 * 41).toLocaleString()} (99457 @$51 + 99458 @$41)
+            </div>
+        `;
+    } catch(e) {
+        document.getElementById('adminRpmEligible').textContent = '-';
+        document.getElementById('adminRpmSummary').innerHTML = '<div style="color:#a5b4fc;">No RPM data available</div>';
+    }
 }
 
 // ============ PREOP ASSESSMENTS ============
@@ -590,23 +707,23 @@ async function openPatientModal(patientId) {
     if (summaryCard) {
         if (USER_ROLE === 'surgeon') {
             summaryCard.style.display = 'block';
-            renderSurgeonSummary(patientId);
+            try { renderSurgeonSummary(patientId); } catch(e) { console.error('Surgeon summary error:', e); }
         } else {
             summaryCard.style.display = 'none';
         }
     }
     
-    // Load patient details
+    // Load patient details — each wrapped to prevent cascade failures
     renderPatientInfo();
     renderSurgeryInfo();
     renderCheckinLink();
-    await loadPatientCheckins(patientId);
-    await loadPatientPreopInfo(patientId);
-    await loadPatientPromSchedule(patientId);
-    await loadPatientAdverseEvents(patientId);
-    await loadPatientNotes(patientId);
-    await loadComplianceScorecard(patientId);
-    await loadPromTrendChart(patientId);
+    try { await loadPatientCheckins(patientId); } catch(e) { console.error('Checkins error:', e); }
+    try { await loadPatientPreopInfo(patientId); } catch(e) { console.error('Preop error:', e); }
+    try { await loadPatientPromSchedule(patientId); } catch(e) { console.error('PROM schedule error:', e); }
+    try { await loadPatientAdverseEvents(patientId); } catch(e) { console.error('Adverse events error:', e); }
+    try { await loadPatientNotes(patientId); } catch(e) { console.error('Notes error:', e); }
+    try { await loadComplianceScorecard(patientId); } catch(e) { console.error('Scorecard error:', e); }
+    try { await loadPromTrendChart(patientId); } catch(e) { console.error('PROM trend error:', e); }
 }
 
 // ============ SURGEON QUICK SUMMARY CARD ============

@@ -73,6 +73,7 @@
         <div class="nav-links">
             <a href="/dashboard.html" class="nav-link active">Dashboard</a>
             <a href="/preop.html" class="nav-link">Pre-Op</a>
+            <a href="/surgical-prep.html" class="nav-link">Surg Prep</a>
             <a href="/analytics.html" class="nav-link">Analytics</a>
             <a href="/rpm-report.html" class="nav-link">RPM Billing</a>
             <a href="/settings.html" class="nav-link">Settings</a>
@@ -122,6 +123,50 @@
                 </div>
                 <div id="nurseActionQueue" style="max-height: 400px; overflow-y: auto;">
                     <div style="text-align: center; padding: 20px; color: #a7f3d0;">Loading priorities...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Metrics Panel (only visible for admin role) -->
+        <div id="adminPanel" style="display:none; margin-bottom: 20px;">
+            <div style="background: linear-gradient(135deg, #312e81, #4338ca); border-radius: 12px; padding: 20px; color: white;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h2 style="margin: 0; font-size: 1.2rem;">📊 Practice Overview</h2>
+                    <span id="adminPanelDate" style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 12px; font-size: 0.85rem;"></span>
+                </div>
+                <!-- Row 1: Big Metrics -->
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; text-align: center; margin-bottom: 16px;">
+                    <div style="background: rgba(255,255,255,0.1); border-radius: 10px; padding: 14px 8px;">
+                        <div id="adminPromRate" style="font-size: 2rem; font-weight: 700;">--%</div>
+                        <div style="font-size: 0.7rem; color: #c7d2fe;">PROM Compliance</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.1); border-radius: 10px; padding: 14px 8px;">
+                        <div id="adminCheckinRate" style="font-size: 2rem; font-weight: 700;">--%</div>
+                        <div style="font-size: 0.7rem; color: #c7d2fe;">Check-in Rate</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.1); border-radius: 10px; padding: 14px 8px;">
+                        <div id="adminRpmEligible" style="font-size: 2rem; font-weight: 700;">-</div>
+                        <div style="font-size: 0.7rem; color: #c7d2fe;">RPM Eligible</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.1); border-radius: 10px; padding: 14px 8px;">
+                        <div id="adminAlertCount" style="font-size: 2rem; font-weight: 700;">-</div>
+                        <div style="font-size: 0.7rem; color: #c7d2fe;">Open Alerts</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.1); border-radius: 10px; padding: 14px 8px;">
+                        <div id="adminAvgPain" style="font-size: 2rem; font-weight: 700;">-</div>
+                        <div style="font-size: 0.7rem; color: #c7d2fe;">Avg Pain</div>
+                    </div>
+                </div>
+                <!-- Row 2: Surgeon Compliance Bars -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div>
+                        <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; color: #e0e7ff;">PROM Compliance by Surgeon</div>
+                        <div id="adminPromBySurgeon" style="font-size: 0.8rem;"></div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; color: #e0e7ff;">RPM Billing This Month</div>
+                        <div id="adminRpmSummary" style="font-size: 0.8rem;"></div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surgical Prep | SRO Intelligence</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .prep-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .prep-tabs { display: flex; gap: 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 24px; }
+        .prep-tab { padding: 12px 24px; font-size: 1rem; font-weight: 600; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; color: #6b7280; margin-bottom: -2px; }
+        .prep-tab.active { border-bottom-color: #2c5aa0; color: #2c5aa0; }
+        .prep-panel { display: none; }
+        .prep-panel.active { display: block; }
+        
+        .calc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        @media (max-width: 768px) { .calc-grid { grid-template-columns: 1fr; } }
+        
+        .input-card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .input-card h3 { margin: 0 0 16px 0; font-size: 1.1rem; color: #1e293b; }
+        
+        .field-row { margin-bottom: 16px; }
+        .field-row label { display: block; font-size: 0.85rem; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .field-row input[type="number"] { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem; }
+        .field-row select { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem; }
+        
+        .radio-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        .radio-btn { flex: 1; min-width: 100px; }
+        .radio-btn input { display: none; }
+        .radio-btn label { display: block; text-align: center; padding: 10px 14px; border: 2px solid #d1d5db; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: all 0.2s; }
+        .radio-btn input:checked + label { border-color: #2c5aa0; background: #eff6ff; color: #2c5aa0; font-weight: 700; }
+        .radio-btn label:hover { border-color: #93c5fd; }
+        
+        .result-card { background: linear-gradient(135deg, #0f172a, #1e293b); border-radius: 12px; padding: 24px; color: white; }
+        .result-card h3 { margin: 0 0 16px 0; font-size: 1.1rem; color: #e2e8f0; }
+        
+        .rec-main { font-size: 1.8rem; font-weight: 700; color: #60a5fa; margin-bottom: 8px; }
+        .rec-sub { font-size: 1rem; color: #94a3b8; margin-bottom: 20px; }
+        
+        .rec-detail { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+        .rec-item { text-align: center; background: rgba(255,255,255,0.08); border-radius: 8px; padding: 12px 8px; }
+        .rec-item-value { font-size: 1.1rem; font-weight: 700; }
+        .rec-item-label { font-size: 0.65rem; color: #94a3b8; margin-top: 4px; }
+        
+        .equip-list { list-style: none; padding: 0; margin: 0; }
+        .equip-list li { padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; font-size: 0.9rem; }
+        .equip-list li:last-child { border-bottom: none; }
+        .equip-cat { color: #94a3b8; font-size: 0.75rem; }
+        
+        .reason-box { background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; }
+        .reason-box p { margin: 0; font-size: 0.85rem; color: #93c5fd; line-height: 1.5; }
+        .reason-box strong { color: #60a5fa; }
+        
+        .print-bar { display: flex; gap: 10px; margin-top: 16px; }
+        .print-bar .btn { padding: 10px 20px; border-radius: 8px; font-size: 0.9rem; }
+        
+        .patient-header { background: #f8f9fa; border-radius: 12px; padding: 16px 24px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; }
+        .patient-header h2 { margin: 0; font-size: 1.3rem; color: #1e293b; }
+        .patient-header .meta { font-size: 0.85rem; color: #6b7280; }
+        
+        @media print {
+            .navbar, .prep-tabs, .print-bar, .btn { display: none !important; }
+            .result-card { color: black !important; background: white !important; border: 2px solid #000 !important; }
+            .rec-main, .rec-item-value { color: black !important; }
+            .rec-item-label, .rec-sub, .reason-box p, .equip-cat { color: #333 !important; }
+            .reason-box { background: #f0f0f0 !important; border-color: #999 !important; }
+            .rec-item { background: #f0f0f0 !important; }
+            .equip-list li { border-color: #ccc !important; color: black !important; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="logo-icon">SRO</span>
+            <span class="nav-title">SRO Intelligence</span>
+        </div>
+        <div class="nav-links">
+            <a href="/dashboard.html" class="nav-link">Dashboard</a>
+            <a href="/preop.html" class="nav-link">Pre-Op</a>
+            <a href="/surgical-prep.html" class="nav-link active">Surg Prep</a>
+            <a href="/analytics.html" class="nav-link">Analytics</a>
+            <a href="/rpm-report.html" class="nav-link">RPM Billing</a>
+            <a href="/settings.html" class="nav-link">Settings</a>
+        </div>
+        <div class="nav-user">
+            <span id="userName">Loading...</span>
+            <button class="btn btn-sm" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="prep-container">
+        <!-- Patient Header -->
+        <div class="patient-header">
+            <div>
+                <h2 id="patientName">Select a Patient</h2>
+                <span class="meta" id="patientMeta"></span>
+            </div>
+            <div>
+                <select id="patientSelect" onchange="selectPatient()" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #d1d5db; font-size: 0.9rem;">
+                    <option value="">Select patient...</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="prep-tabs">
+            <button class="prep-tab active" onclick="switchPrepTab('prosthesis')">🦴 Prosthesis Calculator</button>
+            <button class="prep-tab" onclick="switchPrepTab('equipment')">📦 Equipment List</button>
+            <button class="prep-tab" onclick="switchPrepTab('precert')">📋 Precertification</button>
+        </div>
+
+        <!-- Tab 1: Prosthesis Calculator -->
+        <div id="panelProsthesis" class="prep-panel active">
+            <div class="calc-grid">
+                <!-- Inputs -->
+                <div>
+                    <div class="input-card">
+                        <h3>Patient Factors</h3>
+                        <div class="field-row">
+                            <label>Age</label>
+                            <input type="number" id="calcAge" min="18" max="110" placeholder="e.g. 68" oninput="runCalculator()">
+                        </div>
+                        <div class="field-row">
+                            <label>BMI</label>
+                            <input type="number" id="calcBMI" min="15" max="80" step="0.1" placeholder="e.g. 32.4" oninput="runCalculator()">
+                        </div>
+                    </div>
+                    
+                    <div class="input-card" style="margin-top: 16px;">
+                        <h3>Intraoperative Findings</h3>
+                        <div class="field-row">
+                            <label>Bone Quality</label>
+                            <div class="radio-group">
+                                <div class="radio-btn">
+                                    <input type="radio" name="boneQuality" id="boneGood" value="good" checked onchange="runCalculator()">
+                                    <label for="boneGood">Good</label>
+                                </div>
+                                <div class="radio-btn">
+                                    <input type="radio" name="boneQuality" id="boneSoft" value="soft" onchange="runCalculator()">
+                                    <label for="boneSoft">Soft</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="field-row">
+                            <label>PCL Status</label>
+                            <div class="radio-group">
+                                <div class="radio-btn">
+                                    <input type="radio" name="pclStatus" id="pclIntact" value="intact" checked onchange="runCalculator()">
+                                    <label for="pclIntact">Intact</label>
+                                </div>
+                                <div class="radio-btn">
+                                    <input type="radio" name="pclStatus" id="pclDeficient" value="deficient" onchange="runCalculator()">
+                                    <label for="pclDeficient">Deficient</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="field-row">
+                            <label>Collateral Ligaments</label>
+                            <div class="radio-group">
+                                <div class="radio-btn">
+                                    <input type="radio" name="collaterals" id="collIntact" value="intact" checked onchange="runCalculator()">
+                                    <label for="collIntact">Intact</label>
+                                </div>
+                                <div class="radio-btn">
+                                    <input type="radio" name="collaterals" id="collTorn" value="torn" onchange="runCalculator()">
+                                    <label for="collTorn">Torn</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="field-row">
+                            <label>Deformity (degrees)</label>
+                            <input type="number" id="calcDeformity" min="0" max="60" step="1" value="0" oninput="runCalculator()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Result -->
+                <div>
+                    <div class="result-card" id="resultCard">
+                        <h3>Prosthesis Recommendation</h3>
+                        <div id="calcResult">
+                            <div style="text-align: center; padding: 40px; color: #64748b;">
+                                Enter patient factors to generate recommendation
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Equipment List -->
+        <div id="panelEquipment" class="prep-panel">
+            <div class="input-card">
+                <h3>📦 Equipment & Supply List for OR</h3>
+                <div id="equipmentList" style="padding: 20px; color: #6b7280; text-align: center;">
+                    Run the prosthesis calculator first to generate the equipment list.
+                </div>
+                <div class="print-bar" id="equipPrintBar" style="display: none;">
+                    <button class="btn" style="background: #2c5aa0; color: white;" onclick="printEquipment()">🖨️ Print Equipment List</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Precertification -->
+        <div id="panelPrecert" class="prep-panel">
+            <div class="calc-grid">
+                <div class="input-card">
+                    <h3>📋 Conservative Care Completed</h3>
+                    <div class="field-row">
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
+                                <input type="checkbox" id="consPT" style="width:18px;height:18px;"> Physical Therapy (≥6 weeks)
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
+                                <input type="checkbox" id="consNSAIDs" style="width:18px;height:18px;"> NSAIDs / Anti-inflammatory
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
+                                <input type="checkbox" id="consInjections" style="width:18px;height:18px;"> Corticosteroid / HA Injections
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
+                                <input type="checkbox" id="consBracing" style="width:18px;height:18px;"> Bracing / Assistive Device
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
+                                <input type="checkbox" id="consActivity" style="width:18px;height:18px;"> Activity Modification
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
+                                <input type="checkbox" id="consWeight" style="width:18px;height:18px;"> Weight Loss Counseling
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="input-card">
+                    <h3>🩻 X-Ray Findings</h3>
+                    <div class="field-row">
+                        <label>Joint Space Narrowing</label>
+                        <select id="xrayNarrowing" style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;">
+                            <option value="">Select...</option>
+                            <option value="mild">Mild</option>
+                            <option value="moderate">Moderate</option>
+                            <option value="severe">Severe — Bone-on-Bone</option>
+                        </select>
+                    </div>
+                    <div class="field-row">
+                        <label>Osteophytes</label>
+                        <select id="xrayOsteophytes" style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;">
+                            <option value="">Select...</option>
+                            <option value="none">None</option>
+                            <option value="mild">Mild</option>
+                            <option value="moderate">Moderate</option>
+                            <option value="severe">Severe</option>
+                        </select>
+                    </div>
+                    <div class="field-row">
+                        <label>Alignment</label>
+                        <select id="xrayAlignment" style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;">
+                            <option value="">Select...</option>
+                            <option value="neutral">Neutral</option>
+                            <option value="varus_mild">Mild Varus (&lt;10°)</option>
+                            <option value="varus_severe">Severe Varus (≥10°)</option>
+                            <option value="valgus_mild">Mild Valgus (&lt;10°)</option>
+                            <option value="valgus_severe">Severe Valgus (≥10°)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="input-card" style="margin-top: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h3 style="margin:0;">Generated Precertification Summary</h3>
+                    <button class="btn" style="background:#2c5aa0;color:white;padding:8px 16px;border-radius:8px;" onclick="generatePrecert()">Generate Summary</button>
+                </div>
+                <div id="precertOutput" style="background: #f8f9fa; border-radius: 8px; padding: 20px; font-size: 0.9rem; line-height: 1.7; color: #374151; white-space: pre-wrap;">
+                    Click "Generate Summary" to create precertification document.
+                </div>
+                <div class="print-bar" id="precertPrintBar" style="display: none; margin-top: 12px;">
+                    <button class="btn" style="background: #2c5aa0; color: white;" onclick="printPrecert()">🖨️ Print Precertification</button>
+                    <button class="btn" style="background: #059669; color: white;" onclick="copyPrecert()">📋 Copy to Clipboard</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CLINIC_ID = sessionStorage.getItem('clinicId') || '11111111-1111-1111-1111-111111111111';
+        const USER_NAME = sessionStorage.getItem('userName') || 'User';
+        const USER_ROLE = sessionStorage.getItem('userRole') || 'surgeon';
+        
+        let patients = [];
+        let currentPatient = null;
+        let currentPreop = null;
+        let lastRecommendation = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!CLINIC_ID) { window.location.href = '/index.html'; return; }
+            
+            const roleLabels = { surgeon: 'Surgeon', nurse: 'Nurse', admin: 'Admin' };
+            const roleColors = { surgeon: '#2c5aa0', nurse: '#059669', admin: '#7c3aed' };
+            document.getElementById('userName').innerHTML = USER_NAME + 
+                ' <span style="background:' + (roleColors[USER_ROLE] || '#6b7280') + 
+                ';color:white;padding:2px 8px;border-radius:10px;font-size:0.75rem;margin-left:6px;">' + 
+                (roleLabels[USER_ROLE] || USER_ROLE) + '</span>';
+            
+            // Role-based nav
+            document.querySelectorAll('.nav-link').forEach(link => {
+                const href = link.getAttribute('href');
+                if (USER_ROLE === 'nurse') {
+                    if (href === '/analytics.html' || href === '/settings.html') link.style.display = 'none';
+                } else if (USER_ROLE === 'surgeon') {
+                    if (href === '/rpm-report.html' || href === '/settings.html') link.style.display = 'none';
+                }
+            });
+            
+            await loadPatients();
+            
+            // Check URL param
+            const params = new URLSearchParams(window.location.search);
+            const patientId = params.get('patient');
+            if (patientId) {
+                document.getElementById('patientSelect').value = patientId;
+                selectPatient();
+            }
+        });
+
+        async function loadPatients() {
+            try {
+                const resp = await fetch(`/api/patients?clinic_id=${CLINIC_ID}`);
+                patients = await resp.json();
+                
+                const select = document.getElementById('patientSelect');
+                select.innerHTML = '<option value="">Select patient...</option>';
+                patients.filter(p => p.episode_id).forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = `${p.last_name}, ${p.first_name} — ${p.surgery_type || 'No surgery'}`;
+                    select.appendChild(opt);
+                });
+            } catch(e) { console.error('Error loading patients:', e); }
+        }
+
+        async function selectPatient() {
+            const id = document.getElementById('patientSelect').value;
+            if (!id) {
+                currentPatient = null;
+                currentPreop = null;
+                document.getElementById('patientName').textContent = 'Select a Patient';
+                document.getElementById('patientMeta').textContent = '';
+                return;
+            }
+            
+            currentPatient = patients.find(p => p.id === id);
+            if (!currentPatient) return;
+            
+            document.getElementById('patientName').textContent = 
+                `${currentPatient.first_name} ${currentPatient.last_name}`;
+            
+            const daysPostOp = currentPatient.surgery_date ? 
+                Math.floor((Date.now() - new Date(currentPatient.surgery_date)) / (1000*60*60*24)) : null;
+            document.getElementById('patientMeta').textContent = 
+                `${currentPatient.surgery_type || ''} · ${currentPatient.surgeon_first_name ? 'Dr. ' + currentPatient.surgeon_last_name : ''} · ${daysPostOp !== null && daysPostOp >= 0 ? 'Day ' + daysPostOp + ' post-op' : currentPatient.surgery_date ? Math.abs(daysPostOp) + ' days to surgery' : 'No surgery date'}`;
+            
+            // Load preop data
+            try {
+                const resp = await fetch(`/api/preop-postop-comparison/${id}`);
+                const data = await resp.json();
+                if (data.hasPreop) {
+                    currentPreop = data.preop;
+                    // Try full preop record
+                    const fullResp = await fetch(`/api/preop-assessments?patient_id=${id}`);
+                    const fullList = await fullResp.json();
+                    if (fullList.length > 0) {
+                        const latest = fullList.sort((a,b) => new Date(b.assessed_at) - new Date(a.assessed_at))[0];
+                        currentPreop = { ...currentPreop, ...latest };
+                    }
+                }
+            } catch(e) {}
+            
+            // Auto-fill age and BMI from preop
+            if (currentPreop?.age) document.getElementById('calcAge').value = currentPreop.age;
+            else if (currentPatient.date_of_birth) {
+                const age = Math.floor((Date.now() - new Date(currentPatient.date_of_birth)) / (365.25*24*60*60*1000));
+                document.getElementById('calcAge').value = age;
+            }
+            
+            if (currentPreop?.bmi) document.getElementById('calcBMI').value = parseFloat(currentPreop.bmi).toFixed(1);
+            
+            runCalculator();
+        }
+
+        // ============ PROSTHESIS CALCULATOR ============
+        function runCalculator() {
+            const age = parseFloat(document.getElementById('calcAge').value);
+            const bmi = parseFloat(document.getElementById('calcBMI').value);
+            const bone = document.querySelector('input[name="boneQuality"]:checked')?.value || 'good';
+            const pcl = document.querySelector('input[name="pclStatus"]:checked')?.value || 'intact';
+            const coll = document.querySelector('input[name="collaterals"]:checked')?.value || 'intact';
+            const deformity = parseFloat(document.getElementById('calcDeformity').value) || 0;
+            
+            if (!age || !bmi) {
+                document.getElementById('calcResult').innerHTML = '<div style="text-align:center;padding:40px;color:#64748b;">Enter age and BMI to generate recommendation</div>';
+                return;
+            }
+            
+            // Decision tree (priority order — most constrained first)
+            let fixation, bearing, stem, constraint, reasons = [];
+            
+            if (coll === 'torn') {
+                // Collaterals torn — maximum constraint needed
+                fixation = 'Cemented';
+                bearing = 'PS';
+                stem = 'Tibial Stem';
+                constraint = 'Max CCK Poly';
+                reasons.push('Collateral ligaments torn — requires maximum constraint (CCK) for stability');
+                reasons.push('Posterior stabilized design compensates for ligament deficiency');
+                reasons.push('Tibial stem provides additional fixation for constrained construct');
+                reasons.push('Cemented fixation required for constrained implant');
+            } else if (bmi > 35 && deformity > 10) {
+                // Obese + significant deformity
+                fixation = 'Cemented';
+                bearing = 'PS';
+                stem = 'Tibial Stem';
+                constraint = 'Standard PS';
+                reasons.push(`BMI ${bmi.toFixed(1)} (>35) — increased load requires cemented fixation with stem`);
+                reasons.push(`Deformity ${deformity}° (>10°) — posterior stabilized needed for correction`);
+                reasons.push('Tibial stem provides additional stability under high load + deformity correction');
+            } else if (bmi > 35) {
+                // Obese, no significant deformity
+                fixation = 'Cemented';
+                bearing = 'CR';
+                stem = 'Tibial Stem';
+                constraint = 'Standard';
+                reasons.push(`BMI ${bmi.toFixed(1)} (>35) — increased mechanical load requires cemented fixation`);
+                reasons.push('Tibial stem provides additional fixation to handle higher body weight forces');
+                if (pcl === 'intact') reasons.push('PCL intact — cruciate retaining design appropriate');
+                if (pcl === 'deficient') {
+                    bearing = 'PS';
+                    reasons.push('PCL deficient — upgraded to posterior stabilized');
+                }
+            } else if (pcl === 'deficient') {
+                // PCL deficient, normal BMI
+                fixation = 'Cemented';
+                bearing = 'PS';
+                stem = 'None';
+                constraint = 'Standard PS';
+                reasons.push('PCL deficient — posterior stabilized design required');
+                reasons.push('Cemented fixation for PS implant stability');
+                if (age >= 65) reasons.push(`Age ${age} — cemented fixation appropriate`);
+            } else if (age < 65 && bone === 'good' && bmi <= 35) {
+                // Young, good bone, intact PCL, normal BMI — press-fit
+                fixation = 'Press-fit';
+                bearing = 'CR';
+                stem = 'None';
+                constraint = 'Standard';
+                reasons.push(`Age ${age} (<65) — young patient with biological fixation potential`);
+                reasons.push('Good bone quality supports uncemented press-fit fixation');
+                reasons.push('PCL intact — cruciate retaining design preserves natural kinematics');
+                reasons.push(`BMI ${bmi.toFixed(1)} (≤35) — within range for press-fit`);
+            } else {
+                // Age ≥65 or soft bone, normal BMI, intact PCL
+                fixation = 'Cemented';
+                bearing = 'CR';
+                stem = 'None';
+                constraint = 'Standard';
+                if (age >= 65) reasons.push(`Age ${age} (≥65) — cemented fixation for reliable osseointegration`);
+                if (bone === 'soft') reasons.push('Soft bone quality — cemented fixation for immediate stability');
+                reasons.push('PCL intact — cruciate retaining design appropriate');
+                reasons.push(`BMI ${bmi.toFixed(1)} (≤35) — standard implant sufficient`);
+            }
+            
+            lastRecommendation = { fixation, bearing, stem, constraint, reasons, age, bmi, bone, pcl, coll, deformity };
+            
+            // Render result
+            const bearingFull = bearing === 'CR' ? 'Cruciate Retaining' : 'Posterior Stabilized';
+            const mainLabel = fixation === 'Press-fit' ? 'Press-Fit CR' : 
+                             constraint === 'Max CCK Poly' ? 'Cemented PS + CCK' :
+                             `${fixation} ${bearing}`;
+            
+            let html = `
+                <div class="rec-main">${mainLabel}</div>
+                <div class="rec-sub">${stem !== 'None' ? '+ ' + stem : 'Standard Components'}</div>
+                
+                <div class="rec-detail">
+                    <div class="rec-item">
+                        <div class="rec-item-value" style="color: ${fixation === 'Press-fit' ? '#22c55e' : '#60a5fa'};">${fixation}</div>
+                        <div class="rec-item-label">FIXATION</div>
+                    </div>
+                    <div class="rec-item">
+                        <div class="rec-item-value" style="color: ${bearing === 'PS' ? '#f59e0b' : '#22c55e'};">${bearingFull}</div>
+                        <div class="rec-item-label">BEARING</div>
+                    </div>
+                    <div class="rec-item">
+                        <div class="rec-item-value" style="color: ${stem !== 'None' ? '#f59e0b' : '#22c55e'};">${stem}</div>
+                        <div class="rec-item-label">STEM</div>
+                    </div>
+                    <div class="rec-item">
+                        <div class="rec-item-value" style="color: ${constraint.includes('CCK') ? '#ef4444' : '#22c55e'};">${constraint}</div>
+                        <div class="rec-item-label">CONSTRAINT</div>
+                    </div>
+                </div>
+                
+                <div class="reason-box">
+                    <strong>Clinical Rationale:</strong>
+                    ${reasons.map(r => '<p>• ' + r + '</p>').join('')}
+                </div>
+                
+                <div class="print-bar">
+                    <button class="btn" style="background: #3b82f6; color: white;" onclick="window.print()">🖨️ Print</button>
+                    <button class="btn" style="background: #059669; color: white;" onclick="switchPrepTab('equipment')">📦 View Equipment List</button>
+                </div>
+            `;
+            
+            document.getElementById('calcResult').innerHTML = html;
+            generateEquipmentList();
+        }
+
+        // ============ EQUIPMENT LIST ============
+        function generateEquipmentList() {
+            if (!lastRecommendation) return;
+            const r = lastRecommendation;
+            
+            let items = [];
+            
+            // Always needed
+            items.push({ cat: 'Implant System', item: 'Primary TKA System Tray' });
+            items.push({ cat: 'Implant System', item: 'Femoral Component (sized intraop)' });
+            items.push({ cat: 'Implant System', item: 'Tibial Baseplate (sized intraop)' });
+            items.push({ cat: 'Implant System', item: `Poly Insert — ${r.bearing === 'CR' ? 'CR' : 'PS'} ${r.constraint === 'Max CCK Poly' ? '(CCK Constrained)' : ''}` });
+            
+            if (r.fixation === 'Cemented') {
+                items.push({ cat: 'Cement', item: 'Bone Cement (PMMA) — Antibiotic-loaded' });
+                items.push({ cat: 'Cement', item: 'Cement Mixing System' });
+                items.push({ cat: 'Cement', item: 'Cement Gun + Nozzles' });
+                items.push({ cat: 'Cement', item: 'Cement Restrictor (if applicable)' });
+            }
+            
+            if (r.stem !== 'None') {
+                items.push({ cat: 'Augments / Stems', item: 'Tibial Stem Extension Set' });
+                items.push({ cat: 'Augments / Stems', item: 'Stem Cement Adapter' });
+            }
+            
+            if (r.constraint === 'Max CCK Poly') {
+                items.push({ cat: 'Constraint', item: 'CCK (Constrained Condylar Knee) Poly Insert' });
+                items.push({ cat: 'Constraint', item: 'CCK Femoral Box Augment (if needed)' });
+            }
+            
+            if (r.bearing === 'PS') {
+                items.push({ cat: 'Instrumentation', item: 'PS Femoral Box Cut Guide' });
+                items.push({ cat: 'Instrumentation', item: 'PS Trial Components' });
+            }
+            
+            // Standard surgical supplies
+            items.push({ cat: 'Instruments', item: 'Cutting Guides (Femoral + Tibial)' });
+            items.push({ cat: 'Instruments', item: 'Oscillating Saw + Blades' });
+            items.push({ cat: 'Instruments', item: 'Trial Components (full set)' });
+            items.push({ cat: 'Instruments', item: 'Alignment Rod / Navigation (if used)' });
+            
+            items.push({ cat: 'Surgical Supplies', item: 'Tourniquet' });
+            items.push({ cat: 'Surgical Supplies', item: 'Pulse Lavage + Saline (3L)' });
+            items.push({ cat: 'Surgical Supplies', item: 'Drain (if surgeon preference)' });
+            items.push({ cat: 'Surgical Supplies', item: 'Wound Closure (staples + steri-strips)' });
+            items.push({ cat: 'Surgical Supplies', item: 'Sterile Dressing + ACE Wrap' });
+            
+            const el = document.getElementById('equipmentList');
+            const grouped = {};
+            items.forEach(i => {
+                if (!grouped[i.cat]) grouped[i.cat] = [];
+                grouped[i.cat].push(i.item);
+            });
+            
+            const patientName = currentPatient ? `${currentPatient.first_name} ${currentPatient.last_name}` : 'Unknown';
+            const surgeryType = currentPatient?.surgery_type || 'TKA';
+            const bearingFull = r.bearing === 'CR' ? 'Cruciate Retaining' : 'Posterior Stabilized';
+            
+            el.innerHTML = `
+                <div style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb;">
+                    <strong style="font-size: 1.1rem;">${patientName}</strong> — ${surgeryType}<br>
+                    <span style="color: #6b7280; font-size: 0.85rem;">
+                        ${r.fixation} | ${bearingFull} | ${r.stem !== 'None' ? r.stem : 'No Stem'} | ${r.constraint}
+                    </span>
+                </div>
+                ${Object.entries(grouped).map(([cat, list]) => `
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-weight: 700; font-size: 0.85rem; color: #2c5aa0; margin-bottom: 4px; text-transform: uppercase;">${cat}</div>
+                        <ul class="equip-list" style="list-style:none;padding:0;margin:0;">
+                            ${list.map(item => `<li style="padding:6px 0;border-bottom:1px solid #f3f4f6;font-size:0.9rem;">☐ ${item}</li>`).join('')}
+                        </ul>
+                    </div>
+                `).join('')}
+            `;
+            
+            document.getElementById('equipPrintBar').style.display = 'flex';
+        }
+
+        // ============ PRECERTIFICATION ============
+        function generatePrecert() {
+            const patientName = currentPatient ? `${currentPatient.first_name} ${currentPatient.last_name}` : '[Patient Name]';
+            const dob = currentPatient?.date_of_birth || '[DOB]';
+            const mrn = currentPatient?.mrn || '[MRN]';
+            const surgeryType = currentPatient?.surgery_type || 'Total Knee Arthroplasty';
+            const surgeonName = currentPatient?.surgeon_first_name ? `Dr. ${currentPatient.surgeon_first_name} ${currentPatient.surgeon_last_name}` : '[Surgeon]';
+            
+            const age = document.getElementById('calcAge').value || '[Age]';
+            const bmi = document.getElementById('calcBMI').value || '[BMI]';
+            
+            // Conservative care
+            const cons = [];
+            if (document.getElementById('consPT').checked) cons.push('Physical therapy (≥6 weeks)');
+            if (document.getElementById('consNSAIDs').checked) cons.push('NSAIDs / Anti-inflammatory medications');
+            if (document.getElementById('consInjections').checked) cons.push('Corticosteroid / hyaluronic acid injections');
+            if (document.getElementById('consBracing').checked) cons.push('Bracing / assistive device');
+            if (document.getElementById('consActivity').checked) cons.push('Activity modification');
+            if (document.getElementById('consWeight').checked) cons.push('Weight loss counseling');
+            
+            // X-ray
+            const narrowing = document.getElementById('xrayNarrowing').value;
+            const osteo = document.getElementById('xrayOsteophytes').value;
+            const alignment = document.getElementById('xrayAlignment').value;
+            
+            const narrowingText = { mild: 'mild joint space narrowing', moderate: 'moderate joint space narrowing', severe: 'severe joint space narrowing with bone-on-bone contact' };
+            const osteoText = { none: 'no osteophytes', mild: 'mild osteophyte formation', moderate: 'moderate osteophyte formation', severe: 'severe osteophyte formation' };
+            const alignText = { neutral: 'neutral alignment', varus_mild: 'mild varus deformity (<10°)', varus_severe: 'severe varus deformity (≥10°)', valgus_mild: 'mild valgus deformity (<10°)', valgus_severe: 'severe valgus deformity (≥10°)' };
+            
+            // PROM scores
+            let promText = '';
+            if (currentPreop?.joint_score_preop) {
+                const scoreType = currentPreop.joint_score_type === 'koos_jr' ? 'KOOS Jr' : 'HOOS Jr';
+                promText = `Pre-operative ${scoreType} score: ${Math.round(currentPreop.joint_score_preop)}/100 (projected post-operative: ${Math.round(currentPreop.projected_postop_score || 0)}/100, expected improvement: +${Math.round(currentPreop.expected_improvement || 0)} points).`;
+            }
+            
+            // Prosthesis recommendation
+            let prosthesisText = '';
+            if (lastRecommendation) {
+                const r = lastRecommendation;
+                const bearingFull = r.bearing === 'CR' ? 'cruciate retaining' : 'posterior stabilized';
+                prosthesisText = `Planned implant: ${r.fixation.toLowerCase()} ${bearingFull}${r.stem !== 'None' ? ' with tibial stem extension' : ''}${r.constraint === 'Max CCK Poly' ? ' with constrained condylar knee (CCK) polyethylene' : ''}.`;
+            }
+            
+            const output = `PRECERTIFICATION REQUEST — ${surgeryType.toUpperCase()}
+
+Patient: ${patientName}
+DOB: ${dob}
+MRN: ${mrn}
+Surgeon: ${surgeonName}
+Date: ${new Date().toLocaleDateString()}
+
+CLINICAL HISTORY:
+${age}-year-old patient with BMI ${bmi} presenting with end-stage degenerative joint disease of the ${surgeryType.includes('Hip') || surgeryType.includes('THA') ? 'hip' : 'knee'} refractory to conservative management.
+
+CONSERVATIVE TREATMENTS COMPLETED:
+${cons.length > 0 ? cons.map(c => '• ' + c).join('\n') : '• [No conservative treatments documented]'}
+
+Patient has exhausted conservative treatment options over a period of at least 3 months without adequate relief of pain and functional limitation.
+
+RADIOGRAPHIC FINDINGS:
+Weight-bearing radiographs demonstrate ${narrowingText[narrowing] || '[joint space narrowing severity]'}, ${osteoText[osteo] || '[osteophyte status]'}, and ${alignText[alignment] || '[alignment]'}.
+
+FUNCTIONAL ASSESSMENT:
+${promText || 'Functional outcome scores documented in pre-operative assessment.'}
+
+Patient reports significant limitations in activities of daily living including walking, stair climbing, and sleep disturbance due to pain.
+
+SURGICAL PLAN:
+${surgeryType} is medically necessary to restore function and alleviate pain that has not responded to conservative treatment.
+${prosthesisText}
+
+MEDICAL JUSTIFICATION:
+This procedure meets medical necessity criteria based on:
+1. Failed conservative management (≥3 months)
+2. Radiographic evidence of advanced degenerative joint disease
+3. Significant functional impairment documented by validated patient-reported outcome measures
+4. Pain refractory to non-operative interventions
+
+Requesting authorization for ${surgeryType} with appropriate implant system.
+
+${surgeonName}
+[Signature]`;
+
+            document.getElementById('precertOutput').textContent = output;
+            document.getElementById('precertPrintBar').style.display = 'flex';
+        }
+
+        // ============ TAB SWITCHING ============
+        function switchPrepTab(tab) {
+            document.querySelectorAll('.prep-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.prep-panel').forEach(p => p.classList.remove('active'));
+            
+            const panels = { prosthesis: 'panelProsthesis', equipment: 'panelEquipment', precert: 'panelPrecert' };
+            document.getElementById(panels[tab]).classList.add('active');
+            
+            const tabs = document.querySelectorAll('.prep-tab');
+            const tabIdx = { prosthesis: 0, equipment: 1, precert: 2 };
+            tabs[tabIdx[tab]].classList.add('active');
+        }
+
+        // ============ PRINT / COPY ============
+        function printEquipment() {
+            const el = document.getElementById('equipmentList');
+            const win = window.open('', '_blank');
+            win.document.write(`<html><head><title>Equipment List</title><style>body{font-family:Arial,sans-serif;padding:20px;} ul{list-style:none;padding:0;} li{padding:6px 0;border-bottom:1px solid #eee;}</style></head><body>${el.innerHTML}</body></html>`);
+            win.document.close();
+            win.print();
+        }
+
+        function printPrecert() {
+            const text = document.getElementById('precertOutput').textContent;
+            const win = window.open('', '_blank');
+            win.document.write(`<html><head><title>Precertification</title><style>body{font-family:Arial,sans-serif;padding:40px;white-space:pre-wrap;line-height:1.6;}</style></head><body>${text}</body></html>`);
+            win.document.close();
+            win.print();
+        }
+
+        function copyPrecert() {
+            const text = document.getElementById('precertOutput').textContent;
+            navigator.clipboard.writeText(text).then(() => alert('Precertification summary copied to clipboard!'));
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = '/index.html';
+        }
+    </script>
+</body>
+</html>
