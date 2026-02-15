@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SRO Intelligence — CMS Compliance</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background:#0a0e17; color:#e0e6ed; }
+
+/* === NAV === */
+nav { background:linear-gradient(135deg,#0f1923,#1a2332); padding:12px 24px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #1e2d3d; position:sticky; top:0; z-index:100; }
+nav .brand { font-size:18px; font-weight:700; color:#4fc3f7; }
+nav .links { display:flex; gap:8px; flex-wrap:wrap; }
+nav .links a { color:#8899aa; text-decoration:none; padding:6px 14px; border-radius:6px; font-size:13px; transition:all .2s; }
+nav .links a:hover, nav .links a.active { color:#fff; background:rgba(79,195,247,.15); }
+
+/* === HEADER === */
+.page-header { padding:24px 32px 16px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px; }
+.page-header h1 { font-size:22px; font-weight:700; color:#fff; }
+.page-header h1 span { color:#4fc3f7; }
+.filters { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.filters select, .filters button { background:#141c28; border:1px solid #2a3a4a; color:#e0e6ed; padding:8px 14px; border-radius:8px; font-size:13px; cursor:pointer; }
+.filters select:focus { border-color:#4fc3f7; outline:none; }
+.filters button { background:linear-gradient(135deg,#1565c0,#1976d2); border:none; color:#fff; font-weight:600; }
+.filters button:hover { background:linear-gradient(135deg,#1976d2,#2196f3); }
+.filters button.export-btn { background:linear-gradient(135deg,#2e7d32,#43a047); }
+.filters button.export-btn:hover { background:linear-gradient(135deg,#43a047,#66bb6a); }
+
+/* === PAYER BADGE === */
+.payer-badge { display:inline-block; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600; }
+.payer-badge.medicare { background:rgba(33,150,243,.15); color:#42a5f5; border:1px solid rgba(33,150,243,.3); }
+.payer-badge.all { background:rgba(156,39,176,.15); color:#ce93d8; border:1px solid rgba(156,39,176,.3); }
+
+/* === CMS ELIGIBILITY ALERT === */
+.cms-alert { margin:0 32px 16px; padding:14px 20px; border-radius:10px; font-size:13px; line-height:1.5; }
+.cms-alert.info { background:rgba(33,150,243,.08); border:1px solid rgba(33,150,243,.25); color:#90caf9; }
+.cms-alert.warn { background:rgba(255,152,0,.08); border:1px solid rgba(255,152,0,.25); color:#ffcc80; }
+.cms-alert strong { color:#fff; }
+
+/* === REPORT CARDS === */
+.reports-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(340px,1fr)); gap:20px; padding:0 32px 24px; }
+.report-card { background:linear-gradient(135deg,#111827,#151f2e); border:1px solid #1e2d3d; border-radius:14px; padding:24px; }
+.report-card h2 { font-size:15px; font-weight:600; color:#8899aa; margin-bottom:16px; text-transform:uppercase; letter-spacing:.5px; }
+.report-card h2 .badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; margin-left:8px; text-transform:none; letter-spacing:0; }
+.report-card h2 .badge.required { background:rgba(244,67,54,.15); color:#ef5350; }
+.report-card h2 .badge.team { background:rgba(33,150,243,.15); color:#42a5f5; }
+
+/* === RATE BARS === */
+.rate-row { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+.rate-label { width:130px; font-size:13px; color:#8899aa; flex-shrink:0; }
+.rate-bar-bg { flex:1; height:28px; background:#0d1117; border-radius:6px; position:relative; overflow:hidden; }
+.rate-bar-fill { height:100%; border-radius:6px; transition:width .6s ease; display:flex; align-items:center; padding-left:10px; font-size:12px; font-weight:700; color:#fff; min-width:40px; }
+.rate-bar-fill.green { background:linear-gradient(90deg,#2e7d32,#43a047); }
+.rate-bar-fill.yellow { background:linear-gradient(90deg,#e65100,#f57c00); }
+.rate-bar-fill.red { background:linear-gradient(90deg,#b71c1c,#d32f2f); }
+.rate-bar-fill.blue { background:linear-gradient(90deg,#1565c0,#1976d2); }
+.rate-target { position:absolute; top:0; bottom:0; width:2px; background:#fff; z-index:2; }
+.rate-target::after { content:attr(data-label); position:absolute; top:-18px; left:-20px; font-size:10px; color:#fff; white-space:nowrap; }
+.rate-nums { width:90px; text-align:right; font-size:13px; color:#e0e6ed; flex-shrink:0; }
+.rate-nums .frac { color:#8899aa; }
+
+/* === STAT BOXES === */
+.stat-row { display:flex; gap:12px; margin-top:16px; flex-wrap:wrap; }
+.stat-box { flex:1; min-width:100px; background:#0d1117; border-radius:10px; padding:14px; text-align:center; }
+.stat-box .val { font-size:28px; font-weight:700; }
+.stat-box .val.green { color:#66bb6a; }
+.stat-box .val.red { color:#ef5350; }
+.stat-box .val.yellow { color:#ffa726; }
+.stat-box .val.blue { color:#42a5f5; }
+.stat-box .lbl { font-size:11px; color:#8899aa; margin-top:4px; text-transform:uppercase; }
+
+/* === TIMELINE HEADER === */
+.timeline-section { padding:0 32px 24px; }
+.timeline-section h2 { font-size:15px; font-weight:600; color:#8899aa; margin-bottom:12px; text-transform:uppercase; letter-spacing:.5px; }
+.window-cards { display:flex; gap:12px; flex-wrap:wrap; }
+.window-card { flex:1; min-width:140px; background:linear-gradient(135deg,#111827,#151f2e); border:1px solid #1e2d3d; border-radius:10px; padding:16px; text-align:center; }
+.window-card .count { font-size:32px; font-weight:700; }
+.window-card .label { font-size:12px; color:#8899aa; margin-top:4px; }
+.window-card.pre .count { color:#90caf9; }
+.window-card.recovery .count { color:#ce93d8; }
+.window-card.open .count { color:#ffa726; }
+.window-card.closed .count { color:#66bb6a; }
+
+/* === DATA TABLE === */
+.table-section { padding:0 32px 32px; }
+.table-section h2 { font-size:15px; font-weight:600; color:#8899aa; margin-bottom:12px; text-transform:uppercase; letter-spacing:.5px; }
+.table-wrap { overflow-x:auto; border:1px solid #1e2d3d; border-radius:12px; }
+table { width:100%; border-collapse:collapse; font-size:12px; }
+thead th { background:#111827; color:#8899aa; padding:10px 12px; text-align:left; font-weight:600; text-transform:uppercase; letter-spacing:.3px; position:sticky; top:0; white-space:nowrap; }
+tbody td { padding:8px 12px; border-top:1px solid #1a2332; white-space:nowrap; }
+tbody tr:hover { background:rgba(79,195,247,.04); }
+.dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:4px; vertical-align:middle; }
+.dot.g { background:#66bb6a; }
+.dot.r { background:#ef5350; }
+.dot.y { background:#ffa726; }
+.dot.b { background:#42a5f5; }
+.tag { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+.tag.yes { background:rgba(102,187,106,.12); color:#66bb6a; }
+.tag.no { background:rgba(239,83,80,.12); color:#ef5350; }
+.tag.pending { background:rgba(255,167,38,.12); color:#ffa726; }
+.tag.na { background:rgba(120,144,156,.12); color:#78909c; }
+.tag.cms { background:rgba(33,150,243,.12); color:#42a5f5; }
+
+/* === MODAL === */
+.modal-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.7); z-index:200; display:flex; align-items:center; justify-content:center; }
+.modal { background:#111827; border:1px solid #2a3a4a; border-radius:16px; padding:28px; width:560px; max-width:95vw; max-height:90vh; overflow-y:auto; }
+.modal h2 { color:#fff; font-size:18px; margin-bottom:20px; }
+.modal-section { margin-bottom:18px; }
+.modal-section h3 { color:#8899aa; font-size:12px; text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px; }
+.modal-field { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+.modal-field label { width:180px; font-size:13px; color:#e0e6ed; flex-shrink:0; }
+.modal-field select, .modal-field input { background:#0d1117; border:1px solid #2a3a4a; color:#e0e6ed; padding:8px 12px; border-radius:8px; font-size:13px; flex:1; }
+.modal-field select:focus, .modal-field input:focus { border-color:#4fc3f7; outline:none; }
+.modal-btns { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; }
+.modal-btns button { padding:10px 24px; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; }
+.modal-btns .save { background:linear-gradient(135deg,#1565c0,#1976d2); color:#fff; }
+.modal-btns .cancel { background:#1e2d3d; color:#8899aa; }
+.modal-btns .save:hover { background:linear-gradient(135deg,#1976d2,#2196f3); }
+.eligibility-result { padding:12px; border-radius:10px; margin-top:12px; font-size:13px; }
+.eligibility-result.eligible { background:rgba(102,187,106,.08); border:1px solid rgba(102,187,106,.25); color:#66bb6a; }
+.eligibility-result.excluded { background:rgba(239,83,80,.08); border:1px solid rgba(239,83,80,.25); color:#ef5350; }
+.eligibility-result.unknown { background:rgba(255,167,38,.08); border:1px solid rgba(255,167,38,.25); color:#ffa726; }
+.clickable-row { cursor:pointer; }
+.clickable-row:hover { background:rgba(79,195,247,.08) !important; }
+.loading { text-align:center; padding:60px; color:#8899aa; font-size:14px; }
+.loading .spinner { display:inline-block; width:32px; height:32px; border:3px solid #1e2d3d; border-top-color:#4fc3f7; border-radius:50%; animation:spin .8s linear infinite; margin-bottom:12px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* === RESPONSIVE === */
+@media (max-width:768px) {
+  .page-header { padding:16px; }
+  .reports-grid { padding:0 16px 16px; grid-template-columns:1fr; }
+  .timeline-section, .table-section { padding:0 16px 16px; }
+  .cms-alert { margin:0 16px 12px; }
+  .filters { flex-direction:column; width:100%; }
+  .filters select, .filters button { width:100%; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="brand">SRO Intelligence</div>
+  <div class="links">
+    <a href="/dashboard.html">Dashboard</a>
+    <a href="/preop.html">PreOp</a>
+    <a href="/surgical-prep.html">Surg Prep</a>
+    <a href="/analytics.html">Analytics</a>
+    <a href="/cms-compliance.html" class="active">CMS Compliance</a>
+    <a href="/rpm-report.html">RPM</a>
+    <a href="/settings.html">Settings</a>
+  </div>
+</nav>
+
+<!-- HEADER -->
+<div class="page-header">
+  <h1>📊 <span>CMS Compliance</span> — PRO-PM & TEAM Reporting</h1>
+  <div class="filters">
+    <select id="programFilter" onchange="loadData()">
+      <option value="pro_pm">PRO-PM (Medicare FFS 65+ — CMS Mandatory)</option>
+      <option value="team">TEAM (Medicare FFS All Ages — Bundled Payment)</option>
+      <option value="all_payers">All Payers (Internal QI)</option>
+    </select>
+    <select id="surgeonFilter" onchange="loadData()">
+      <option value="">All Surgeons</option>
+    </select>
+    <button onclick="toggleMethodology()" style="background:linear-gradient(135deg,#5e35b1,#7e57c2);">📘 Methodology</button>
+    <button class="export-btn" onclick="exportCSV()">📥 Export CSV</button>
+  </div>
+</div>
+
+<!-- CMS ELIGIBILITY INFO -->
+<div class="cms-alert info" id="cmsInfo"></div>
+
+<!-- DENOMINATOR SUMMARY -->
+<div style="display:flex; gap:12px; padding:0 32px 16px; flex-wrap:wrap;" id="denomPanel">
+  <div style="flex:1; min-width:150px; background:#111827; border:1px solid #1e2d3d; border-radius:10px; padding:14px; text-align:center;">
+    <div style="font-size:28px; font-weight:700; color:#42a5f5;" id="denomInView">0</div>
+    <div style="font-size:11px; color:#8899aa; margin-top:4px;">IN VIEW (DENOMINATOR)</div>
+  </div>
+  <div style="flex:1; min-width:150px; background:#111827; border:1px solid #1e2d3d; border-radius:10px; padding:14px; text-align:center;">
+    <div style="font-size:28px; font-weight:700; color:#ce93d8;" id="denomProPM">0</div>
+    <div style="font-size:11px; color:#8899aa; margin-top:4px;">PRO-PM ELIGIBLE</div>
+  </div>
+  <div style="flex:1; min-width:150px; background:#111827; border:1px solid #1e2d3d; border-radius:10px; padding:14px; text-align:center;">
+    <div style="font-size:28px; font-weight:700; color:#ffa726;" id="denomTEAM">0</div>
+    <div style="font-size:11px; color:#8899aa; margin-top:4px;">TEAM ELIGIBLE</div>
+  </div>
+  <div style="flex:1; min-width:150px; background:#111827; border:1px solid #1e2d3d; border-radius:10px; padding:14px; text-align:center;">
+    <div style="font-size:28px; font-weight:700; color:#78909c;" id="denomAll">0</div>
+    <div style="font-size:11px; color:#8899aa; margin-top:4px;">ALL PAYERS</div>
+  </div>
+  <div style="flex:1; min-width:150px; background:#111827; border:1px solid rgba(239,83,80,.2); border-radius:10px; padding:14px; text-align:center;">
+    <div style="font-size:28px; font-weight:700; color:#ef5350;" id="denomExcluded">0</div>
+    <div style="font-size:11px; color:#8899aa; margin-top:4px;">EXCLUDED</div>
+  </div>
+</div>
+
+<!-- METHODOLOGY PANEL (hidden by default) -->
+<div id="methodologyPanel" style="display:none; margin:0 32px 20px; background:linear-gradient(135deg,#111827,#151f2e); border:1px solid #2a3a4a; border-radius:14px; padding:24px; font-size:13px; line-height:1.7;">
+  <h2 style="font-size:16px; color:#fff; margin-bottom:16px;">📘 CMS Orthopedic Programs: TEAM vs PRO-PM (2026)</h2>
+  
+  <!-- 1. PROGRAM OVERVIEWS -->
+  <div style="margin-bottom:16px;">
+    <h3 style="color:#fff; font-size:14px; margin-bottom:10px;">1. Program Overviews</h3>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+      <div style="background:#0d1117; border-radius:10px; padding:16px; border-left:3px solid #42a5f5;">
+        <h4 style="color:#42a5f5; font-size:13px; margin-bottom:8px;">THA/TKA PRO-PM (Quality Measure)</h4>
+        <div style="color:#8899aa;">
+          A <strong style="color:#e0e6ed;">nationwide mandatory quality measure</strong> focused on Patient-Reported Outcome Measures (PROMs). Measures hospital-level functional improvement following elective THA/TKA. Failure to meet reporting thresholds results in a penalty to the Annual Payment Update (APU).<br><br>
+          <strong style="color:#e0e6ed;">Type:</strong> Pay-for-REPORTING (submit data or face penalty)<br>
+          <strong style="color:#e0e6ed;">Scope:</strong> Nationwide — all hospitals performing elective THA/TKA<br>
+          <strong style="color:#e0e6ed;">Public Reporting:</strong> RSIR on Care Compare (2027+)
+        </div>
+      </div>
+      <div style="background:#0d1117; border-radius:10px; padding:16px; border-left:3px solid #ffa726;">
+        <h4 style="color:#ffa726; font-size:13px; margin-bottom:8px;">CMS TEAM (Bundled Payment Model)</h4>
+        <div style="color:#8899aa;">
+          A <strong style="color:#e0e6ed;">mandatory, episode-based bundled payment model</strong> (30-day window) starting January 1, 2026. Holds hospitals financially accountable for the total cost and quality of care during and 30 days after certain surgical procedures.<br><br>
+          <strong style="color:#e0e6ed;">Type:</strong> Pay-for-PERFORMANCE (quality adjusts financial reconciliation)<br>
+          <strong style="color:#e0e6ed;">Scope:</strong> Regional — only 188 selected CBSAs<br>
+          <strong style="color:#e0e6ed;">Duration:</strong> Jan 1, 2026 – Dec 31, 2030 (5 performance years)
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 2. DENOMINATOR & PATIENT CRITERIA -->
+  <div style="margin-top:16px; padding-top:16px; border-top:1px solid #1e2d3d;">
+    <h3 style="color:#fff; font-size:14px; margin-bottom:10px;">2. Denominator &amp; Patient Criteria</h3>
+    <div style="color:#8899aa; margin-bottom:10px;">Both programs strictly focus on <strong style="color:#fff;">Medicare Fee-for-Service (Original Medicare)</strong>.</div>
+    <table style="width:100%; border-collapse:collapse; font-size:12px;">
+      <thead>
+        <tr>
+          <th style="background:#0d1117; color:#8899aa; padding:8px 12px; text-align:left; border:1px solid #1e2d3d;">Feature</th>
+          <th style="background:#0d1117; color:#ffa726; padding:8px 12px; text-align:left; border:1px solid #1e2d3d;">TEAM Program</th>
+          <th style="background:#0d1117; color:#42a5f5; padding:8px 12px; text-align:left; border:1px solid #1e2d3d;">THA/TKA PRO-PM</th>
+        </tr>
+      </thead>
+      <tbody style="color:#e0e6ed;">
+        <tr><td style="padding:6px 12px; border:1px solid #1e2d3d; color:#8899aa;">Payer</td><td style="padding:6px 12px; border:1px solid #1e2d3d;">Medicare FFS only</td><td style="padding:6px 12px; border:1px solid #1e2d3d;">Medicare FFS only</td></tr>
+        <tr><td style="padding:6px 12px; border:1px solid #1e2d3d; color:#8899aa;">Age</td><td style="padding:6px 12px; border:1px solid #1e2d3d; color:#ffa726; font-weight:600;">All ages (includes disability)</td><td style="padding:6px 12px; border:1px solid #1e2d3d; color:#42a5f5; font-weight:600;">65 years and older</td></tr>
+        <tr><td style="padding:6px 12px; border:1px solid #1e2d3d; color:#8899aa;">Medicare Advantage</td><td style="padding:6px 12px; border:1px solid #1e2d3d; color:#ef5350;">Excluded</td><td style="padding:6px 12px; border:1px solid #1e2d3d; color:#ef5350;">Excluded</td></tr>
+        <tr><td style="padding:6px 12px; border:1px solid #1e2d3d; color:#8899aa;">Clinical Setting</td><td style="padding:6px 12px; border:1px solid #1e2d3d;">Inpatient and HOPD</td><td style="padding:6px 12px; border:1px solid #1e2d3d;">Inpatient, HOPD, and ASC</td></tr>
+        <tr><td style="padding:6px 12px; border:1px solid #1e2d3d; color:#8899aa;">Geographic Scope</td><td style="padding:6px 12px; border:1px solid #1e2d3d;">188 selected CBSAs only</td><td style="padding:6px 12px; border:1px solid #1e2d3d;">Nationwide — all hospitals</td></tr>
+        <tr><td style="padding:6px 12px; border:1px solid #1e2d3d; color:#8899aa;">Penalty Mechanism</td><td style="padding:6px 12px; border:1px solid #1e2d3d;">Bundled payment reconciliation (gain/loss)</td><td style="padding:6px 12px; border:1px solid #1e2d3d;">25% APU reduction on ALL Medicare</td></tr>
+      </tbody>
+    </table>
+  </div>
+  
+  <!-- 3. REGIONAL MANDATES -->
+  <div style="margin-top:16px; padding-top:16px; border-top:1px solid #1e2d3d;">
+    <h3 style="color:#ce93d8; font-size:14px; margin-bottom:10px;">3. Regional Mandates (Arkansas Focus)</h3>
+    <div style="color:#8899aa; margin-bottom:10px;">
+      The PRO-PM is a <strong style="color:#e0e6ed;">nationwide requirement</strong> for all hospitals. The TEAM bundled payment model is <strong style="color:#e0e6ed;">only mandatory in 188 selected CBSAs</strong>.
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+      <div style="background:rgba(239,83,80,.06); border:1px solid rgba(239,83,80,.2); border-radius:8px; padding:12px;">
+        <strong style="color:#ef5350;">Mandatory TEAM Areas (AR):</strong><br>
+        <span style="color:#e0e6ed;">Batesville (72501), Searcy, Harrison, Hot Springs, Camden, West Memphis</span>
+      </div>
+      <div style="background:rgba(102,187,106,.06); border:1px solid rgba(102,187,106,.2); border-radius:8px; padding:12px;">
+        <strong style="color:#66bb6a;">Exempt TEAM Areas (AR):</strong><br>
+        <span style="color:#e0e6ed;">Little Rock, Conway, Fayetteville/Bentonville, Jonesboro</span><br>
+        <span style="color:#78909c;">(unless facility opted in voluntarily)</span>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 4. INCLUSION & EXCLUSION CRITERIA -->
+  <div style="margin-top:16px; padding-top:16px; border-top:1px solid #1e2d3d;">
+    <h3 style="color:#fff; font-size:14px; margin-bottom:10px;">4. Inclusion &amp; Exclusion Criteria</h3>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+      <div style="background:rgba(102,187,106,.06); border:1px solid rgba(102,187,106,.2); border-radius:8px; padding:12px;">
+        <strong style="color:#66bb6a;">Inclusions (The Denominator):</strong><br>
+        <span style="color:#e0e6ed;">
+          <strong>LEJR:</strong> Primary Total Hip Arthroplasty (THA) and Total Knee Arthroplasty (TKA)<br>
+          <strong>Fractures (TEAM Only):</strong> Surgical Hip/Femur Fracture Treatment (SHFFT) is its own separate episode category — NOT included in elective LEJR
+        </span>
+      </div>
+      <div style="background:rgba(239,83,80,.06); border:1px solid rgba(239,83,80,.2); border-radius:8px; padding:12px;">
+        <strong style="color:#ef5350;">Exclusions:</strong><br>
+        <span style="color:#e0e6ed;">
+          <strong>Trauma:</strong> Excluded from "Elective" LEJR category<br>
+          <strong>Malignancy:</strong> Primary diagnosis of bone or joint cancer<br>
+          <strong>Mechanical Complications:</strong> Revisions and removals of previous hardware<br>
+          <strong>Partial Joints:</strong> Unicompartmental knee or hip procedures<br>
+          <strong>Specific Factors:</strong> Death during stay or transfer to another acute care facility
+        </span>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 5. CRITICAL REQUIREMENTS -->
+  <div style="margin-top:16px; padding-top:16px; border-top:1px solid #1e2d3d;">
+    <h3 style="color:#fff; font-size:14px; margin-bottom:10px;">5. Critical Requirements for Success</h3>
+    
+    <div style="background:#0d1117; border-radius:10px; padding:14px; margin-bottom:10px; border-left:3px solid #66bb6a;">
+      <strong style="color:#66bb6a;">PROM Collection (HOOS Jr. / KOOS Jr.):</strong><br>
+      <span style="color:#e0e6ed;">
+        Pre-op Window: 0–90 days before surgery<br>
+        Post-op Window: 300–425 days after surgery<br>
+        Threshold: 50% matched completion rate (Inpatient/HOPD) | 45% (ASC)<br>
+        SCB Thresholds: TKA ≥ +20 KOOS Jr | THA ≥ +22 HOOS Jr
+      </span>
+    </div>
+    
+    <div style="background:#0d1117; border-radius:10px; padding:14px; margin-bottom:10px; border-left:3px solid #42a5f5;">
+      <strong style="color:#42a5f5;">Risk Variables (captured during pre-op clinic visit):</strong><br>
+      <span style="color:#e0e6ed;">
+        Low back pain · Health literacy (SILS-2) · Other joint pain (contralateral/total painful joint count) · Chronic narcotics use &gt;90 days
+      </span><br>
+      <span style="color:#78909c;">Matching Variables: Medicare MBI, DOB, Procedure date, Procedure type</span>
+    </div>
+    
+    <div style="background:#0d1117; border-radius:10px; padding:14px; margin-bottom:10px; border-left:3px solid #ffa726;">
+      <strong style="color:#ffa726;">Financial Risk (TEAM):</strong><br>
+      <span style="color:#e0e6ed;">
+        In Batesville, the hospital enters <strong>two-sided risk in Year 2 (2027)</strong>, meaning they may owe CMS money if the 30-day episode costs exceed the target price.
+      </span>
+    </div>
+    
+    <div style="background:#0d1117; border-radius:10px; padding:14px; border-left:3px solid #ce93d8;">
+      <strong style="color:#ce93d8;">Data Accuracy:</strong><br>
+      <span style="color:#e0e6ed;">
+        Ensure EMR/Suki.ai templates capture mandatory "Risk Variables" (back pain, health literacy, joint anatomy) during the pre-op clinic visit. All 4 risk variables + 4 matching variables must be complete for each eligible patient.
+      </span>
+    </div>
+  </div>
+  
+  <!-- TEAM Quality Measures -->
+  <div style="margin-top:16px; padding-top:16px; border-top:1px solid #1e2d3d;">
+    <h3 style="color:#ffa726; font-size:14px; margin-bottom:10px;">TEAM Quality Measures (Composite Quality Score)</h3>
+    <div style="color:#8899aa;">
+      <strong style="color:#e0e6ed;">PY1-2:</strong> Hybrid HWR (Readmission) + PSI 90 (Patient Safety) + THA/TKA PRO-PM<br>
+      <strong style="color:#e0e6ed;">PY3+ (2028):</strong> Adds Information Transfer PRO-PM<br>
+      <strong style="color:#e0e6ed;">Track 1:</strong> Upside only, no downside risk (PY1 — all hospitals start here)<br>
+      <strong style="color:#e0e6ed;">Track 2:</strong> Safety net / rural hospitals (PY2-5, lower risk/reward)<br>
+      <strong style="color:#e0e6ed;">Track 3:</strong> Full risk and reward (all PYs)<br>
+      <strong style="color:#e0e6ed;">Low Volume:</strong> &lt; 31 episodes in baseline = no downside risk but eligible for upside gains<br>
+      <strong style="color:#e0e6ed;">Neutral Score:</strong> Hospitals with insufficient data receive 50% quality score
+    </div>
+  </div>
+  
+  <!-- ACTION ITEMS FOR 72501 -->
+  <div style="margin-top:16px; padding-top:16px; border-top:1px solid #1e2d3d;">
+    <h3 style="color:#fff; font-size:14px; margin-bottom:10px;">⚡ Action Items for 72501 (Batesville)</h3>
+    <div style="background:rgba(255,167,38,.06); border:1px solid rgba(255,167,38,.2); border-radius:10px; padding:14px;">
+      <div style="color:#e0e6ed; margin-bottom:8px;">
+        <strong style="color:#ffa726;">1. Flag All Original Medicare Patients:</strong>
+        Distinguish them from Medicare Advantage in the schedule. Only Medicare FFS patients count toward the denominator.
+      </div>
+      <div style="color:#e0e6ed; margin-bottom:8px;">
+        <strong style="color:#ffa726;">2. Standardize PROMs:</strong>
+        Automate HOOS/KOOS Jr. collection in the clinic for all elective joints. Pre-op within 90 days of surgery, post-op at 300-425 days.
+      </div>
+      <div style="color:#e0e6ed;">
+        <strong style="color:#ffa726;">3. Episode Coordination:</strong>
+        Ensure the 30-day post-discharge window is managed closely — SNF usage, ER visits, and readmissions all count against the TEAM target price. Two-sided risk starts PY2 (2027).
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div class="loading" id="loadingPanel">
+  <div class="spinner"></div>
+  <div>Loading compliance data...</div>
+</div>
+
+<!-- CONTENT (hidden until loaded) -->
+<div id="contentPanel" style="display:none;">
+
+<!-- REPORT CARDS -->
+<div class="reports-grid">
+
+  <!-- REPORT 1: CAPTURE RATE -->
+  <div class="report-card">
+    <h2>📈 Report 1: Capture Rate <span class="badge required">IQR Required</span></h2>
+    <div class="rate-row">
+      <div class="rate-label">Pre-Op PROM</div>
+      <div class="rate-bar-bg">
+        <div class="rate-bar-fill" id="preopBar"></div>
+        <div class="rate-target" id="preopTarget" data-label="50% target"></div>
+      </div>
+      <div class="rate-nums" id="preopNums"></div>
+    </div>
+    <div class="rate-row">
+      <div class="rate-label">Post-Op PROM</div>
+      <div class="rate-bar-bg">
+        <div class="rate-bar-fill" id="postopBar"></div>
+        <div class="rate-target" id="postopTarget" data-label="50% target"></div>
+      </div>
+      <div class="rate-nums" id="postopNums"></div>
+    </div>
+    <div class="rate-row">
+      <div class="rate-label">Matched (Both)</div>
+      <div class="rate-bar-bg">
+        <div class="rate-bar-fill" id="matchedBar"></div>
+        <div class="rate-target" id="matchedTarget" data-label="50% target"></div>
+      </div>
+      <div class="rate-nums" id="matchedNums"></div>
+    </div>
+    <div style="margin-top:10px; font-size:11px; color:#78909c;">
+      ⚠️ Failing to meet 50% matched rate → 25% APU reduction on <em>all</em> Medicare reimbursement
+    </div>
+  </div>
+
+  <!-- REPORT 2: DATA COMPLETENESS -->
+  <div class="report-card">
+    <h2>📋 Report 2: Data Completeness <span class="badge required">IQR Required</span></h2>
+    <div class="rate-row">
+      <div class="rate-label">Risk Variables</div>
+      <div class="rate-bar-bg">
+        <div class="rate-bar-fill" id="riskBar"></div>
+      </div>
+      <div class="rate-nums" id="riskNums"></div>
+    </div>
+    <div class="rate-row">
+      <div class="rate-label">Matching Vars</div>
+      <div class="rate-bar-bg">
+        <div class="rate-bar-fill" id="matchVarBar"></div>
+      </div>
+      <div class="rate-nums" id="matchVarNums"></div>
+    </div>
+    <div style="margin-top:12px;">
+      <div style="font-size:12px; color:#8899aa; margin-bottom:8px;">Required Risk Variables (per patient):</div>
+      <div id="riskVarChecklist" style="display:grid; grid-template-columns:1fr 1fr; gap:4px; font-size:12px;"></div>
+    </div>
+    <div style="margin-top:12px;">
+      <div style="font-size:12px; color:#8899aa; margin-bottom:8px;">Required Matching Variables:</div>
+      <div id="matchVarChecklist" style="display:grid; grid-template-columns:1fr 1fr; gap:4px; font-size:12px;"></div>
+    </div>
+  </div>
+
+  <!-- REPORT 3: FUNCTIONAL IMPROVEMENT / RSIR -->
+  <div class="report-card">
+    <h2>🏆 Report 3: Functional Improvement (RSIR) <span class="badge team">TEAM Quality</span></h2>
+    <div class="stat-row">
+      <div class="stat-box">
+        <div class="val" id="scbRate">—</div>
+        <div class="lbl">SCB Rate</div>
+      </div>
+      <div class="stat-box">
+        <div class="val green" id="scbYes">—</div>
+        <div class="lbl">Met SCB</div>
+      </div>
+      <div class="stat-box">
+        <div class="val red" id="scbNo">—</div>
+        <div class="lbl">Below SCB</div>
+      </div>
+    </div>
+    <div style="margin-top:14px; font-size:12px; color:#8899aa;">
+      <strong>SCB Thresholds:</strong> TKA ≥ +20 KOOS Jr | THA ≥ +22 HOOS Jr<br>
+      CMS publicly reports hospital-level Risk-Standardized Improvement Rate (RSIR)
+    </div>
+  </div>
+
+  <!-- TEAM COMPOSITE -->
+  <div class="report-card">
+    <h2>🏥 TEAM Quality Composite <span class="badge team">PY1 2026</span></h2>
+    <div style="font-size:12px; color:#8899aa; margin-bottom:12px;">
+      3 measures weighted by episode volume. Composite Quality Score (CQS) adjusts financial reconciliation.
+    </div>
+    <div class="stat-row">
+      <div class="stat-box">
+        <div class="val blue" id="teamReadmit">—</div>
+        <div class="lbl">Readmit Rate</div>
+      </div>
+      <div class="stat-box">
+        <div class="val yellow" id="teamER">—</div>
+        <div class="lbl">ER Visits</div>
+      </div>
+      <div class="stat-box">
+        <div class="val" id="teamSCB">—</div>
+        <div class="lbl">PRO-PM (SCB%)</div>
+      </div>
+    </div>
+    <div style="margin-top:14px; font-size:12px;">
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <span class="tag cms">Hybrid HWR (Readmission)</span>
+        <span class="tag cms">PSI 90 (Patient Safety)</span>
+        <span class="tag cms">THA/TKA PRO-PM</span>
+      </div>
+      <div style="margin-top:8px; color:#78909c;">
+        PY1 = upside only (Track 1). PY3+ adds Information Transfer PRO-PM.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- POST-OP WINDOW STATUS -->
+<div class="timeline-section">
+  <h2>📅 Post-Op Collection Window Status</h2>
+  <div class="window-cards">
+    <div class="window-card pre">
+      <div class="count" id="wPre">0</div>
+      <div class="label">Pre-Surgery</div>
+    </div>
+    <div class="window-card recovery">
+      <div class="count" id="wRecovery">0</div>
+      <div class="label">Recovery (0-299d)</div>
+    </div>
+    <div class="window-card open">
+      <div class="count" id="wOpen">0</div>
+      <div class="label">Window Open (300-425d)</div>
+    </div>
+    <div class="window-card closed">
+      <div class="count" id="wClosed">0</div>
+      <div class="label">Window Closed (>425d)</div>
+    </div>
+  </div>
+</div>
+
+<!-- PATIENT TABLE -->
+<div class="table-section">
+  <h2>📋 Patient-Level Compliance Detail <span id="tableCount" style="color:#4fc3f7;"></span></h2>
+  <div style="font-size:12px; color:#78909c; margin-bottom:10px;">
+    💡 Click any patient row to set CMS exclusion flags (primary/revision, elective/trauma, partial, malignancy, discharge status, insurance). 
+    Use <strong>All Payers</strong> view to classify patients, then switch to <strong>PRO-PM</strong> or <strong>TEAM</strong> to see your compliance numbers.
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Patient</th>
+          <th>Procedure</th>
+          <th>Surgery Date</th>
+          <th>Surgeon</th>
+          <th>Insurance</th>
+          <th>CMS Eligible</th>
+          <th>Age</th>
+          <th>Pre-Op PROM</th>
+          <th>Post-Op PROM</th>
+          <th>Matched</th>
+          <th>Risk Vars</th>
+          <th>Match Vars</th>
+          <th>SCB</th>
+          <th>Δ Score</th>
+          <th>Window</th>
+          <th>ER</th>
+          <th>Readmit</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+</div><!-- end contentPanel -->
+
+<script>
+const CLINIC_ID = '11111111-1111-1111-1111-111111111111';
+let complianceData = null;
+
+async function loadData() {
+  const program = document.getElementById('programFilter').value;
+  const surgeon = document.getElementById('surgeonFilter').value;
+  
+  let url = `/api/cms-compliance?clinic_id=${CLINIC_ID}&program_filter=${program}`;
+  if (surgeon) url += `&surgeon_id=${surgeon}`;
+  
+  try {
+    const res = await fetch(url);
+    complianceData = await res.json();
+    
+    // Populate surgeon dropdown (once)
+    const surgSelect = document.getElementById('surgeonFilter');
+    if (surgSelect.options.length <= 1 && complianceData.surgeons) {
+      complianceData.surgeons.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = `Dr. ${s.first_name} ${s.last_name}`;
+        surgSelect.appendChild(opt);
+      });
+    }
+    
+    renderAll();
+  } catch(e) {
+    console.error('Load error:', e);
+    document.getElementById('loadingPanel').innerHTML = '<div style="color:#ef5350;">Error loading compliance data. Is the server running?</div>';
+  }
+}
+
+function renderAll() {
+  const s = complianceData.summary;
+  const records = complianceData.records;
+  
+  document.getElementById('loadingPanel').style.display = 'none';
+  document.getElementById('contentPanel').style.display = 'block';
+  
+  // Update CMS info based on program filter
+  const program = document.getElementById('programFilter').value;
+  const infoEl = document.getElementById('cmsInfo');
+  if (program === 'pro_pm') {
+    infoEl.className = 'cms-alert info';
+    infoEl.innerHTML = `<strong>Viewing: PRO-PM Denominator</strong> — Medicare FFS, age 65+, elective primary THA/TKA. This is the population CMS uses for IQR mandatory reporting. Failing 50% matched rate → 25% APU reduction on <em>all</em> Medicare reimbursement. <strong>${s.total_in_view}</strong> eligible patients.`;
+  } else if (program === 'team') {
+    infoEl.className = 'cms-alert info';
+    infoEl.innerHTML = `<strong>Viewing: TEAM Denominator</strong> — Medicare FFS, <em>all ages</em> (includes disability), elective primary THA/TKA. TEAM uses PRO-PM + Hybrid HWR + PSI 90 for Composite Quality Score. Episode = 30 days post-discharge. <strong>${s.total_in_view}</strong> eligible patients.`;
+  } else {
+    infoEl.className = 'cms-alert warn';
+    infoEl.innerHTML = `<strong>Viewing: All Payers (Internal QI)</strong> — Includes all THA/TKA patients regardless of insurance or age. For CMS mandatory reporting, switch to "PRO-PM" or "TEAM" to see your actual compliance denominator. Best practice: collect PROMs on ALL patients. <strong>${s.total_in_view}</strong> patients.`;
+  }
+  
+  // Denominator panel
+  document.getElementById('denomInView').textContent = s.total_in_view;
+  document.getElementById('denomProPM').textContent = s.total_pro_pm_eligible;
+  document.getElementById('denomTEAM').textContent = s.total_team_eligible;
+  document.getElementById('denomAll').textContent = s.total_all_payers;
+  document.getElementById('denomExcluded').textContent = s.total_clinically_excluded || 0;
+  
+  // === REPORT 1: CAPTURE RATE ===
+  renderRateBar('preopBar', 'preopNums', 'preopTarget', s.preop_captured, s.total_in_view, 50);
+  renderRateBar('postopBar', 'postopNums', 'postopTarget', s.postop_captured, s.total_in_view, 50);
+  renderRateBar('matchedBar', 'matchedNums', 'matchedTarget', s.matched, s.total_in_view, 50);
+  
+  // === REPORT 2: DATA COMPLETENESS ===
+  renderRateBar('riskBar', 'riskNums', null, s.risk_vars_complete, s.total_in_view, null);
+  renderRateBar('matchVarBar', 'matchVarNums', null, s.matching_vars_complete, s.total_in_view, null);
+  
+  // Risk var checklist aggregate
+  const rvCounts = { low_back_pain:0, health_literacy:0, other_joint_pain:0, chronic_narcotics:0 };
+  const mvCounts = { medicare_id:0, dob:0, surgery_date:0, surgery_type:0 };
+  records.forEach(r => {
+    if (r.risk_vars.low_back_pain) rvCounts.low_back_pain++;
+    if (r.risk_vars.health_literacy) rvCounts.health_literacy++;
+    if (r.risk_vars.other_joint_pain) rvCounts.other_joint_pain++;
+    if (r.risk_vars.chronic_narcotics) rvCounts.chronic_narcotics++;
+    if (r.matching_vars.medicare_id) mvCounts.medicare_id++;
+    if (r.matching_vars.dob) mvCounts.dob++;
+    if (r.matching_vars.surgery_date) mvCounts.surgery_date++;
+    if (r.matching_vars.surgery_type) mvCounts.surgery_type++;
+  });
+  const tot = s.total_in_view || 1;
+  document.getElementById('riskVarChecklist').innerHTML = `
+    ${rvItem('Low Back Pain', rvCounts.low_back_pain, tot)}
+    ${rvItem('Health Literacy (SILS)', rvCounts.health_literacy, tot)}
+    ${rvItem('Other Joint Pain', rvCounts.other_joint_pain, tot)}
+    ${rvItem('Chronic Narcotics >90d', rvCounts.chronic_narcotics, tot)}
+  `;
+  document.getElementById('matchVarChecklist').innerHTML = `
+    ${rvItem('Medicare MBI', mvCounts.medicare_id, tot)}
+    ${rvItem('Date of Birth', mvCounts.dob, tot)}
+    ${rvItem('Surgery Date', mvCounts.surgery_date, tot)}
+    ${rvItem('Surgery Type', mvCounts.surgery_type, tot)}
+  `;
+  
+  // === REPORT 3: FUNCTIONAL IMPROVEMENT ===
+  const scbPct = s.scb_eligible > 0 ? parseFloat(s.scb_rate) : 0;
+  document.getElementById('scbRate').textContent = s.scb_eligible > 0 ? s.scb_rate + '%' : '—';
+  document.getElementById('scbRate').className = 'val ' + (scbPct >= 60 ? 'green' : scbPct >= 40 ? 'yellow' : s.scb_eligible > 0 ? 'red' : '');
+  document.getElementById('scbYes').textContent = s.scb_achieved;
+  document.getElementById('scbNo').textContent = s.scb_not_achieved;
+  
+  // === TEAM COMPOSITE ===
+  document.getElementById('teamReadmit').textContent = s.readmission_rate + '%';
+  document.getElementById('teamER').textContent = s.er_visits;
+  document.getElementById('teamSCB').textContent = s.scb_eligible > 0 ? s.scb_rate + '%' : '—';
+  document.getElementById('teamSCB').className = 'val ' + (scbPct >= 60 ? 'green' : scbPct >= 40 ? 'yellow' : s.scb_eligible > 0 ? 'red' : '');
+  
+  // === WINDOW STATUS ===
+  document.getElementById('wPre').textContent = s.pre_surgery_count;
+  document.getElementById('wRecovery').textContent = s.recovery_count;
+  document.getElementById('wOpen').textContent = s.window_open_count;
+  document.getElementById('wClosed').textContent = s.window_closed_count;
+  
+  // === TABLE ===
+  document.getElementById('tableCount').textContent = `(${records.length} patients)`;
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = records.map((r,i) => `
+    <tr class="clickable-row" onclick="openEpisodeModal(complianceData.records[${i}])">
+      <td><strong>${r.last_name}, ${r.first_name}</strong></td>
+      <td>${r.surgery_type || '—'}</td>
+      <td>${r.surgery_date || '—'}</td>
+      <td>${r.surgeon_name || '—'}</td>
+      <td>${r.insurance_type || '<span style="color:#78909c">Not set</span>'}</td>
+      <td>${eligTag(r)}</td>
+      <td>${r.age || '—'}</td>
+      <td>${r.has_preop_prom ? `<span class="dot g"></span>${r.preop_prom_score?.toFixed(1) || '✓'}` : '<span class="dot r"></span>Missing'}</td>
+      <td>${r.has_postop_prom ? `<span class="dot g"></span>${r.postop_prom_score?.toFixed(1) || '✓'}` : windowTag(r.postop_window_status)}</td>
+      <td>${r.is_matched ? '<span class="tag yes">✓ Matched</span>' : '<span class="tag no">✗</span>'}</td>
+      <td>${riskTag(r.risk_vars)}</td>
+      <td>${matchTag(r.matching_vars)}</td>
+      <td>${scbTag(r)}</td>
+      <td>${r.delta !== null ? (r.delta >= 0 ? '+' : '') + r.delta.toFixed(1) : '—'}</td>
+      <td>${windowStatusTag(r.postop_window_status, r.days_since_surgery)}</td>
+      <td>${r.er_visits > 0 ? `<span style="color:#ef5350">${r.er_visits}</span>` : '0'}</td>
+      <td>${r.readmissions > 0 ? `<span style="color:#ef5350">${r.readmissions}</span>` : '0'}</td>
+    </tr>
+  `).join('');
+}
+
+function renderRateBar(barId, numsId, targetId, num, denom, targetPct) {
+  const pct = denom > 0 ? (num/denom)*100 : 0;
+  const bar = document.getElementById(barId);
+  const colorClass = targetPct ? (pct >= targetPct ? 'green' : pct >= targetPct*0.7 ? 'yellow' : 'red') : (pct >= 80 ? 'green' : pct >= 50 ? 'yellow' : 'red');
+  bar.className = 'rate-bar-fill ' + colorClass;
+  bar.style.width = Math.max(pct, 3) + '%';
+  bar.textContent = pct.toFixed(1) + '%';
+  
+  document.getElementById(numsId).innerHTML = `${num} <span class="frac">/ ${denom}</span>`;
+  
+  if (targetId && targetPct) {
+    const target = document.getElementById(targetId);
+    target.style.left = targetPct + '%';
+  }
+}
+
+function rvItem(label, count, total) {
+  const pct = total > 0 ? ((count/total)*100).toFixed(0) : 0;
+  const color = pct >= 80 ? '#66bb6a' : pct >= 50 ? '#ffa726' : '#ef5350';
+  return `<div><span class="dot" style="background:${color}"></span>${label}: ${count}/${total}</div>`;
+}
+
+function windowTag(status) {
+  if (status === 'pre_surgery') return '<span class="tag pending">Pre-Surgery</span>';
+  if (status === 'recovery') return '<span class="tag pending">In Recovery</span>';
+  if (status === 'window_open') return '<span class="tag yes" style="background:rgba(255,167,38,.12);color:#ffa726">Window Open!</span>';
+  if (status === 'window_closed') return '<span class="tag no">Window Closed</span>';
+  return '<span class="tag na">—</span>';
+}
+
+function windowStatusTag(status, days) {
+  const d = days !== null ? `${days}d` : '';
+  if (status === 'pre_surgery') return `<span class="tag" style="background:rgba(144,202,249,.12);color:#90caf9">Pre-Op</span>`;
+  if (status === 'recovery') return `<span class="tag" style="background:rgba(206,147,216,.12);color:#ce93d8">${d} post</span>`;
+  if (status === 'window_open') return `<span class="tag" style="background:rgba(255,167,38,.15);color:#ffa726">${d} — OPEN</span>`;
+  if (status === 'window_closed') return `<span class="tag" style="background:rgba(102,187,106,.12);color:#66bb6a">${d} closed</span>`;
+  return '<span class="tag na">—</span>';
+}
+
+function riskTag(rv) {
+  if (rv.complete) return '<span class="tag yes">4/4 ✓</span>';
+  return `<span class="tag no">${rv.count}/4</span>`;
+}
+
+function matchTag(mv) {
+  if (mv.complete) return '<span class="tag yes">4/4 ✓</span>';
+  return `<span class="tag no">${mv.count}/4</span>`;
+}
+
+function eligTag(r) {
+  const tags = [];
+  if (r.is_pro_pm_eligible) tags.push('<span class="tag cms" style="margin-right:2px">PRO-PM</span>');
+  if (r.is_team_eligible && !r.is_pro_pm_eligible) tags.push('<span class="tag" style="background:rgba(255,167,38,.12);color:#ffa726;">TEAM only</span>');
+  if (r.is_team_eligible && r.is_pro_pm_eligible) tags.push('<span class="tag" style="background:rgba(255,167,38,.12);color:#ffa726;margin-left:2px">TEAM</span>');
+  if (!r.is_pro_pm_eligible && !r.is_team_eligible) {
+    if (r.exclusions && r.exclusions.length) return `<span class="tag no" title="${r.exclusions.join(', ')}">${r.exclusions[0]}</span>`;
+    return '<span class="tag na">—</span>';
+  }
+  return tags.join('');
+}
+
+function scbTag(r) {
+  if (r.scb_achieved === true) return `<span class="tag yes">✓ SCB (≥${r.scb_threshold})</span>`;
+  if (r.scb_achieved === false) return `<span class="tag no">✗ Below</span>`;
+  return '<span class="tag na">Pending</span>';
+}
+
+function toggleMethodology() {
+  const panel = document.getElementById('methodologyPanel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+function exportCSV() {
+  if (!complianceData || !complianceData.records.length) {
+    alert('No data to export');
+    return;
+  }
+  
+  const headers = [
+    'Patient Last','Patient First','DOB','Age','Medicare MBI','Insurance Type',
+    'PRO-PM Eligible','TEAM Eligible','Clinical Exclusion','Exclusion Details',
+    'Procedure Category','Case Type','Partial Joint','Malignancy','Device Removal','Discharge Status',
+    'Procedure','Surgery Date','Surgeon',
+    'PreOp PROM','PreOp Score','PreOp Date',
+    'PostOp PROM','PostOp Score','PostOp Date',
+    'Matched','Delta','SCB Achieved','SCB Threshold',
+    'Risk Vars Complete','Low Back Pain','Health Literacy','Other Joint Pain','Chronic Narcotics',
+    'Matching Vars Complete','Has MBI','Has DOB','Has Surgery Date','Has Surgery Type',
+    'PostOp Window','Days Since Surgery',
+    'ER Visits','Readmissions','Risk Tier','BMI','ASA'
+  ];
+  
+  const rows = complianceData.records.map(r => [
+    r.last_name, r.first_name, r.dob, r.age, r.medicare_id || '', r.insurance_type || '',
+    r.is_pro_pm_eligible ? 'Yes' : 'No', r.is_team_eligible ? 'Yes' : 'No',
+    r.has_clinical_exclusion ? 'Yes' : 'No',
+    (r.exclusions || []).join('; '),
+    r.procedure_category || 'primary', r.case_type || 'elective',
+    r.is_partial ? 'Yes' : 'No', r.has_malignancy ? 'Yes' : 'No',
+    r.simultaneous_device_removal ? 'Yes' : 'No', r.discharge_status || '',
+    r.surgery_type, r.surgery_date, r.surgeon_name || '',
+    r.has_preop_prom ? 'Yes' : 'No', r.preop_prom_score || '', r.preop_prom_date || '',
+    r.has_postop_prom ? 'Yes' : 'No', r.postop_prom_score || '', r.postop_prom_date || '',
+    r.is_matched ? 'Yes' : 'No', r.delta || '', r.scb_achieved === null ? 'Pending' : r.scb_achieved ? 'Yes' : 'No', r.scb_threshold,
+    r.risk_vars.complete ? 'Yes' : 'No', r.risk_vars.low_back_pain ? 'Yes' : 'No', r.risk_vars.health_literacy ? 'Yes' : 'No', r.risk_vars.other_joint_pain ? 'Yes' : 'No', r.risk_vars.chronic_narcotics ? 'Yes' : 'No',
+    r.matching_vars.complete ? 'Yes' : 'No', r.matching_vars.medicare_id ? 'Yes' : 'No', r.matching_vars.dob ? 'Yes' : 'No', r.matching_vars.surgery_date ? 'Yes' : 'No', r.matching_vars.surgery_type ? 'Yes' : 'No',
+    r.postop_window_status, r.days_since_surgery || '',
+    r.er_visits, r.readmissions, r.risk_tier || '', r.bmi || '', r.asa_class || ''
+  ]);
+  
+  const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const program = document.getElementById('programFilter').value;
+  const date = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `SRO_CMS_Compliance_${program}_${date}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Check role
+const role = sessionStorage.getItem('userRole');
+if (role === 'nurse') {
+  // Nurses can view but not export
+}
+
+// Load on page load
+loadData();
+</script>
+<!-- CMS EPISODE EDIT MODAL -->
+<div id="episodeModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h2>📋 CMS Episode Classification</h2>
+    <div style="color:#8899aa; font-size:13px; margin-bottom:16px;">
+      <strong id="modalPatientName" style="color:#fff;"></strong> — <span id="modalProcedure"></span> on <span id="modalSurgDate"></span>
+    </div>
+    
+    <!-- Procedure Classification -->
+    <div class="modal-section">
+      <h3>Procedure Classification</h3>
+      <div class="modal-field">
+        <label>Procedure Category</label>
+        <select id="modalProcedureCat">
+          <option value="primary">Primary (included in CMS denominator)</option>
+          <option value="revision">Revision (EXCLUDED from CMS)</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>Case Type</label>
+        <select id="modalCaseType">
+          <option value="elective">Elective (included in CMS denominator)</option>
+          <option value="trauma">Trauma / Fracture (EXCLUDED from CMS)</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>Joint Replacement Type</label>
+        <select id="modalIsPartial">
+          <option value="0">Total Replacement (included in CMS)</option>
+          <option value="1">Partial / Unicompartmental (EXCLUDED)</option>
+        </select>
+      </div>
+    </div>
+    
+    <!-- Clinical Exclusions -->
+    <div class="modal-section">
+      <h3>Clinical Exclusions</h3>
+      <div class="modal-field">
+        <label>Malignancy at Surgical Site</label>
+        <select id="modalMalignancy">
+          <option value="0">No</option>
+          <option value="1">Yes — bone/joint cancer (EXCLUDED)</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>Simultaneous Device Removal</label>
+        <select id="modalDeviceRemoval">
+          <option value="0">No</option>
+          <option value="1">Yes — hardware removal same procedure (EXCLUDED)</option>
+        </select>
+      </div>
+    </div>
+    
+    <!-- Discharge Outcome -->
+    <div class="modal-section">
+      <h3>Discharge Outcome (Post-Op)</h3>
+      <div class="modal-field">
+        <label>Discharge Status</label>
+        <select id="modalDischarge">
+          <option value="">Not yet discharged</option>
+          <option value="home">Home</option>
+          <option value="home_health">Home with Home Health</option>
+          <option value="outpatient_pt">Outpatient PT</option>
+          <option value="snf">Skilled Nursing Facility (SNF)</option>
+          <option value="rehab">Inpatient Rehab</option>
+          <option value="death">Death During Stay (EXCLUDED)</option>
+          <option value="transfer_acute">Transfer to Acute Care (EXCLUDED)</option>
+        </select>
+      </div>
+    </div>
+    
+    <!-- Insurance (quick edit) -->
+    <div class="modal-section">
+      <h3>Insurance Classification</h3>
+      <div class="modal-field">
+        <label>Insurance Type</label>
+        <select id="modalInsurance">
+          <option value="">Not set</option>
+          <option value="Medicare FFS">Medicare FFS (Original Medicare)</option>
+          <option value="Medicare Advantage">Medicare Advantage (EXCLUDED)</option>
+          <option value="Medicaid">Medicaid</option>
+          <option value="Commercial">Commercial (HMO/PPO/EPO)</option>
+          <option value="Self Pay">Self Pay</option>
+          <option value="Workers Comp">Workers Comp</option>
+          <option value="VA">VA / Tricare</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>Medicare MBI</label>
+        <input type="text" id="modalMBI" placeholder="11-digit alphanumeric" maxlength="11">
+      </div>
+    </div>
+    
+    <!-- Eligibility Result -->
+    <div id="modalEligResult" class="eligibility-result unknown">
+      Set fields above to see eligibility determination.
+    </div>
+    
+    <div class="modal-btns">
+      <button class="cancel" onclick="closeModal()">Cancel</button>
+      <button class="save" onclick="saveEpisodeFlags()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentEditRecord = null;
+
+function openEpisodeModal(record) {
+  currentEditRecord = record;
+  document.getElementById('modalPatientName').textContent = `${record.last_name}, ${record.first_name}`;
+  document.getElementById('modalProcedure').textContent = record.surgery_type || '—';
+  document.getElementById('modalSurgDate').textContent = record.surgery_date || '—';
+  
+  document.getElementById('modalProcedureCat').value = record.procedure_category || 'primary';
+  document.getElementById('modalCaseType').value = record.case_type || 'elective';
+  document.getElementById('modalIsPartial').value = record.is_partial ? '1' : '0';
+  document.getElementById('modalMalignancy').value = record.has_malignancy ? '1' : '0';
+  document.getElementById('modalDeviceRemoval').value = record.simultaneous_device_removal ? '1' : '0';
+  document.getElementById('modalDischarge').value = record.discharge_status || '';
+  document.getElementById('modalInsurance').value = record.insurance_type || '';
+  document.getElementById('modalMBI').value = record.medicare_id || '';
+  
+  updateEligPreview();
+  document.getElementById('episodeModal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('episodeModal').style.display = 'none';
+  currentEditRecord = null;
+}
+
+function updateEligPreview() {
+  const cat = document.getElementById('modalProcedureCat').value;
+  const caseType = document.getElementById('modalCaseType').value;
+  const partial = document.getElementById('modalIsPartial').value === '1';
+  const malig = document.getElementById('modalMalignancy').value === '1';
+  const device = document.getElementById('modalDeviceRemoval').value === '1';
+  const discharge = document.getElementById('modalDischarge').value;
+  const ins = document.getElementById('modalInsurance').value;
+  
+  const exclusions = [];
+  if (cat === 'revision') exclusions.push('Revision procedure');
+  if (caseType === 'trauma') exclusions.push('Trauma/fracture');
+  if (partial) exclusions.push('Partial/unicompartmental');
+  if (malig) exclusions.push('Malignancy at surgical site');
+  if (device) exclusions.push('Simultaneous device removal');
+  if (discharge === 'death') exclusions.push('Death during stay');
+  if (discharge === 'transfer_acute') exclusions.push('Transfer to acute care');
+  if (ins === 'Medicare Advantage') exclusions.push('Medicare Advantage');
+  if (ins && ins !== 'Medicare FFS' && ins !== 'Medicare Advantage') exclusions.push('Non-Medicare FFS payer');
+  
+  const el = document.getElementById('modalEligResult');
+  if (exclusions.length > 0) {
+    el.className = 'eligibility-result excluded';
+    el.innerHTML = `<strong>❌ EXCLUDED from CMS Denominator:</strong> ${exclusions.join(', ')}`;
+  } else if (ins === 'Medicare FFS') {
+    const age = currentEditRecord ? currentEditRecord.age : null;
+    if (age !== null && age >= 65) {
+      el.className = 'eligibility-result eligible';
+      el.innerHTML = `<strong>✅ PRO-PM Eligible</strong> (Medicare FFS, age ${age}) <strong>+ TEAM Eligible</strong>`;
+    } else if (age !== null) {
+      el.className = 'eligibility-result eligible';
+      el.innerHTML = `<strong>✅ TEAM Eligible</strong> (Medicare FFS, age ${age}) — <em>Not PRO-PM eligible (age &lt; 65)</em>`;
+    } else {
+      el.className = 'eligibility-result unknown';
+      el.innerHTML = `<strong>⚠️ Medicare FFS — DOB needed</strong> to determine PRO-PM vs TEAM-only eligibility`;
+    }
+  } else if (!ins) {
+    el.className = 'eligibility-result unknown';
+    el.innerHTML = `<strong>⚠️ Insurance not set</strong> — set insurance type to determine CMS eligibility`;
+  } else {
+    el.className = 'eligibility-result excluded';
+    el.innerHTML = `<strong>❌ Not CMS eligible</strong> — ${ins} is not Medicare FFS`;
+  }
+}
+
+// Live preview on change
+['modalProcedureCat','modalCaseType','modalIsPartial','modalMalignancy','modalDeviceRemoval','modalDischarge','modalInsurance'].forEach(id => {
+  document.getElementById(id).addEventListener('change', updateEligPreview);
+});
+
+async function saveEpisodeFlags() {
+  if (!currentEditRecord) return;
+  
+  // Save episode exclusion fields
+  try {
+    const epRes = await fetch(`/api/episodes/${currentEditRecord.episode_id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        procedure_category: document.getElementById('modalProcedureCat').value,
+        case_type: document.getElementById('modalCaseType').value,
+        is_partial: document.getElementById('modalIsPartial').value === '1',
+        has_malignancy: document.getElementById('modalMalignancy').value === '1',
+        simultaneous_device_removal: document.getElementById('modalDeviceRemoval').value === '1',
+        discharge_status: document.getElementById('modalDischarge').value || null
+      })
+    });
+    
+    // Save patient insurance and MBI
+    const ins = document.getElementById('modalInsurance').value;
+    const mbi = document.getElementById('modalMBI').value.trim();
+    if (ins || mbi) {
+      await fetch(`/api/patients/${currentEditRecord.patient_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          insurance_type: ins || null,
+          medicare_id: mbi || null
+        })
+      });
+    }
+    
+    closeModal();
+    loadData(); // Refresh
+  } catch(e) {
+    console.error('Save error:', e);
+    alert('Error saving. Check console.');
+  }
+}
+</script>
+
+</body>
+</html>

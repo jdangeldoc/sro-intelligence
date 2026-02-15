@@ -228,7 +228,62 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_prom_schedule_due ON prom_schedule(due_date);
   CREATE INDEX IF NOT EXISTS idx_nursing_notes_patient ON nursing_notes(patient_id);
   CREATE INDEX IF NOT EXISTS idx_nursing_notes_episode ON nursing_notes(episode_id);
+
+  -- Surgical Prep Data
+  CREATE TABLE IF NOT EXISTS surgical_prep (
+    id TEXT PRIMARY KEY,
+    patient_id TEXT REFERENCES patients(id),
+    episode_id TEXT,
+    clinic_id TEXT REFERENCES clinics(id),
+    contract_data TEXT,
+    consent_data TEXT,
+    history_data TEXT,
+    insurance_data TEXT,
+    prosthesis_data TEXT,
+    contract_signed_at DATETIME,
+    consent_signed_at DATETIME,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX IF NOT EXISTS idx_surgical_prep_patient ON surgical_prep(patient_id);
 `);
+
+// Migration: add medicare/insurance columns to patients
+const patCols = db.pragma('table_info(patients)').map(c => c.name);
+if (!patCols.includes('medicare_id')) {
+  db.exec("ALTER TABLE patients ADD COLUMN medicare_id TEXT");
+}
+if (!patCols.includes('insurance_type')) {
+  db.exec("ALTER TABLE patients ADD COLUMN insurance_type TEXT");
+}
+
+// Migration: add CMS exclusion columns to episodes
+const epCols = db.pragma('table_info(episodes)').map(c => c.name);
+if (!epCols.includes('procedure_category')) {
+  // 'primary' or 'revision' — revisions excluded from CMS denominator
+  db.exec("ALTER TABLE episodes ADD COLUMN procedure_category TEXT DEFAULT 'primary'");
+}
+if (!epCols.includes('case_type')) {
+  // 'elective' or 'trauma' — trauma/fractures excluded from elective LEJR
+  db.exec("ALTER TABLE episodes ADD COLUMN case_type TEXT DEFAULT 'elective'");
+}
+if (!epCols.includes('is_partial')) {
+  // 0 = total (included), 1 = partial/unicompartmental (excluded)
+  db.exec("ALTER TABLE episodes ADD COLUMN is_partial INTEGER DEFAULT 0");
+}
+if (!epCols.includes('has_malignancy')) {
+  // 0 = no, 1 = yes — bone/joint cancer at surgical site (excluded)
+  db.exec("ALTER TABLE episodes ADD COLUMN has_malignancy INTEGER DEFAULT 0");
+}
+if (!epCols.includes('discharge_status')) {
+  // 'home','snf','rehab','home_health','outpatient_pt','death','transfer_acute' 
+  // death and transfer_acute are CMS exclusions
+  db.exec("ALTER TABLE episodes ADD COLUMN discharge_status TEXT");
+}
+if (!epCols.includes('simultaneous_device_removal')) {
+  // 0 = no, 1 = yes — excluded from PRO-PM
+  db.exec("ALTER TABLE episodes ADD COLUMN simultaneous_device_removal INTEGER DEFAULT 0");
+}
 
 // Migration: add CMS risk variable columns if missing
 const preopCols = db.pragma('table_info(preop_assessments)').map(c => c.name);
@@ -524,12 +579,23 @@ app.post('/api/patients', (req, res) => {
 });
 
 app.put('/api/patients/:id', (req, res) => {
-  const { first_name, last_name, date_of_birth, email, phone, mrn } = req.body;
+  const { first_name, last_name, date_of_birth, email, phone, mrn, insurance_type, medicare_id } = req.body;
   
-  db.prepare(`
-    UPDATE patients SET first_name = ?, last_name = ?, date_of_birth = ?, email = ?, phone = ?, mrn = ?
-    WHERE id = ?
-  `).run(first_name, last_name, date_of_birth, email, phone, mrn, req.params.id);
+  const updates = [];
+  const vals = [];
+  if (first_name !== undefined) { updates.push('first_name = ?'); vals.push(first_name); }
+  if (last_name !== undefined) { updates.push('last_name = ?'); vals.push(last_name); }
+  if (date_of_birth !== undefined) { updates.push('date_of_birth = ?'); vals.push(date_of_birth); }
+  if (email !== undefined) { updates.push('email = ?'); vals.push(email); }
+  if (phone !== undefined) { updates.push('phone = ?'); vals.push(phone); }
+  if (mrn !== undefined) { updates.push('mrn = ?'); vals.push(mrn); }
+  if (insurance_type !== undefined) { updates.push('insurance_type = ?'); vals.push(insurance_type); }
+  if (medicare_id !== undefined) { updates.push('medicare_id = ?'); vals.push(medicare_id); }
+  
+  if (updates.length === 0) return res.json({ success: false, error: 'No fields to update' });
+  
+  vals.push(req.params.id);
+  db.prepare(`UPDATE patients SET ${updates.join(', ')} WHERE id = ?`).run(...vals);
   
   res.json({ success: true });
 });
@@ -706,12 +772,29 @@ app.post('/api/episodes', (req, res) => {
 });
 
 app.put('/api/episodes/:id', (req, res) => {
-  const { surgeon_id, surgery_type, surgery_date, surgery_location, status } = req.body;
+  const { surgeon_id, surgery_type, surgery_date, surgery_location, status,
+          procedure_category, case_type, is_partial, has_malignancy,
+          discharge_status, simultaneous_device_removal } = req.body;
   
-  db.prepare(`
-    UPDATE episodes SET surgeon_id = ?, surgery_type = ?, surgery_date = ?, surgery_location = ?, status = ?
-    WHERE id = ?
-  `).run(surgeon_id, surgery_type, surgery_date, surgery_location, status, req.params.id);
+  // Build dynamic update to only set provided fields
+  const updates = [];
+  const vals = [];
+  if (surgeon_id !== undefined) { updates.push('surgeon_id = ?'); vals.push(surgeon_id); }
+  if (surgery_type !== undefined) { updates.push('surgery_type = ?'); vals.push(surgery_type); }
+  if (surgery_date !== undefined) { updates.push('surgery_date = ?'); vals.push(surgery_date); }
+  if (surgery_location !== undefined) { updates.push('surgery_location = ?'); vals.push(surgery_location); }
+  if (status !== undefined) { updates.push('status = ?'); vals.push(status); }
+  if (procedure_category !== undefined) { updates.push('procedure_category = ?'); vals.push(procedure_category); }
+  if (case_type !== undefined) { updates.push('case_type = ?'); vals.push(case_type); }
+  if (is_partial !== undefined) { updates.push('is_partial = ?'); vals.push(is_partial ? 1 : 0); }
+  if (has_malignancy !== undefined) { updates.push('has_malignancy = ?'); vals.push(has_malignancy ? 1 : 0); }
+  if (discharge_status !== undefined) { updates.push('discharge_status = ?'); vals.push(discharge_status); }
+  if (simultaneous_device_removal !== undefined) { updates.push('simultaneous_device_removal = ?'); vals.push(simultaneous_device_removal ? 1 : 0); }
+  
+  if (updates.length === 0) return res.json({ success: false, error: 'No fields to update' });
+  
+  vals.push(req.params.id);
+  db.prepare(`UPDATE episodes SET ${updates.join(', ')} WHERE id = ?`).run(...vals);
   
   res.json({ success: true });
 });
@@ -1406,6 +1489,357 @@ app.post('/api/clear-demo', (req, res) => {
   } catch (error) {
     res.json({ success: false, error: error.message });
   }
+});
+
+// --- Surgical Prep ---
+
+// --- CMS Compliance Reporting ---
+// METHODOLOGY (per CMS final rule):
+// PRO-PM: Medicare FFS, 65+, elective primary THA/TKA, Inpatient/HOPD/ASC, 50% matched rate (45% ASC)
+// TEAM:   Medicare FFS, ALL ages (incl disability), LEJR + SHFFT + more, Inpatient/HOPD only, CBSA-specific
+// Exclusions: Trauma/fracture (from LEJR), malignancy, revisions, partials, death during stay
+// Pre-op window: 0-90 days before surgery | Post-op window: 300-425 days after surgery
+// SCB: TKA >= +20 KOOS Jr | THA >= +22 HOOS Jr
+// Risk vars: low back pain, health literacy (SILS), other joint pain, chronic narcotics >90d
+// Matching vars: Medicare MBI, DOB, procedure date, procedure type
+app.get('/api/cms-compliance', (req, res) => {
+  const clinic_id = req.query.clinic_id || '11111111-1111-1111-1111-111111111111';
+  const surgeon_id = req.query.surgeon_id || null;
+  const program_filter = req.query.program_filter || 'pro_pm'; // 'pro_pm', 'team', 'all_payers'
+  
+  // Arkansas TEAM CBSAs (mandatory participation areas)
+  const TEAM_CBSAS_AR = ['Batesville','Searcy','Harrison','Hot Springs','Camden','West Memphis'];
+  const EXEMPT_CBSAS_AR = ['Little Rock','Conway','Fayetteville','Bentonville','Jonesboro'];
+  
+  // Get all patients with episodes
+  let patientQuery = `
+    SELECT p.id, p.first_name, p.last_name, p.date_of_birth, p.medicare_id, p.insurance_type,
+           e.id as episode_id, e.surgery_type, e.surgery_date, e.surgeon_id, e.status as episode_status,
+           e.surgery_location, e.procedure_category, e.case_type, e.is_partial,
+           e.has_malignancy, e.discharge_status, e.simultaneous_device_removal,
+           u.first_name as surgeon_first_name, u.last_name as surgeon_last_name
+    FROM patients p
+    LEFT JOIN episodes e ON e.patient_id = p.id
+    LEFT JOIN users u ON e.surgeon_id = u.id
+    WHERE p.clinic_id = ?
+    AND e.surgery_type IN ('TKA','THA')
+  `;
+  const params = [clinic_id];
+  if (surgeon_id) { patientQuery += ' AND e.surgeon_id = ?'; params.push(surgeon_id); }
+  patientQuery += ' ORDER BY e.surgery_date DESC';
+  
+  let patients = db.prepare(patientQuery).all(...params);
+  
+  // Get all preop assessments
+  const preops = db.prepare('SELECT * FROM preop_assessments WHERE clinic_id = ?').all(clinic_id);
+  const preopByPatient = {};
+  preops.forEach(p => {
+    if (!preopByPatient[p.patient_id] || new Date(p.assessed_at) > new Date(preopByPatient[p.patient_id].assessed_at)) {
+      preopByPatient[p.patient_id] = p;
+    }
+  });
+  
+  // Get all PRO assessments  
+  const pros = db.prepare('SELECT * FROM pro_assessments WHERE clinic_id = ?').all(clinic_id);
+  const prosByPatient = {};
+  pros.forEach(p => {
+    if (!prosByPatient[p.patient_id]) prosByPatient[p.patient_id] = [];
+    prosByPatient[p.patient_id].push(p);
+  });
+  
+  // Get adverse events
+  const adverse = db.prepare('SELECT * FROM adverse_events WHERE clinic_id = ?').all(clinic_id);
+  const adverseByPatient = {};
+  adverse.forEach(a => {
+    if (!adverseByPatient[a.patient_id]) adverseByPatient[a.patient_id] = [];
+    adverseByPatient[a.patient_id].push(a);
+  });
+
+  // Get surgical_prep insurance data
+  const surgPreps = db.prepare('SELECT patient_id, insurance_data FROM surgical_prep WHERE clinic_id = ?').all(clinic_id);
+  const surgPrepByPatient = {};
+  surgPreps.forEach(sp => { surgPrepByPatient[sp.patient_id] = sp; });
+  
+  // Build per-patient compliance records
+  const records = patients.map(p => {
+    const preop = preopByPatient[p.id] || null;
+    const patientPros = prosByPatient[p.id] || [];
+    const patientAdverse = adverseByPatient[p.id] || [];
+    const surgPrep = surgPrepByPatient[p.id] || null;
+    
+    // Determine insurance from surgical_prep if not on patient record
+    let insuranceType = p.insurance_type || null;
+    let surgLocation = p.surgery_location || null;
+    if (!insuranceType && surgPrep && surgPrep.insurance_data) {
+      try {
+        const ins = JSON.parse(surgPrep.insurance_data);
+        insuranceType = ins.plan_type || ins.carrier || null;
+        if (!surgLocation && ins.surgery_location) surgLocation = ins.surgery_location;
+      } catch(e) {}
+    }
+    
+    // Age calculation
+    const age = p.date_of_birth ? Math.floor((new Date() - new Date(p.date_of_birth)) / (365.25*24*60*60*1000)) : null;
+    
+    // === ELIGIBILITY DETERMINATIONS ===
+    const isMedicareFFS = insuranceType && (
+      insuranceType === 'Medicare FFS' || insuranceType === 'medicare_ffs' ||
+      insuranceType.toLowerCase() === 'medicare ffs'
+    );
+    const isMedicareAdvantage = insuranceType && (
+      insuranceType === 'Medicare Advantage' || insuranceType === 'medicare_advantage' ||
+      insuranceType.toLowerCase() === 'medicare advantage'
+    );
+    
+    // === CMS EXCLUSION CHECKS ===
+    const isRevision = p.procedure_category === 'revision';
+    const isTrauma = p.case_type === 'trauma';
+    const isPartial = p.is_partial === 1;
+    const hasMalignancy = p.has_malignancy === 1;
+    const diedDuringStay = p.discharge_status === 'death';
+    const transferredAcute = p.discharge_status === 'transfer_acute';
+    const hasDeviceRemoval = p.simultaneous_device_removal === 1;
+    
+    const hasClinicalExclusion = isRevision || isTrauma || isPartial || hasMalignancy || diedDuringStay || transferredAcute || hasDeviceRemoval;
+    
+    // PRO-PM: Medicare FFS + 65+ + elective primary THA/TKA + no clinical exclusions
+    const isAge65Plus = age !== null && age >= 65;
+    const isPROPMEligible = !!(isMedicareFFS && isAge65Plus && !hasClinicalExclusion);
+    
+    // TEAM: Medicare FFS + ANY age + elective primary THA/TKA + no clinical exclusions
+    const isTEAMEligible = !!(isMedicareFFS && !hasClinicalExclusion);
+    
+    // Exclusion tracking for display
+    const exclusions = [];
+    if (isMedicareAdvantage) exclusions.push('Medicare Advantage');
+    if (!isMedicareFFS && !isMedicareAdvantage && insuranceType) exclusions.push('Non-Medicare payer');
+    if (!insuranceType) exclusions.push('Insurance not set');
+    if (isRevision) exclusions.push('Revision procedure');
+    if (isTrauma) exclusions.push('Trauma/fracture');
+    if (isPartial) exclusions.push('Partial/unicompartmental');
+    if (hasMalignancy) exclusions.push('Malignancy at surgical site');
+    if (diedDuringStay) exclusions.push('Death during stay');
+    if (transferredAcute) exclusions.push('Transfer to acute care');
+    if (hasDeviceRemoval) exclusions.push('Simultaneous device removal');
+    
+    // Find pre-op PROM (within 90 days before surgery)
+    const surgDate = p.surgery_date ? new Date(p.surgery_date) : null;
+    let preopProm = null;
+    let postopProm = null;
+    
+    const jointType = p.surgery_type === 'THA' ? 'hoos_jr' : 'koos_jr';
+    const jointPros = patientPros.filter(pr => pr.assessment_type === jointType);
+    
+    if (surgDate) {
+      const preWindow = new Date(surgDate); preWindow.setDate(preWindow.getDate() - 90);
+      preopProm = jointPros.find(pr => {
+        const d = new Date(pr.assessment_date);
+        return d >= preWindow && d <= surgDate;
+      });
+      
+      const postStart = new Date(surgDate); postStart.setDate(postStart.getDate() + 300);
+      const postEnd = new Date(surgDate); postEnd.setDate(postEnd.getDate() + 425);
+      postopProm = jointPros.find(pr => {
+        const d = new Date(pr.assessment_date);
+        return d >= postStart && d <= postEnd;
+      });
+    }
+    
+    // Risk variable completeness
+    const hasLowBackPain = !!(preop && preop.low_back_pain !== null && preop.low_back_pain !== undefined);
+    const hasHealthLiteracy = !!(preop && preop.health_literacy_sils !== null && preop.health_literacy_sils !== undefined);
+    const hasOtherJointPain = !!(preop && (preop.cms_other_knee_pain !== null || preop.cms_other_hip_pain !== null || preop.total_painful_joint_count !== null));
+    const hasNarcotics = !!(preop && preop.chronic_narcotics_use !== null && preop.chronic_narcotics_use !== undefined);
+    const riskVarsComplete = hasLowBackPain && hasHealthLiteracy && hasOtherJointPain && hasNarcotics;
+    const riskVarsCount = [hasLowBackPain, hasHealthLiteracy, hasOtherJointPain, hasNarcotics].filter(Boolean).length;
+    
+    // Matching variables
+    const hasMedicareId = !!(p.medicare_id);
+    const hasDOB = !!(p.date_of_birth);
+    const hasSurgeryDate = !!(p.surgery_date);
+    const hasSurgeryType = !!(p.surgery_type);
+    const matchingVarsComplete = hasMedicareId && hasDOB && hasSurgeryDate && hasSurgeryType;
+    const matchingVarsCount = [hasMedicareId, hasDOB, hasSurgeryDate, hasSurgeryType].filter(Boolean).length;
+    
+    // SCB
+    let scbAchieved = null;
+    let delta = null;
+    const scbThreshold = p.surgery_type === 'THA' ? 22 : 20;
+    if (preopProm && postopProm) {
+      delta = postopProm.score - preopProm.score;
+      scbAchieved = delta >= scbThreshold;
+    }
+    
+    // Adverse events
+    const erVisits = patientAdverse.filter(a => a.event_type === 'er_visit').length;
+    const readmissions = patientAdverse.filter(a => a.event_type === 'readmission').length;
+    
+    // Post-op window status
+    let postopWindowStatus = 'not_scheduled';
+    let daysSinceSurg = null;
+    if (surgDate) {
+      const now = new Date();
+      daysSinceSurg = Math.floor((now - surgDate) / (1000*60*60*24));
+      if (daysSinceSurg < 0) postopWindowStatus = 'pre_surgery';
+      else if (daysSinceSurg < 300) postopWindowStatus = 'recovery';
+      else if (daysSinceSurg <= 425) postopWindowStatus = 'window_open';
+      else postopWindowStatus = 'window_closed';
+    }
+    
+    return {
+      patient_id: p.id, first_name: p.first_name, last_name: p.last_name,
+      dob: p.date_of_birth, age, medicare_id: p.medicare_id,
+      insurance_type: insuranceType, surgery_location: surgLocation,
+      episode_id: p.episode_id, surgery_type: p.surgery_type,
+      surgery_date: p.surgery_date, surgeon_id: p.surgeon_id,
+      surgeon_name: p.surgeon_last_name ? `Dr. ${p.surgeon_first_name} ${p.surgeon_last_name}` : null,
+      is_pro_pm_eligible: isPROPMEligible, is_team_eligible: isTEAMEligible,
+      is_medicare_ffs: !!isMedicareFFS, is_medicare_advantage: !!isMedicareAdvantage,
+      is_age_65_plus: !!isAge65Plus, exclusions,
+      // CMS exclusion details
+      procedure_category: p.procedure_category || 'primary',
+      case_type: p.case_type || 'elective',
+      is_partial: !!isPartial,
+      has_malignancy: !!hasMalignancy,
+      discharge_status: p.discharge_status || null,
+      simultaneous_device_removal: !!hasDeviceRemoval,
+      has_clinical_exclusion: hasClinicalExclusion,
+      has_preop_prom: !!preopProm, preop_prom_date: preopProm ? preopProm.assessment_date : null,
+      preop_prom_score: preopProm ? preopProm.score : null,
+      has_postop_prom: !!postopProm, postop_prom_date: postopProm ? postopProm.assessment_date : null,
+      postop_prom_score: postopProm ? postopProm.score : null,
+      postop_window_status: postopWindowStatus, days_since_surgery: daysSinceSurg,
+      is_matched: !!(preopProm && postopProm),
+      risk_vars: { low_back_pain: hasLowBackPain, health_literacy: hasHealthLiteracy, other_joint_pain: hasOtherJointPain, chronic_narcotics: hasNarcotics, complete: riskVarsComplete, count: riskVarsCount },
+      matching_vars: { medicare_id: hasMedicareId, dob: hasDOB, surgery_date: hasSurgeryDate, surgery_type: hasSurgeryType, complete: matchingVarsComplete, count: matchingVarsCount },
+      scb_achieved: scbAchieved, delta, scb_threshold: scbThreshold,
+      er_visits: erVisits, readmissions,
+      has_preop_assessment: !!preop,
+      preop_data_complete: !!(preopProm && riskVarsComplete && matchingVarsComplete),
+      risk_tier: preop ? preop.risk_tier : null,
+      bmi: preop ? preop.bmi : null,
+      asa_class: preop ? preop.asa_class : null
+    };
+  });
+  
+  // Apply program filter
+  let filteredRecords = records;
+  if (program_filter === 'pro_pm') {
+    filteredRecords = records.filter(r => r.is_pro_pm_eligible);
+  } else if (program_filter === 'team') {
+    filteredRecords = records.filter(r => r.is_team_eligible);
+  }
+  
+  // Aggregate
+  const total = filteredRecords.length;
+  const withPreop = filteredRecords.filter(r => r.has_preop_prom).length;
+  const withPostop = filteredRecords.filter(r => r.has_postop_prom).length;
+  const matched = filteredRecords.filter(r => r.is_matched).length;
+  const riskComplete = filteredRecords.filter(r => r.risk_vars.complete).length;
+  const matchComplete = filteredRecords.filter(r => r.matching_vars.complete).length;
+  const scbYes = filteredRecords.filter(r => r.scb_achieved === true).length;
+  const scbNo = filteredRecords.filter(r => r.scb_achieved === false).length;
+  const scbEligible = scbYes + scbNo;
+  const totalER = filteredRecords.reduce((s,r) => s + r.er_visits, 0);
+  const totalReadmit = filteredRecords.reduce((s,r) => s + r.readmissions, 0);
+  const patientsWithReadmit = filteredRecords.filter(r => r.readmissions > 0).length;
+  
+  // Cross-program and exclusion counts
+  const clinicallyExcluded = records.filter(r => r.has_clinical_exclusion).length;
+  const proPmCount = records.filter(r => r.is_pro_pm_eligible).length;
+  const teamCount = records.filter(r => r.is_team_eligible).length;
+  
+  const surgeons = db.prepare("SELECT id, first_name, last_name FROM users WHERE clinic_id = ? AND role = 'surgeon'").all(clinic_id);
+  
+  res.json({
+    methodology: {
+      pro_pm: {
+        payer: 'Medicare FFS only', age: '65+ years',
+        procedures: 'Elective primary THA/TKA',
+        settings: 'Inpatient, HOPD, ASC',
+        threshold_inpatient: '50% matched', threshold_asc: '45% matched',
+        penalty: '25% APU reduction on ALL Medicare reimbursement',
+        scb_tka: '+20 KOOS Jr', scb_tha: '+22 HOOS Jr',
+        preop_window: '0-90 days before surgery',
+        postop_window: '300-425 days after surgery',
+        excludes: ['Medicare Advantage','Trauma/fractures','Malignancy','Revisions','Partial joints','Death during stay']
+      },
+      team: {
+        payer: 'Medicare FFS only', age: 'All ages (includes disability)',
+        procedures: 'LEJR (THA/TKA) + SHFFT + Spinal Fusion + CABG + Major Bowel',
+        settings: 'Inpatient and HOPD only (not ASC)',
+        episode_window: '30 days post-discharge',
+        quality_measures: ['Hybrid HWR (Readmission)','PSI 90 (Patient Safety)','THA/TKA PRO-PM'],
+        py3_addition: 'Information Transfer PRO-PM (2028)',
+        tracks: { 1: 'Upside only (PY1)', 2: 'Safety net/rural (PY2-5)', 3: 'Full risk/reward (all PYs)' },
+        ar_mandatory_cbsas: TEAM_CBSAS_AR,
+        ar_exempt_cbsas: EXEMPT_CBSAS_AR,
+        low_volume_threshold: 'Fewer than 31 episodes = no downside risk',
+        excludes: ['Medicare Advantage','Non-Medicare payers']
+      },
+      risk_variables: ['Low back pain','Health literacy (SILS-2)','Other joint pain','Chronic narcotics >90 days'],
+      matching_variables: ['Medicare MBI','Date of birth','Procedure date','Procedure type']
+    },
+    summary: {
+      program_filter,
+      total_in_view: total,
+      total_all_payers: records.length,
+      total_clinically_excluded: clinicallyExcluded,
+      total_pro_pm_eligible: proPmCount,
+      total_team_eligible: teamCount,
+      preop_captured: withPreop,
+      preop_rate: total ? ((withPreop/total)*100).toFixed(1) : '0.0',
+      postop_captured: withPostop,
+      postop_rate: total ? ((withPostop/total)*100).toFixed(1) : '0.0',
+      matched, matched_rate: total ? ((matched/total)*100).toFixed(1) : '0.0',
+      risk_vars_complete: riskComplete,
+      risk_vars_rate: total ? ((riskComplete/total)*100).toFixed(1) : '0.0',
+      matching_vars_complete: matchComplete,
+      matching_vars_rate: total ? ((matchComplete/total)*100).toFixed(1) : '0.0',
+      scb_achieved: scbYes, scb_not_achieved: scbNo, scb_eligible: scbEligible,
+      scb_rate: scbEligible ? ((scbYes/scbEligible)*100).toFixed(1) : '0.0',
+      er_visits: totalER, readmissions: totalReadmit,
+      readmission_rate: total ? ((patientsWithReadmit/total)*100).toFixed(1) : '0.0',
+      pre_surgery_count: filteredRecords.filter(r => r.postop_window_status === 'pre_surgery').length,
+      recovery_count: filteredRecords.filter(r => r.postop_window_status === 'recovery').length,
+      window_open_count: filteredRecords.filter(r => r.postop_window_status === 'window_open').length,
+      window_closed_count: filteredRecords.filter(r => r.postop_window_status === 'window_closed').length
+    },
+    records: filteredRecords,
+    all_records: records,
+    surgeons
+  });
+});
+
+
+app.get('/api/surgical-prep', (req, res) => {
+  const { patient_id, clinic_id } = req.query;
+  let query = 'SELECT * FROM surgical_prep WHERE 1=1';
+  const params = [];
+  if (patient_id) { query += ' AND patient_id = ?'; params.push(patient_id); }
+  if (clinic_id) { query += ' AND clinic_id = ?'; params.push(clinic_id); }
+  query += ' ORDER BY updated_at DESC';
+  res.json(db.prepare(query).all(...params));
+});
+
+app.post('/api/surgical-prep', (req, res) => {
+  const id = uuid();
+  const { patient_id, episode_id, clinic_id, contract_data, consent_data, history_data, insurance_data, prosthesis_data, contract_signed_at, consent_signed_at } = req.body;
+  db.prepare(`INSERT INTO surgical_prep (id, patient_id, episode_id, clinic_id, contract_data, consent_data, history_data, insurance_data, prosthesis_data, contract_signed_at, consent_signed_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run(
+    id, patient_id, episode_id, clinic_id,
+    contract_data || null, consent_data || null, history_data || null, insurance_data || null, prosthesis_data || null,
+    contract_signed_at || null, consent_signed_at || null
+  );
+  res.json({ id, success: true });
+});
+
+app.put('/api/surgical-prep/:id', (req, res) => {
+  const { contract_data, consent_data, history_data, insurance_data, prosthesis_data, contract_signed_at, consent_signed_at } = req.body;
+  db.prepare(`UPDATE surgical_prep SET contract_data=?, consent_data=?, history_data=?, insurance_data=?, prosthesis_data=?, contract_signed_at=?, consent_signed_at=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(
+    contract_data || null, consent_data || null, history_data || null, insurance_data || null, prosthesis_data || null,
+    contract_signed_at || null, consent_signed_at || null, req.params.id
+  );
+  res.json({ id: req.params.id, success: true });
 });
 
 // --- RPM Time Logs ---
