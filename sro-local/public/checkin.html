@@ -446,7 +446,7 @@
         qs.push({ id:'readmit_reason', icon:'&#x1F4DD;', question:'What was the reason for readmission?', type:'text_input', placeholder:'Describe the reason...', conditional:'readmitted', condValue:'yes' });
 
         // Warning signs
-        qs.push({ id:'concerns_flags', icon:'&#x1F6A9;', question:'Any warning signs?', subtitle:'Check any that apply (or skip)', type:'concerns' });
+        qs.push({ id:'concerns_flags', icon:'&#x1F6A9;', question:'Any warning signs?', subtitle:'Tap No or select any that apply', type:'concerns' });
 
         // Free text
         qs.push({ id:'concerns_text', icon:'&#x1F4AC;', question:'Anything else to share?', subtitle:'Questions, concerns, or updates for your care team', type:'text_area', placeholder:'Type here or skip if nothing to add...' });
@@ -547,157 +547,155 @@
     // ========== ROM ==========
     function renderROM() {
         var isKnee = surgeryType === 'TKA';
-        var joint = isKnee ? 'Knee' : 'Hip';
         var flex = answers.rom_flexion || 30;
         var ext = answers.rom_extension || 30;
 
-        var svgW = 550, svgH = 320;
+        var svgW = 400, svgH = 260;
         var pivX, pivY;
 
-        if (isKnee) { pivX = 380; pivY = 110; }
-        else { pivX = 380; pivY = 70; }
+        if (isKnee) { pivX = 170; pivY = 90; }
+        else { pivX = 170; pivY = 60; }
 
-        var seg1Len = 100, seg2Len = 110;
+        var seg1Len = 85, seg2Len = 95;
         var svg = '';
 
         if (isKnee) {
-            // KNEE VERSION
-            var thighAng = 220 * Math.PI / 180;
+            // KNEE VERSION — patient faces RIGHT, knee bends right
+            var thighAng = 320 * Math.PI / 180; // up-right
             var thighX = pivX + Math.cos(thighAng) * seg1Len;
             var thighY = pivY + Math.sin(thighAng) * seg1Len;
-            svg += '<circle cx="'+thighX+'" cy="'+thighY+'" r="14" fill="#FFCC80" stroke="#D4A373" stroke-width="2"/>';
-            svg += '<text x="'+thighX+'" y="'+(thighY-20)+'" text-anchor="middle" fill="#A1887F" font-size="13" font-weight="800">HIP</text>';
-            svg += '<line x1="'+thighX+'" y1="'+thighY+'" x2="'+pivX+'" y2="'+pivY+'" stroke="#FFCC80" stroke-width="30" stroke-linecap="round"/>';
-            svg += '<text x="'+((thighX+pivX)/2+22)+'" y="'+((thighY+pivY)/2)+'" fill="#A1887F" font-size="12" font-weight="700">THIGH</text>';
+            svg += '<circle cx="'+thighX+'" cy="'+thighY+'" r="12" fill="#FFCC80" stroke="#D4A373" stroke-width="2"/>';
+            svg += '<text x="'+thighX+'" y="'+(thighY-16)+'" text-anchor="middle" fill="#A1887F" font-size="11" font-weight="800">HIP</text>';
+            svg += '<line x1="'+thighX+'" y1="'+thighY+'" x2="'+pivX+'" y2="'+pivY+'" stroke="#FFCC80" stroke-width="26" stroke-linecap="round"/>';
+            svg += '<text x="'+((thighX+pivX)/2-18)+'" y="'+((thighY+pivY)/2)+'" fill="#A1887F" font-size="11" font-weight="700">THIGH</text>';
 
             var straightAng = thighAng + Math.PI;
-            var calfDir = straightAng + flex * Math.PI / 180;
+            var calfDir = straightAng - flex * Math.PI / 180; // subtract for right-facing bend
             var calfX = pivX + Math.cos(calfDir) * seg2Len;
             var calfY = pivY + Math.sin(calfDir) * seg2Len;
-            svg += '<line x1="'+pivX+'" y1="'+pivY+'" x2="'+calfX+'" y2="'+calfY+'" stroke="#FFCC80" stroke-width="26" stroke-linecap="round" id="lowerLeg"/>';
+            svg += '<line x1="'+pivX+'" y1="'+pivY+'" x2="'+calfX+'" y2="'+calfY+'" stroke="#FFCC80" stroke-width="22" stroke-linecap="round" id="lowerLeg"/>';
             var cMidX = (pivX+calfX)/2, cMidY = (pivY+calfY)/2;
-            svg += '<text x="'+(cMidX+20)+'" y="'+cMidY+'" fill="#A1887F" font-size="12" font-weight="700">CALF</text>';
+            svg += '<text x="'+(cMidX-18)+'" y="'+cMidY+'" fill="#A1887F" font-size="11" font-weight="700">CALF</text>';
 
             // Kneecap
-            svg += '<ellipse cx="'+pivX+'" cy="'+pivY+'" rx="18" ry="20" fill="#FFE0B2" stroke="#D4A373" stroke-width="2.5"/>';
-            svg += '<ellipse cx="'+pivX+'" cy="'+pivY+'" rx="9" ry="11" fill="#FFD180"/>';
-            svg += '<text x="'+(pivX-28)+'" y="'+(pivY+5)+'" text-anchor="end" fill="#E65100" font-size="14" font-weight="800">KNEE</text>';
+            svg += '<ellipse cx="'+pivX+'" cy="'+pivY+'" rx="15" ry="17" fill="#FFE0B2" stroke="#D4A373" stroke-width="2.5"/>';
+            svg += '<ellipse cx="'+pivX+'" cy="'+pivY+'" rx="7" ry="9" fill="#FFD180"/>';
+            svg += '<text x="'+(pivX+24)+'" y="'+(pivY+5)+'" text-anchor="start" fill="#E65100" font-size="12" font-weight="800">KNEE</text>';
 
             // Foot
             var ankleX = calfX + Math.cos(calfDir) * 2;
             var ankleY = calfY + Math.sin(calfDir) * 2;
             var footFwd = calfDir + Math.PI/2, footBack = calfDir - Math.PI/2, footDown = calfDir;
-            var heelX = ankleX + Math.cos(footBack)*16 + Math.cos(footDown)*18;
-            var heelY = ankleY + Math.sin(footBack)*16 + Math.sin(footDown)*18;
-            var heelBX = heelX + Math.cos(footDown)*12, heelBY = heelY + Math.sin(footDown)*12;
-            var archX = ankleX + Math.cos(footFwd)*16 + Math.cos(footDown)*28;
-            var archY = ankleY + Math.sin(footFwd)*16 + Math.sin(footDown)*28;
-            var ballX = ankleX + Math.cos(footFwd)*44 + Math.cos(footDown)*22;
-            var ballY = ankleY + Math.sin(footFwd)*44 + Math.sin(footDown)*22;
-            var toeTopX = ankleX + Math.cos(footFwd)*60 + Math.cos(footDown)*10;
-            var toeTopY = ankleY + Math.sin(footFwd)*60 + Math.sin(footDown)*10;
-            var toeTipX = ankleX + Math.cos(footFwd)*64 + Math.cos(footDown)*20;
-            var toeTipY = ankleY + Math.sin(footFwd)*64 + Math.sin(footDown)*20;
-            var ankTopX = ankleX + Math.cos(footFwd)*8 - Math.cos(footDown)*6;
-            var ankTopY = ankleY + Math.sin(footFwd)*8 - Math.sin(footDown)*6;
-            var ankBackX = ankleX + Math.cos(footBack)*14 - Math.cos(footDown)*3;
-            var ankBackY = ankleY + Math.sin(footBack)*14 - Math.sin(footDown)*3;
+            var heelX = ankleX + Math.cos(footBack)*14 + Math.cos(footDown)*15;
+            var heelY = ankleY + Math.sin(footBack)*14 + Math.sin(footDown)*15;
+            var heelBX = heelX + Math.cos(footDown)*10, heelBY = heelY + Math.sin(footDown)*10;
+            var archX = ankleX + Math.cos(footFwd)*14 + Math.cos(footDown)*24;
+            var archY = ankleY + Math.sin(footFwd)*14 + Math.sin(footDown)*24;
+            var ballX = ankleX + Math.cos(footFwd)*38 + Math.cos(footDown)*18;
+            var ballY = ankleY + Math.sin(footFwd)*38 + Math.sin(footDown)*18;
+            var toeTopX = ankleX + Math.cos(footFwd)*52 + Math.cos(footDown)*8;
+            var toeTopY = ankleY + Math.sin(footFwd)*52 + Math.sin(footDown)*8;
+            var toeTipX = ankleX + Math.cos(footFwd)*55 + Math.cos(footDown)*17;
+            var toeTipY = ankleY + Math.sin(footFwd)*55 + Math.sin(footDown)*17;
+            var ankTopX = ankleX + Math.cos(footFwd)*7 - Math.cos(footDown)*5;
+            var ankTopY = ankleY + Math.sin(footFwd)*7 - Math.sin(footDown)*5;
+            var ankBackX = ankleX + Math.cos(footBack)*12 - Math.cos(footDown)*3;
+            var ankBackY = ankleY + Math.sin(footBack)*12 - Math.sin(footDown)*3;
 
-            svg += '<path d="M'+ankBackX+','+ankBackY+' L'+heelX+','+heelY+' Q'+heelBX+','+heelBY+' '+archX+','+archY+' Q'+ballX+','+ballY+' '+toeTipX+','+toeTipY+' L'+toeTopX+','+toeTopY+' Q'+ballX+','+(ballY-Math.sin(footDown)*6)+' '+ankTopX+','+ankTopY+' Z" fill="#FFCC80" stroke="#D4A373" stroke-width="2"/>';
-            for (var ti=0;ti<4;ti++) {
-                var tlx1=ankleX+Math.cos(footFwd)*(48+ti*4)+Math.cos(footDown)*12;
-                var tly1=ankleY+Math.sin(footFwd)*(48+ti*4)+Math.sin(footDown)*12;
-                var tlx2=tlx1+Math.cos(footDown)*8, tly2=tly1+Math.sin(footDown)*8;
+            svg += '<path d="M'+ankBackX+','+ankBackY+' L'+heelX+','+heelY+' Q'+heelBX+','+heelBY+' '+archX+','+archY+' Q'+ballX+','+ballY+' '+toeTipX+','+toeTipY+' L'+toeTopX+','+toeTopY+' Q'+ballX+','+(ballY-Math.sin(footDown)*5)+' '+ankTopX+','+ankTopY+' Z" fill="#FFCC80" stroke="#D4A373" stroke-width="2"/>';
+            for (var ti=0;ti<3;ti++) {
+                var tlx1=ankleX+Math.cos(footFwd)*(42+ti*4)+Math.cos(footDown)*10;
+                var tly1=ankleY+Math.sin(footFwd)*(42+ti*4)+Math.sin(footDown)*10;
+                var tlx2=tlx1+Math.cos(footDown)*7, tly2=tly1+Math.sin(footDown)*7;
                 svg += '<line x1="'+tlx1+'" y1="'+tly1+'" x2="'+tlx2+'" y2="'+tly2+'" stroke="#D4A373" stroke-width="1.5"/>';
             }
-            svg += '<circle cx="'+ankleX+'" cy="'+ankleY+'" r="8" fill="#FFE0B2" stroke="#D4A373" stroke-width="1.5"/>';
-            svg += '<circle cx="'+ankleX+'" cy="'+ankleY+'" r="18" fill="#1565C0" id="legHandle" style="cursor:grab;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.3));opacity:0.85;"/>';
-            svg += '<text x="'+ankleX+'" y="'+(ankleY+1)+'" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="9" font-weight="800" style="pointer-events:none;">DRAG</text>';
+            svg += '<circle cx="'+ankleX+'" cy="'+ankleY+'" r="7" fill="#FFE0B2" stroke="#D4A373" stroke-width="1.5"/>';
+            svg += '<circle cx="'+ankleX+'" cy="'+ankleY+'" r="16" fill="#1565C0" id="legHandle" style="cursor:grab;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.3));opacity:0.85;"/>';
+            svg += '<text x="'+ankleX+'" y="'+(ankleY+1)+'" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="8" font-weight="800" style="pointer-events:none;">DRAG</text>';
 
         } else {
-            // HIP VERSION
-            svg += '<rect x="'+(pivX-25)+'" y="10" width="50" height="55" rx="12" fill="#FFCC80" stroke="#D4A373" stroke-width="2"/>';
-            svg += '<text x="'+pivX+'" y="35" text-anchor="middle" fill="#A1887F" font-size="12" font-weight="800">TORSO</text>';
-            svg += '<circle cx="'+pivX+'" cy="'+pivY+'" r="20" fill="#FFE0B2" stroke="#D4A373" stroke-width="2.5"/>';
-            svg += '<circle cx="'+pivX+'" cy="'+pivY+'" r="10" fill="#FFD180"/>';
-            svg += '<circle cx="'+pivX+'" cy="'+pivY+'" r="4" fill="#FFAB40"/>';
-            svg += '<text x="'+(pivX-28)+'" y="'+(pivY+5)+'" text-anchor="end" fill="#E65100" font-size="14" font-weight="800">HIP</text>';
+            // HIP VERSION — patient faces right
+            svg += '<rect x="'+(pivX-22)+'" y="8" width="44" height="48" rx="10" fill="#FFCC80" stroke="#D4A373" stroke-width="2"/>';
+            svg += '<text x="'+pivX+'" y="30" text-anchor="middle" fill="#A1887F" font-size="11" font-weight="800">TORSO</text>';
+            svg += '<circle cx="'+pivX+'" cy="'+pivY+'" r="17" fill="#FFE0B2" stroke="#D4A373" stroke-width="2.5"/>';
+            svg += '<circle cx="'+pivX+'" cy="'+pivY+'" r="9" fill="#FFD180"/>';
+            svg += '<circle cx="'+pivX+'" cy="'+pivY+'" r="3" fill="#FFAB40"/>';
+            svg += '<text x="'+(pivX+24)+'" y="'+(pivY+5)+'" text-anchor="start" fill="#E65100" font-size="12" font-weight="800">HIP</text>';
 
             var thighDir = (90 + flex) * Math.PI / 180;
             var thighEndX = pivX + Math.cos(thighDir) * seg1Len;
             var thighEndY = pivY + Math.sin(thighDir) * seg1Len;
-            svg += '<line x1="'+pivX+'" y1="'+pivY+'" x2="'+thighEndX+'" y2="'+thighEndY+'" stroke="#FFCC80" stroke-width="30" stroke-linecap="round" id="lowerLeg"/>';
+            svg += '<line x1="'+pivX+'" y1="'+pivY+'" x2="'+thighEndX+'" y2="'+thighEndY+'" stroke="#FFCC80" stroke-width="26" stroke-linecap="round" id="lowerLeg"/>';
             var tMidX = (pivX+thighEndX)/2, tMidY = (pivY+thighEndY)/2;
-            svg += '<text x="'+(tMidX+22)+'" y="'+tMidY+'" fill="#A1887F" font-size="12" font-weight="700">THIGH</text>';
-            svg += '<ellipse cx="'+thighEndX+'" cy="'+thighEndY+'" rx="14" ry="16" fill="#FFE0B2" stroke="#D4A373" stroke-width="2"/>';
-            svg += '<text x="'+thighEndX+'" y="'+(thighEndY-20)+'" text-anchor="middle" fill="#A1887F" font-size="11" font-weight="700">KNEE</text>';
+            svg += '<text x="'+(tMidX+18)+'" y="'+tMidY+'" fill="#A1887F" font-size="11" font-weight="700">THIGH</text>';
+            svg += '<ellipse cx="'+thighEndX+'" cy="'+thighEndY+'" rx="12" ry="14" fill="#FFE0B2" stroke="#D4A373" stroke-width="2"/>';
+            svg += '<text x="'+thighEndX+'" y="'+(thighEndY-16)+'" text-anchor="middle" fill="#A1887F" font-size="10" font-weight="700">KNEE</text>';
 
-            var calfX2 = thighEndX + Math.cos(thighDir) * (seg2Len*0.9);
-            var calfY2 = thighEndY + Math.sin(thighDir) * (seg2Len*0.9);
-            svg += '<line x1="'+thighEndX+'" y1="'+thighEndY+'" x2="'+calfX2+'" y2="'+calfY2+'" stroke="#FFCC80" stroke-width="24" stroke-linecap="round"/>';
+            var calfX2 = thighEndX + Math.cos(thighDir) * (seg2Len*0.85);
+            var calfY2 = thighEndY + Math.sin(thighDir) * (seg2Len*0.85);
+            svg += '<line x1="'+thighEndX+'" y1="'+thighEndY+'" x2="'+calfX2+'" y2="'+calfY2+'" stroke="#FFCC80" stroke-width="20" stroke-linecap="round"/>';
 
             var ankleX2 = calfX2, ankleY2 = calfY2;
             var footFwd2 = thighDir + Math.PI/2, footBack2 = thighDir - Math.PI/2, footDown2 = thighDir;
-            var heelX2 = ankleX2 + Math.cos(footBack2)*14 + Math.cos(footDown2)*16;
-            var heelY2 = ankleY2 + Math.sin(footBack2)*14 + Math.sin(footDown2)*16;
-            var heelBX2 = heelX2 + Math.cos(footDown2)*10, heelBY2 = heelY2 + Math.sin(footDown2)*10;
-            var archX2 = ankleX2 + Math.cos(footFwd2)*14 + Math.cos(footDown2)*24;
-            var archY2 = ankleY2 + Math.sin(footFwd2)*14 + Math.sin(footDown2)*24;
-            var ballX2 = ankleX2 + Math.cos(footFwd2)*40 + Math.cos(footDown2)*20;
-            var ballY2 = ankleY2 + Math.sin(footFwd2)*40 + Math.sin(footDown2)*20;
-            var toeTopX2 = ankleX2 + Math.cos(footFwd2)*56 + Math.cos(footDown2)*8;
-            var toeTopY2 = ankleY2 + Math.sin(footFwd2)*56 + Math.sin(footDown2)*8;
-            var toeTipX2 = ankleX2 + Math.cos(footFwd2)*58 + Math.cos(footDown2)*18;
-            var toeTipY2 = ankleY2 + Math.sin(footFwd2)*58 + Math.sin(footDown2)*18;
-            var ankTopX2 = ankleX2 + Math.cos(footFwd2)*7 - Math.cos(footDown2)*5;
-            var ankTopY2 = ankleY2 + Math.sin(footFwd2)*7 - Math.sin(footDown2)*5;
-            var ankBackX2 = ankleX2 + Math.cos(footBack2)*12 - Math.cos(footDown2)*2;
-            var ankBackY2 = ankleY2 + Math.sin(footBack2)*12 - Math.sin(footDown2)*2;
+            var heelX2 = ankleX2 + Math.cos(footBack2)*12 + Math.cos(footDown2)*14;
+            var heelY2 = ankleY2 + Math.sin(footBack2)*12 + Math.sin(footDown2)*14;
+            var heelBX2 = heelX2 + Math.cos(footDown2)*8, heelBY2 = heelY2 + Math.sin(footDown2)*8;
+            var archX2 = ankleX2 + Math.cos(footFwd2)*12 + Math.cos(footDown2)*20;
+            var archY2 = ankleY2 + Math.sin(footFwd2)*12 + Math.sin(footDown2)*20;
+            var ballX2 = ankleX2 + Math.cos(footFwd2)*34 + Math.cos(footDown2)*16;
+            var ballY2 = ankleY2 + Math.sin(footFwd2)*34 + Math.sin(footDown2)*16;
+            var toeTopX2 = ankleX2 + Math.cos(footFwd2)*48 + Math.cos(footDown2)*7;
+            var toeTopY2 = ankleY2 + Math.sin(footFwd2)*48 + Math.sin(footDown2)*7;
+            var toeTipX2 = ankleX2 + Math.cos(footFwd2)*50 + Math.cos(footDown2)*15;
+            var toeTipY2 = ankleY2 + Math.sin(footFwd2)*50 + Math.sin(footDown2)*15;
+            var ankTopX2 = ankleX2 + Math.cos(footFwd2)*6 - Math.cos(footDown2)*4;
+            var ankTopY2 = ankleY2 + Math.sin(footFwd2)*6 - Math.sin(footDown2)*4;
+            var ankBackX2 = ankleX2 + Math.cos(footBack2)*10 - Math.cos(footDown2)*2;
+            var ankBackY2 = ankleY2 + Math.sin(footBack2)*10 - Math.sin(footDown2)*2;
 
-            svg += '<path d="M'+ankBackX2+','+ankBackY2+' L'+heelX2+','+heelY2+' Q'+heelBX2+','+heelBY2+' '+archX2+','+archY2+' Q'+ballX2+','+ballY2+' '+toeTipX2+','+toeTipY2+' L'+toeTopX2+','+toeTopY2+' Q'+ballX2+','+(ballY2-Math.sin(footDown2)*6)+' '+ankTopX2+','+ankTopY2+' Z" fill="#FFCC80" stroke="#D4A373" stroke-width="2"/>';
-            for (var ti2=0;ti2<4;ti2++) {
-                var tlx12=ankleX2+Math.cos(footFwd2)*(44+ti2*4)+Math.cos(footDown2)*10;
-                var tly12=ankleY2+Math.sin(footFwd2)*(44+ti2*4)+Math.sin(footDown2)*10;
-                var tlx22=tlx12+Math.cos(footDown2)*7, tly22=tly12+Math.sin(footDown2)*7;
+            svg += '<path d="M'+ankBackX2+','+ankBackY2+' L'+heelX2+','+heelY2+' Q'+heelBX2+','+heelBY2+' '+archX2+','+archY2+' Q'+ballX2+','+ballY2+' '+toeTipX2+','+toeTipY2+' L'+toeTopX2+','+toeTopY2+' Q'+ballX2+','+(ballY2-Math.sin(footDown2)*5)+' '+ankTopX2+','+ankTopY2+' Z" fill="#FFCC80" stroke="#D4A373" stroke-width="2"/>';
+            for (var ti2=0;ti2<3;ti2++) {
+                var tlx12=ankleX2+Math.cos(footFwd2)*(38+ti2*4)+Math.cos(footDown2)*8;
+                var tly12=ankleY2+Math.sin(footFwd2)*(38+ti2*4)+Math.sin(footDown2)*8;
+                var tlx22=tlx12+Math.cos(footDown2)*6, tly22=tly12+Math.sin(footDown2)*6;
                 svg += '<line x1="'+tlx12+'" y1="'+tly12+'" x2="'+tlx22+'" y2="'+tly22+'" stroke="#D4A373" stroke-width="1.5"/>';
             }
-            svg += '<circle cx="'+ankleX2+'" cy="'+ankleY2+'" r="7" fill="#FFE0B2" stroke="#D4A373" stroke-width="1.5"/>';
-            svg += '<circle cx="'+ankleX2+'" cy="'+ankleY2+'" r="18" fill="#1565C0" id="legHandle" style="cursor:grab;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.3));opacity:0.85;"/>';
-            svg += '<text x="'+ankleX2+'" y="'+(ankleY2+1)+'" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="9" font-weight="800" style="pointer-events:none;">DRAG</text>';
+            svg += '<circle cx="'+ankleX2+'" cy="'+ankleY2+'" r="6" fill="#FFE0B2" stroke="#D4A373" stroke-width="1.5"/>';
+            svg += '<circle cx="'+ankleX2+'" cy="'+ankleY2+'" r="16" fill="#1565C0" id="legHandle" style="cursor:grab;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.3));opacity:0.85;"/>';
+            svg += '<text x="'+ankleX2+'" y="'+(ankleY2+1)+'" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="8" font-weight="800" style="pointer-events:none;">DRAG</text>';
         }
 
         var fullSvg = '<svg width="'+svgW+'" height="'+svgH+'" id="legSvg" class="leg-svg" viewBox="0 0 '+svgW+' '+svgH+'">' + svg + '</svg>';
 
         var rangeText = '';
-        if (flex < 60) rangeText = 'Limited range &mdash; keep working on exercises!';
-        else if (flex < 90) rangeText = 'Good progress &mdash; getting there!';
-        else if (flex < 120) rangeText = 'Great range of motion!';
-        else rangeText = 'Excellent flexibility!';
+        if (flex < 60) rangeText = 'Keep working on exercises!';
+        else if (flex < 90) rangeText = 'Good progress!';
+        else if (flex < 120) rangeText = 'Great range!';
+        else rangeText = 'Excellent!';
 
-        var h = '<div class="leg-wrap">';
-        h += '<div class="leg-container" id="legArea">' + fullSvg + '</div>';
-        h += '<div class="rom-numbers">';
-        h += '<div class="rom-num-box"><div class="rom-num-val" id="romFlexVal">' + flex + '&deg;</div><div class="rom-num-label">Flexion (max bend)</div></div>';
-        h += '<div class="rom-num-box" style="border-color:#ef4444;background:rgba(239,68,68,0.1);"><div class="rom-num-val" style="color:#f87171;" id="romExtVal">' + ext + '&deg;</div><div class="rom-num-label">Extension lag<br><span style="font-size:0.7rem;color:#64748b;">0&deg; = fully straight</span></div></div>';
+        // Compact layout: SVG on left, numbers+buttons on right — no scrolling
+        var h = '<div class="leg-wrap" style="flex-direction:row;align-items:flex-start;gap:12px;flex-wrap:wrap;">';
+        h += '<div class="leg-container" id="legArea" style="flex:1;min-width:220px;max-width:400px;margin-bottom:0;">' + fullSvg + '</div>';
+        h += '<div style="display:flex;flex-direction:column;gap:8px;min-width:140px;align-items:center;">';
+        h += '<div class="rom-num-box" style="width:100%;padding:8px 12px;"><div class="rom-num-val" id="romFlexVal" style="font-size:2rem;">' + flex + '&deg;</div><div class="rom-num-label">Flexion</div></div>';
+        h += '<div class="rom-num-box" style="width:100%;padding:8px 12px;border-color:#ef4444;background:rgba(239,68,68,0.1);"><div class="rom-num-val" style="color:#f87171;font-size:2rem;" id="romExtVal">' + ext + '&deg;</div><div class="rom-num-label">Extension lag</div></div>';
+        h += '<div class="rom-feedback" id="romFeedback" style="margin:0;font-size:0.85rem;">' + rangeText + '</div>';
+        h += '<div style="display:flex;gap:6px;width:100%;">';
+        h += '<button class="btn-reset" style="flex:1;padding:10px;font-size:0.85rem;" onclick="resetRom()">Reset</button>';
+        h += '<button class="btn-iphone" style="flex:1;padding:10px;font-size:0.85rem;" onclick="openRomModal()">&#x1F4F1; iPhone</button>';
         h += '</div>';
-        h += '<div class="rom-feedback" id="romFeedback">' + rangeText + '</div>';
-        h += '<div class="rom-hint-box">';
-        h += isKnee ?
-            '<strong>How to use:</strong><br>1. Drag the foot <b>back</b> to match how far you can bend your knee<br>2. Then drag it <b>forward</b> to match how straight you can get it<br>The numbers will lock in your best range' :
-            '<strong>How to use:</strong><br>1. Drag the foot <b>forward</b> to match how far you can bend your hip<br>2. Then drag it <b>back</b> to match how straight you can get it<br>The numbers will lock in your best range';
-        h += '</div>';
-        h += '<div class="rom-actions">';
-        h += '<button class="btn-reset" onclick="resetRom()">Reset</button>';
-        h += '<button class="btn-iphone" onclick="openRomModal()">&#x1F4F1; iPhone</button>';
-        h += '</div>';
-        h += '<button class="skip-link" onclick="answers.rom_flexion=null;answers.rom_extension=null;advance();">Skip ROM</button>';
-        h += '</div>';
+        h += '<button class="skip-link" style="margin:0;font-size:0.85rem;" onclick="answers.rom_flexion=null;answers.rom_extension=null;advance();">Skip ROM</button>';
+        h += '</div></div>';
         return h;
     }
 
     // ========== CONCERNS ==========
     function renderConcerns() {
-        var h = '<div class="cb-grid">';
+        var h = '';
+        // "No warning signs" button at top — auto-advances
+        h += '<button class="opt-btn' + (answers.concerns_flags === 'none' ? ' selected' : '') + '" style="border-color:#22c55e;margin-bottom:10px;" onclick="pickNoConcerns()">';
+        h += '<span class="opt-icon">&#x2705;</span> No warning signs</button>';
+        h += '<div class="cb-grid">';
         concernsList.forEach(function(c) {
             var chk = selectedConcerns.has(c.id) ? ' checked' : '';
             h += '<div class="cb-item' + chk + '" onclick="toggleCB(\'' + c.id + '\',this)">';
@@ -705,8 +703,13 @@
             h += c.label + '</div>';
         });
         h += '</div>';
-        h += '<button class="skip-link" onclick="answers.concerns_flags=\'\';advance();">None of these &mdash; Skip</button>';
         return h;
+    }
+
+    function pickNoConcerns() {
+        selectedConcerns.clear();
+        answers.concerns_flags = 'none';
+        setTimeout(function() { advance(); }, 300);
     }
 
     // ========== TEXT AREA ==========
@@ -778,6 +781,10 @@
             el.querySelector('.cb-check').innerHTML = '&#x2713;';
         }
         answers.concerns_flags = Array.from(selectedConcerns).join(',');
+        // Auto-advance after selecting a concern
+        if (selectedConcerns.size > 0) {
+            setTimeout(function() { advance(); }, 400);
+        }
     }
 
     // ========== NAVIGATION ==========
@@ -864,23 +871,23 @@
         if (!svg) return;
         var rect = svg.getBoundingClientRect();
         var isKnee = surgeryType === 'TKA';
-        var scaleX = 550 / rect.width;
-        var scaleY = 320 / rect.height;
+        var scaleX = 400 / rect.width;
+        var scaleY = 260 / rect.height;
 
         if (isKnee) {
-            var pivX = 380, pivY = 110;
+            var pivX = 170, pivY = 90;
             var px = rect.left + pivX / scaleX;
             var py = rect.top + pivY / scaleY;
             var dx = mx - px, dy = my - py;
             var ang = Math.atan2(dy, dx);
-            var straightAng = (220 + 180) * Math.PI / 180;
-            var flexAng = ang - straightAng;
+            var straightAng = (320 + 180) * Math.PI / 180;
+            var flexAng = straightAng - ang; // reversed for right-facing
             while (flexAng < -Math.PI) flexAng += 2 * Math.PI;
             while (flexAng > Math.PI) flexAng -= 2 * Math.PI;
             var flex = Math.round(flexAng * 180 / Math.PI);
             flex = Math.max(0, Math.min(150, flex));
         } else {
-            var pivX = 380, pivY = 70;
+            var pivX = 170, pivY = 60;
             var px = rect.left + pivX / scaleX;
             var py = rect.top + pivY / scaleY;
             var dx = mx - px, dy = my - py;
