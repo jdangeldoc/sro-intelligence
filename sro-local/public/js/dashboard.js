@@ -2,6 +2,7 @@
 const CLINIC_ID = sessionStorage.getItem('clinicId') || '11111111-1111-1111-1111-111111111111';
 const USER_ID = sessionStorage.getItem('userId');
 const USER_NAME = sessionStorage.getItem('userName') || 'User';
+const USER_ROLE = sessionStorage.getItem('userRole') || 'surgeon';
 
 // ============ STATE ============
 let patients = [];
@@ -30,8 +31,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
     
-    // Set user name in nav
-    document.getElementById('userName').textContent = USER_NAME;
+    // Set user name and role badge in nav
+    const roleLabels = { surgeon: 'Surgeon', nurse: 'Nurse', admin: 'Admin' };
+    const roleColors = { surgeon: '#2c5aa0', nurse: '#059669', admin: '#7c3aed' };
+    document.getElementById('userName').innerHTML = USER_NAME + 
+        ' <span style="background:' + (roleColors[USER_ROLE] || '#6b7280') + 
+        ';color:white;padding:2px 8px;border-radius:10px;font-size:0.75rem;margin-left:6px;">' + 
+        (roleLabels[USER_ROLE] || USER_ROLE) + '</span>';
+    
+    // Apply role-based visibility
+    applyRoleBasedView();
     
     // Load data
     await loadSurgeons();
@@ -40,7 +49,55 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadStats();
     await loadPatients();
     await loadPromCompliance();
+    
+    // For surgeons, auto-select their own name in filter
+    if (USER_ROLE === 'surgeon' && USER_ID) {
+        const filterSurgeon = document.getElementById('filterSurgeon');
+        if (filterSurgeon) {
+            // Find the option matching this user
+            for (let opt of filterSurgeon.options) {
+                if (opt.value === USER_ID) {
+                    filterSurgeon.value = USER_ID;
+                    filterPatients();
+                    break;
+                }
+            }
+        }
+    }
 });
+
+// ============ ROLE-BASED VIEWS ============
+function applyRoleBasedView() {
+    // Nav links - show/hide based on role
+    document.querySelectorAll('.nav-link').forEach(link => {
+        const href = link.getAttribute('href');
+        if (USER_ROLE === 'nurse') {
+            // Nurses: hide Analytics (surgeon tool), Settings (admin tool)
+            // Nurses KEEP: Dashboard, Pre-Op (data entry), RPM Billing (they log monitoring time)
+            if (href === '/analytics.html' || href === '/settings.html') link.style.display = 'none';
+        } else if (USER_ROLE === 'surgeon') {
+            // Surgeons: hide RPM Billing (nurse does this), Settings (admin tool)
+            // Surgeons KEEP: Dashboard, Pre-Op (decision tool), Analytics (outcomes)
+            if (href === '/rpm-report.html' || href === '/settings.html') link.style.display = 'none';
+        }
+        // Admin: sees everything
+    });
+    
+    // Demo buttons - admin only
+    const demoButtons = document.querySelectorAll('[onclick*="seedDemo"], [onclick*="clearDemo"]');
+    if (USER_ROLE !== 'admin') {
+        demoButtons.forEach(btn => btn.style.display = 'none');
+    }
+    
+    // Add Patient / Pre-Op Assessment buttons - nurses need both for data entry
+    
+    // Export CSV - admin and surgeon only
+    const exportBtn = document.querySelector('[onclick*="exportPatients"]');
+    if (USER_ROLE === 'nurse' && exportBtn) exportBtn.style.display = 'none';
+    
+    // PROM Compliance tab - visible for all roles (nurses need it for chasing)
+    // RPM timer in patient modal - visible for all roles (nurses log call time, surgeons log review time)
+}
 
 // ============ PREOP ASSESSMENTS ============
 async function loadPreopAssessments() {
@@ -327,7 +384,7 @@ async function openPatientModal(patientId) {
     document.getElementById('modalPatientName').textContent = 
         `${currentPatient.first_name} ${currentPatient.last_name}`;
     
-    // Reset RPM timer state
+    // RPM timer: visible for all roles (nurses log call time, surgeons log review time)
     document.getElementById('startReviewBtn').style.display = 'block';
     document.getElementById('rpmTimer').style.display = 'none';
     

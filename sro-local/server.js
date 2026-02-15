@@ -279,7 +279,32 @@ if (clinicCount.count === 0) {
     VALUES (?, ?, 'Jennifer', 'Lee', 'surgeon', 'Total Joint Replacement')
   `).run(uuid(), defaultClinicId);
   
-  console.log('Created default clinic and demo surgeons');
+  db.prepare(`
+    INSERT INTO users (id, clinic_id, first_name, last_name, role, specialty)
+    VALUES (?, ?, 'Lisa', 'Thompson', 'nurse', 'Orthopedic Nursing')
+  `).run(uuid(), defaultClinicId);
+  
+  db.prepare(`
+    INSERT INTO users (id, clinic_id, first_name, last_name, role, specialty)
+    VALUES (?, ?, 'Karen', 'Davis', 'admin', 'Practice Administration')
+  `).run(uuid(), defaultClinicId);
+  
+  console.log('Created default clinic and demo users (surgeons, nurse, admin)');
+}
+
+// Migration: ensure nurse and admin users exist (for existing databases)
+const defaultClinicCheck = db.prepare('SELECT id FROM clinics LIMIT 1').get();
+if (defaultClinicCheck) {
+  const hasNurse = db.prepare("SELECT id FROM users WHERE clinic_id = ? AND role = 'nurse' LIMIT 1").get(defaultClinicCheck.id);
+  if (!hasNurse) {
+    db.prepare("INSERT INTO users (id, clinic_id, first_name, last_name, role, specialty) VALUES (?, ?, 'Lisa', 'Thompson', 'nurse', 'Orthopedic Nursing')").run(uuid(), defaultClinicCheck.id);
+    console.log('Added demo nurse user');
+  }
+  const hasAdmin = db.prepare("SELECT id FROM users WHERE clinic_id = ? AND role = 'admin' LIMIT 1").get(defaultClinicCheck.id);
+  if (!hasAdmin) {
+    db.prepare("INSERT INTO users (id, clinic_id, first_name, last_name, role, specialty) VALUES (?, ?, 'Karen', 'Davis', 'admin', 'Practice Administration')").run(uuid(), defaultClinicCheck.id);
+    console.log('Added demo admin user');
+  }
 }
 
 // ============ PROM SCHEDULE HELPER ============
@@ -440,9 +465,9 @@ app.get('/api/patients', (req, res) => {
       e.surgeon_id,
       u.first_name as surgeon_first_name,
       u.last_name as surgeon_last_name,
-      (SELECT checkin_date FROM checkins WHERE patient_id = p.id ORDER BY checkin_date DESC LIMIT 1) as last_checkin_date,
-      (SELECT pain_level FROM checkins WHERE patient_id = p.id ORDER BY checkin_date DESC LIMIT 1) as last_pain_level,
-      (SELECT pt_exercises FROM checkins WHERE patient_id = p.id ORDER BY checkin_date DESC LIMIT 1) as last_pt_exercises
+      (SELECT checkin_date FROM checkins WHERE patient_id = p.id ORDER BY checkin_date DESC, created_at DESC LIMIT 1) as last_checkin_date,
+      (SELECT pain_level FROM checkins WHERE patient_id = p.id ORDER BY checkin_date DESC, created_at DESC LIMIT 1) as last_pain_level,
+      (SELECT pt_exercises FROM checkins WHERE patient_id = p.id ORDER BY checkin_date DESC, created_at DESC LIMIT 1) as last_pt_exercises
     FROM patients p
     LEFT JOIN episodes e ON e.patient_id = p.id AND e.status = 'active'
     LEFT JOIN users u ON e.surgeon_id = u.id
