@@ -119,9 +119,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
         <a href="dashboard.html">Dashboard</a>
         <a href="preop.html" style="color:white;font-weight:700;">PreOp</a>
         <a href="surgical-prep.html">Surg Prep</a>
+        <a href="nonop-plan.html">Non-Op Plan</a>
         <a href="analytics.html">Analytics</a>
         <a href="rpm-report.html">RPM</a>
         <a href="settings.html">Settings</a>
+        <button class="btn btn-sm" onclick="logout()" style="margin-left:16px;background:#dc2626;color:white;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:0.8rem;">Logout</button>
     </div>
 </div>
 
@@ -156,6 +158,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
     <button class="tab-btn" onclick="switchTab(2)">3. Workup Tracking</button>
     <button class="tab-btn" onclick="switchTab(3)">4. Decision Tool</button>
     <button class="tab-btn" onclick="switchTab(4)">5. Patient View</button>
+    <button class="tab-btn" onclick="goToSurgPrep()" style="color:#059669;">6. Surgical Prep →</button>
 </div>
 
 <!-- TAB 0: INTAKE RESULTS -->
@@ -166,9 +169,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
             <p style="color:#6b7280;text-align:center;padding:30px;">No intake completed yet. Click "Launch Patient Intake" to start.</p>
         </div>
     </div>
+    <div style="text-align:center;padding:16px;"><button class="btn btn-primary" onclick="switchTab(1);">Proceed to Comorbidities &rarr;</button></div>
 </div>
-
-<!-- TAB 1: COMORBIDITIES -->
 <div class="tab-panel" id="panel1">
     <div class="score-bar">
         <div class="score-item"><span class="score-label">HCC Score:</span><span class="score-val" id="hccScore">0.000</span></div>
@@ -257,6 +259,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
     <div id="surgPrepLaunchBox" style="display:none;text-align:center;padding:12px;margin-top:4px;">
         <div style="background:linear-gradient(135deg,#312e81,#4338ca);border-radius:12px;padding:16px;display:inline-block;">
             <span style="color:#e0e7ff;font-size:0.9rem;margin-right:12px;">Assessment saved.</span>
+            <button class="btn" style="background:#2563eb;color:white;font-size:1rem;padding:10px 24px;" onclick="switchTab(4)">📊 Patient View →</button>
             <button class="btn" style="background:#22c55e;color:white;font-size:1rem;padding:10px 24px;" onclick="launchSurgPrep()">🦴 Launch Surgical Prep →</button>
         </div>
     </div>
@@ -363,6 +366,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
         </div>
         <div style="text-align:center;margin-top:16px;">
             <button class="btn btn-primary" onclick="printPatientView()" style="background:#1e40af;">Print for Patient</button>
+            <button class="btn btn-primary" onclick="goToSurgPrep()" style="background:#059669;margin-left:10px;">Proceed to Surgical Prep →</button>
         </div>
     </div>
     </div>
@@ -491,6 +495,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
 
         <div style="text-align:center;margin-top:16px;">
             <button class="btn btn-primary" onclick="printSafetyView()" style="background:#1e40af;">Print for Patient</button>
+            <button class="btn btn-primary" onclick="goToSurgPrep()" style="background:#059669;margin-left:10px;">Proceed to Surgical Prep →</button>
         </div>
     </div>
     </div>
@@ -572,7 +577,13 @@ function buildQuestions(joint) {
     qs.push({id:"cardiac_afib",section:"Medical History — Cardiovascular",text:"Arrhythmia / Atrial Fibrillation?",type:"choice",options:["No","Yes"],conditional:"cardiac:Yes"});
     qs.push({id:"ckd",section:"Medical History",text:"KIDNEY disease?",type:"choice",options:["No","Yes"]});
     qs.push({id:"smoker",section:"Medical History",text:"Smoking status?",type:"choice",options:["Never smoked","Quit >1 year ago","Quit recently","Current smoker"]});
-    qs.push({id:"sleep_apnea",section:"Medical History",text:"SLEEP APNEA?",type:"choice",options:["No","Yes - uses CPAP","Yes - no CPAP"]});
+    qs.push({id:"sleep_apnea",section:"Medical History",text:"SLEEP APNEA?",type:"choice",options:["No","Yes - uses CPAP","Yes - no CPAP","I don't know"]});
+    // STOP-BANG screening (conditional on "I don't know")
+    qs.push({id:"sb_snore",section:"Sleep Screening (STOP-BANG)",text:"Do you SNORE loudly (louder than talking, or heard through closed doors)?",type:"choice",options:["No","Yes"],conditional:"sleep_apnea:I don't know"});
+    qs.push({id:"sb_tired",section:"Sleep Screening (STOP-BANG)",text:"Do you often feel TIRED, fatigued, or sleepy during the daytime?",type:"choice",options:["No","Yes"],conditional:"sleep_apnea:I don't know"});
+    qs.push({id:"sb_observed",section:"Sleep Screening (STOP-BANG)",text:"Has anyone OBSERVED you stop breathing or choking during sleep?",type:"choice",options:["No","Yes"],conditional:"sleep_apnea:I don't know"});
+    qs.push({id:"sb_pressure",section:"Sleep Screening (STOP-BANG)",text:"Are you being treated for high blood PRESSURE?",type:"choice",options:["No","Yes"],conditional:"sleep_apnea:I don't know"});
+    qs.push({id:"sb_neck",section:"Sleep Screening (STOP-BANG)",text:"Is your NECK circumference greater than 16 inches (40 cm)?",type:"choice",options:["No","Yes","Not sure"],conditional:"sleep_apnea:I don't know"});
     qs.push({id:"rheumatoid",section:"Medical History",text:"RHEUMATOID or inflammatory arthritis?",type:"choice",options:["No","Yes - Rheumatoid Arthritis","Yes - Psoriatic Arthritis","Yes - Other inflammatory"]});
     qs.push({id:"anticoagulant",section:"Medical History",text:"On BLOOD THINNERS (anticoagulants)?",type:"choice",options:["No","Yes"]});
     qs.push({id:"anticoag_reason",section:"Medical History",text:"Blood thinner is for?",type:"choice",options:["Heart condition","DVT / blood clot history","Stroke prevention","Other"],conditional:"anticoagulant:Yes"});
@@ -641,11 +652,17 @@ var existingAssessmentId = null;  // Track if editing existing assessment
 function switchTab(n) {
     var btns = document.querySelectorAll('.tab-btn');
     var panels = document.querySelectorAll('.tab-panel');
-    for(var i=0;i<btns.length;i++){btns[i].classList.remove('active');panels[i].classList.remove('active');}
+    for(var i=0;i<btns.length;i++){btns[i].classList.remove('active');}
+    for(var i=0;i<panels.length;i++){panels[i].classList.remove('active');}
     btns[n].classList.add('active');panels[n].classList.add('active');
     if(n===2) generateWorkup();
     if(n===3) updateDecisionTool();
     if(n===4) updateSafetyView();
+}
+
+function goToSurgPrep() {
+    var pid = document.getElementById('patientSelect')?.value || '';
+    window.location.href = '/surgical-prep.html' + (pid ? '?patient=' + pid : '');
 }
 
 function onProcChange() {
@@ -773,6 +790,52 @@ function finishIntake() {
     switchTab(0);
 }
 
+// STOP-BANG Sleep Apnea Screening Calculator
+function calculateStopBang() {
+    var r = intakeResponses;
+    if(!r.sleep_apnea || r.sleep_apnea.answer !== "I don't know") return null;
+    var score = 0;
+    var items = [];
+    // S - Snoring
+    var s1 = (r.sb_snore||{}).answer === 'Yes';
+    if(s1) score++;
+    items.push({letter:'S', label:'Snoring', value: s1 ? 'Yes' : 'No', positive: s1});
+    // T - Tired
+    var s2 = (r.sb_tired||{}).answer === 'Yes';
+    if(s2) score++;
+    items.push({letter:'T', label:'Tired/Fatigued', value: s2 ? 'Yes' : 'No', positive: s2});
+    // O - Observed apnea
+    var s3 = (r.sb_observed||{}).answer === 'Yes';
+    if(s3) score++;
+    items.push({letter:'O', label:'Observed apnea', value: s3 ? 'Yes' : 'No', positive: s3});
+    // P - Blood Pressure treatment
+    var s4 = (r.sb_pressure||{}).answer === 'Yes';
+    if(s4) score++;
+    items.push({letter:'P', label:'Blood Pressure Rx', value: s4 ? 'Yes' : 'No', positive: s4});
+    // B - BMI > 35 (auto-calculated from intake)
+    var bmiVal = 28;
+    try { var hf=parseInt(r.height_ft.answer); var hi=parseInt(r.height_in.answer); bmiVal=(r.weight.answer/Math.pow(hf*12+hi,2))*703; } catch(e){}
+    var s5 = bmiVal > 35;
+    if(s5) score++;
+    items.push({letter:'B', label:'BMI > 35', value: s5 ? 'Yes ('+bmiVal.toFixed(1)+')' : 'No ('+bmiVal.toFixed(1)+')', positive: s5, auto: true});
+    // A - Age > 50 (auto-calculated from intake)
+    var ageVal = parseInt((r.age||{}).answer) || 0;
+    var s6 = ageVal > 50;
+    if(s6) score++;
+    items.push({letter:'A', label:'Age > 50', value: s6 ? 'Yes ('+ageVal+')' : 'No ('+ageVal+')', positive: s6, auto: true});
+    // N - Neck > 16 inches
+    var s7 = (r.sb_neck||{}).answer === 'Yes';
+    if(s7) score++;
+    items.push({letter:'N', label:'Neck > 16 in', value: (r.sb_neck||{}).answer || 'N/A', positive: s7});
+    // G - Gender = Male (auto-calculated from intake)
+    var genderVal = (r.gender||{}).answer || '';
+    var s8 = genderVal === 'Male';
+    if(s8) score++;
+    items.push({letter:'G', label:'Gender: Male', value: s8 ? 'Yes' : 'No', positive: s8, auto: true});
+    var risk = score >= 5 ? 'high' : score >= 3 ? 'intermediate' : 'low';
+    return { score: score, risk: risk, items: items };
+}
+
 // Official HSS Rasch Interval Conversion Tables
 var KOOS_JR_TABLE = {0:100,1:91.975,2:84.6,3:79.914,4:76.332,5:73.342,6:70.704,7:68.284,8:65.994,9:63.776,10:61.583,11:59.381,12:57.14,13:54.84,14:52.465,15:50.012,16:47.487,17:44.905,18:42.281,19:39.625,20:36.931,21:34.174,22:31.307,23:28.251,24:24.875,25:20.941,26:15.939,27:8.291,28:0};
 var HOOS_JR_TABLE = {0:100,1:92.34,2:85.257,3:80.55,4:76.776,5:73.472,6:70.426,7:67.516,8:64.664,9:61.815,10:58.93,11:55.985,12:52.965,13:49.858,14:46.652,15:43.335,16:39.902,17:36.363,18:32.735,19:29.009,20:25.103,21:20.805,22:15.633,23:8.104,24:0};
@@ -838,7 +901,13 @@ function calculateScores() {
     var chronicUti = (intakeResponses.chronic_uti||{}).answer||"No";
     if(chronicUti==="Yes") alerts.push({text:"Chronic UTI - perioperative infection risk",level:"warn"});
     var sleepApnea = (intakeResponses.sleep_apnea||{}).answer||"No";
+    var stopBang = calculateStopBang();
     if(sleepApnea==="Yes - no CPAP") alerts.push({text:"Sleep apnea without CPAP - anesthesia risk",level:"danger"});
+    else if(sleepApnea==="Yes - uses CPAP") alerts.push({text:"Sleep apnea - verify CPAP compliance (>4 hrs/night)",level:"info"});
+    else if(stopBang) {
+        if(stopBang.risk==='high') alerts.push({text:"STOP-BANG "+stopBang.score+"/8 — HIGH risk for OSA. Refer to Pulmonology/Sleep Medicine before surgery.",level:"danger"});
+        else if(stopBang.risk==='intermediate') alerts.push({text:"STOP-BANG "+stopBang.score+"/8 — Intermediate risk for OSA. Consider sleep study.",level:"warn"});
+    }
     var dietGlp1 = (intakeResponses.diet_glp1||{}).answer||"No";
     if(dietGlp1==="Yes") alerts.push({text:"GLP-1 medication - review hold protocol before surgery",level:"warn"});
     var otherMedical = (intakeResponses.other_medical||{}).answer||"";
@@ -848,7 +917,7 @@ function calculateScores() {
         phq:phq, gad:gad, bmi:bmi, statedWeight:statedWeight, actualWeight:actualWeight, alerts:alerts,
         cmsLowBackPain:cmsLowBackPain, cmsHealthLiteracy:cmsHealthLiteracy,
         cmsOtherJointPain:cmsOtherJointPain, cmsNarcotics90d:cmsNarcotics90d,
-        asaClass:asaClass, otherMedical:otherMedical
+        asaClass:asaClass, otherMedical:otherMedical, stopBang:stopBang
     };
 }
 
@@ -879,6 +948,31 @@ function displayIntakeResults(s) {
     if (s.alerts.length) {
         html += '<div class="card"><h3>Alerts</h3>';
         for(var i=0;i<s.alerts.length;i++) html += '<div class="alert-item ' + s.alerts[i].level + '">' + s.alerts[i].text + '</div>';
+        html += '</div>';
+    }
+    // STOP-BANG results card
+    if(s.stopBang) {
+        var sb = s.stopBang;
+        var riskColor = sb.risk==='high' ? '#dc2626' : sb.risk==='intermediate' ? '#d97706' : '#16a34a';
+        var riskLabel = sb.risk==='high' ? 'HIGH RISK' : sb.risk==='intermediate' ? 'INTERMEDIATE' : 'LOW RISK';
+        html += '<div class="card" style="border-left:4px solid '+riskColor+';">';
+        html += '<h3>STOP-BANG Sleep Apnea Screening</h3>';
+        html += '<div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;">';
+        html += '<div style="font-size:2rem;font-weight:800;color:'+riskColor+';">'+sb.score+'/8</div>';
+        html += '<div><div style="font-weight:700;color:'+riskColor+';font-size:1.1rem;">'+riskLabel+'</div>';
+        html += '<div style="font-size:0.8rem;color:#6b7280;">0-2 Low | 3-4 Intermediate | 5-8 High</div></div></div>';
+        html += '<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">';
+        for(var si=0;si<sb.items.length;si++){
+            var it = sb.items[si];
+            var valColor = it.positive ? '#dc2626' : '#16a34a';
+            var autoTag = it.auto ? ' <span style="font-size:0.7rem;color:#9ca3af;">(auto)</span>' : '';
+            html += '<tr><td style="padding:5px 8px;border-bottom:1px solid #f3f4f6;font-weight:700;width:30px;color:'+riskColor+';">'+it.letter+'</td>';
+            html += '<td style="padding:5px 8px;border-bottom:1px solid #f3f4f6;">'+it.label+autoTag+'</td>';
+            html += '<td style="padding:5px 8px;border-bottom:1px solid #f3f4f6;font-weight:600;color:'+valColor+';">'+it.value+'</td></tr>';
+        }
+        html += '</table>';
+        if(sb.risk==='high') html += '<div style="margin-top:10px;padding:10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;font-size:0.85rem;color:#991b1b;font-weight:600;">⚠️ Refer to Pulmonology / Sleep Medicine before scheduling surgery</div>';
+        else if(sb.risk==='intermediate') html += '<div style="margin-top:10px;padding:10px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;font-size:0.85rem;color:#92400e;">Consider ordering a sleep study before proceeding</div>';
         html += '</div>';
     }
     // Nutrition summary card
@@ -931,8 +1025,15 @@ function autoPopulateComorbidities() {
     if(r.ckd && r.ckd.answer==='Yes') setCC('ckd_stage_3',true,true);
     if(r.smoker && r.smoker.answer.indexOf('Current')>=0) setCC('smoking_current',true,true);
     if(r.opioid && r.opioid.answer.indexOf('more than 3')>=0) setCC('opioid_chronic',true,true);
-    // Sleep apnea
-    if(r.sleep_apnea && r.sleep_apnea.answer!=='No') setCC('sleep_apnea',true,true);
+    // Sleep apnea (direct answer or STOP-BANG result)
+    if(r.sleep_apnea && r.sleep_apnea.answer!=='No') {
+        if(r.sleep_apnea.answer === "I don't know") {
+            var sb = calculateStopBang();
+            if(sb && sb.score >= 3) setCC('sleep_apnea',true,true);
+        } else {
+            setCC('sleep_apnea',true,true);
+        }
+    }
     // Rheumatoid / inflammatory arthritis
     if(r.rheumatoid && r.rheumatoid.answer!=='No') setCC('rheumatoid_arthritis',true,true);
     // Anticoagulant
@@ -1573,6 +1674,11 @@ function confirmNotIndicated() {
         document.getElementById('notIndicatedDone').style.display='block';
         document.querySelector('#surgeryNotIndicatedBox p').style.display='none';
     });
+}
+
+function logout() {
+    sessionStorage.clear();
+    window.location.href = '/index.html';
 }
 </script>
 </body>

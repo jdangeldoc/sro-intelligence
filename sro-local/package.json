@@ -1,15 +1,17 @@
 {
-  "name": "sro-local",
+  "name": "sro-intelligence",
   "version": "1.0.0",
-  "description": "SRO Intelligence - Local Deployment for Orthopedic Practices",
+  "description": "SRO Intelligence - Episode Command System for Orthopedic Joint Replacement",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "node server.js"
   },
   "dependencies": {
-    "better-sqlite3": "^9.4.3",
+    "better-sqlite3": "^11.0.0",
     "cors": "^2.8.5",
     "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

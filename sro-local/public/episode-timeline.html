@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Episode Timeline — SRO Intelligence</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #f8fafc; margin: 0; }
+        .navbar { background: linear-gradient(135deg, #1e3a5f, #2c5aa0); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
+        .navbar a { color: rgba(255,255,255,0.8); text-decoration: none; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; }
+        .navbar a:hover, .navbar a.active { background: rgba(255,255,255,0.15); color: white; }
+        .navbar .brand { font-size: 1.1rem; font-weight: 700; color: white; }
+
+        .patient-banner {
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            color: white; padding: 20px 32px; display: flex; align-items: center; gap: 24px;
+        }
+        .patient-banner h1 { margin: 0; font-size: 1.5rem; }
+        .patient-banner .meta { color: #94a3b8; font-size: 0.85rem; }
+        .patient-banner .stat { text-align: center; }
+        .patient-banner .stat-val { font-size: 1.6rem; font-weight: 700; }
+        .patient-banner .stat-label { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; }
+
+        .container { max-width: 900px; margin: 0 auto; padding: 24px; }
+
+        .filter-bar {
+            display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; align-items: center;
+        }
+        .filter-btn {
+            padding: 6px 14px; border-radius: 20px; border: 1px solid #d1d5db; background: white;
+            font-size: 0.8rem; cursor: pointer; font-weight: 500; color: #374151;
+        }
+        .filter-btn.active { background: #2c5aa0; color: white; border-color: #2c5aa0; }
+
+        .timeline { position: relative; padding-left: 40px; }
+        .timeline::before {
+            content: ''; position: absolute; left: 16px; top: 0; bottom: 0;
+            width: 2px; background: #e5e7eb;
+        }
+        .tl-month {
+            font-size: 0.85rem; font-weight: 700; color: #6b7280; margin: 20px 0 8px -40px;
+            padding: 4px 12px; background: #f1f5f9; border-radius: 20px; display: inline-block;
+        }
+        .tl-event {
+            position: relative; margin-bottom: 8px; padding: 12px 16px;
+            background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            border-left: 3px solid #d1d5db; cursor: pointer; transition: all 0.15s;
+        }
+        .tl-event:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .tl-event::before {
+            content: ''; position: absolute; left: -30px; top: 16px;
+            width: 10px; height: 10px; border-radius: 50%; background: #d1d5db; border: 2px solid white;
+        }
+        .tl-event.type-checkin { border-left-color: #2563eb; }
+        .tl-event.type-checkin::before { background: #2563eb; }
+        .tl-event.type-prom { border-left-color: #7c3aed; }
+        .tl-event.type-prom::before { background: #7c3aed; }
+        .tl-event.type-preop { border-left-color: #059669; }
+        .tl-event.type-preop::before { background: #059669; }
+        .tl-event.type-surgprep { border-left-color: #0891b2; }
+        .tl-event.type-surgprep::before { background: #0891b2; }
+        .tl-event.type-adverse { border-left-color: #dc2626; }
+        .tl-event.type-adverse::before { background: #dc2626; }
+        .tl-event.type-note { border-left-color: #d97706; }
+        .tl-event.type-note::before { background: #d97706; }
+        .tl-event.type-rpm { border-left-color: #6b7280; }
+        .tl-event.type-rpm::before { background: #6b7280; }
+        .tl-event.type-surgery { border-left-color: #be185d; }
+        .tl-event.type-surgery::before { background: #be185d; }
+        .tl-event.type-alert { border-left-color: #ea580c; }
+        .tl-event.type-alert::before { background: #ea580c; }
+        .tl-event.type-task { border-left-color: #059669; }
+        .tl-event.type-task::before { background: #059669; }
+
+        .tl-header { display: flex; justify-content: space-between; align-items: center; }
+        .tl-title { font-weight: 600; font-size: 0.9rem; color: #1e293b; }
+        .tl-date { font-size: 0.75rem; color: #9ca3af; }
+        .tl-badge {
+            display: inline-block; padding: 2px 8px; border-radius: 10px;
+            font-size: 0.7rem; font-weight: 600; margin-right: 6px;
+        }
+        .tl-detail { font-size: 0.82rem; color: #6b7280; margin-top: 6px; display: none; }
+        .tl-event.expanded .tl-detail { display: block; }
+        .tl-summary { font-size: 0.82rem; color: #6b7280; margin-top: 4px; }
+
+        .loading { text-align: center; padding: 60px; color: #9ca3af; font-size: 1rem; }
+        .empty-state { text-align: center; padding: 60px; color: #9ca3af; }
+        .print-btn { position: fixed; bottom: 24px; right: 24px; background: #2c5aa0; color: white; border: none; padding: 12px 20px; border-radius: 10px; font-size: 0.9rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(44,90,160,0.3); z-index: 100; }
+
+        @media print {
+            .navbar, .filter-bar, .print-btn { display: none !important; }
+            .tl-detail { display: block !important; }
+            .tl-event { box-shadow: none; break-inside: avoid; }
+            body { background: white; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <span class="brand">SRO Intelligence</span>
+        <div>
+            <a href="/dashboard.html">Dashboard</a>
+            <a href="/preop.html">PreOp</a>
+            <a href="/nonop-plan.html">Non-Op Plan</a>
+            <a href="/analytics.html">Analytics</a>
+            <a href="/rpm-report.html">RPM</a>
+            <a href="/settings.html">Settings</a>
+            <button onclick="logout()" style="margin-left:16px;background:#dc2626;color:white;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:0.8rem;">Logout</button>
+        </div>
+    </nav>
+
+    <div class="patient-banner" id="patientBanner">
+        <div style="flex:1;">
+            <h1 id="bannerName">Loading...</h1>
+            <div class="meta" id="bannerMeta"></div>
+        </div>
+        <div class="stat"><div class="stat-val" id="bannerEvents">-</div><div class="stat-label">Events</div></div>
+        <div class="stat"><div class="stat-val" id="bannerDays">-</div><div class="stat-label">Episode Days</div></div>
+        <div class="stat"><div class="stat-val" id="bannerPain">-</div><div class="stat-label">Latest Pain</div></div>
+        <div class="stat"><div class="stat-val" id="bannerScore">-</div><div class="stat-label">Latest PROM</div></div>
+    </div>
+
+    <div class="container">
+        <div class="filter-bar">
+            <span style="font-size:0.8rem;color:#6b7280;font-weight:600;">Filter:</span>
+            <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">All</button>
+            <button class="filter-btn" data-filter="checkin" onclick="setFilter('checkin')">Check-ins</button>
+            <button class="filter-btn" data-filter="prom" onclick="setFilter('prom')">PROMs</button>
+            <button class="filter-btn" data-filter="preop" onclick="setFilter('preop')">PreOp</button>
+            <button class="filter-btn" data-filter="surgprep" onclick="setFilter('surgprep')">Surg Prep</button>
+            <button class="filter-btn" data-filter="adverse" onclick="setFilter('adverse')">Adverse</button>
+            <button class="filter-btn" data-filter="note" onclick="setFilter('note')">Notes</button>
+            <button class="filter-btn" data-filter="alert" onclick="setFilter('alert')">Alerts</button>
+            <button class="filter-btn" data-filter="task" onclick="setFilter('task')">Tasks</button>
+        </div>
+        <div id="timelineContainer"><div class="loading">Loading timeline...</div></div>
+    </div>
+
+    <button class="print-btn" onclick="window.print()">🖨️ Print Timeline</button>
+
+<script>
+const CLINIC_ID = sessionStorage.getItem('clinicId') || '11111111-1111-1111-1111-111111111111';
+const params = new URLSearchParams(window.location.search);
+const PATIENT_ID = params.get('patient');
+
+let allEvents = [];
+let activeFilter = 'all';
+
+if (!PATIENT_ID) {
+    document.getElementById('timelineContainer').innerHTML = '<div class="empty-state">No patient specified. Open from Dashboard.</div>';
+}
+
+async function loadTimeline() {
+    if (!PATIENT_ID) return;
+
+    // Load patient info
+    try {
+        const resp = await fetch(`/api/patients?clinic_id=${CLINIC_ID}`);
+        const patients = await resp.json();
+        const patient = patients.find(p => p.id === PATIENT_ID);
+        if (patient) {
+            document.getElementById('bannerName').innerHTML = `${patient.first_name} ${patient.last_name}` +
+                (patient.mrn ? ` <span style="font-size:0.8rem;color:#94a3b8;font-weight:400;">[${patient.mrn}]</span>` : '');
+            const meta = [];
+            if (patient.date_of_birth) {
+                const age = Math.floor((Date.now() - new Date(patient.date_of_birth)) / (365.25*24*60*60*1000));
+                meta.push(`Age ${age}`);
+            }
+            if (patient.procedure_type) meta.push(patient.procedure_type);
+            if (patient.surgeon_name) meta.push(`Dr. ${patient.surgeon_name}`);
+            if (patient.surgery_date) meta.push(`Surgery: ${new Date(patient.surgery_date).toLocaleDateString()}`);
+            document.getElementById('bannerMeta').textContent = meta.join('  •  ');
+            document.title = `Timeline — ${patient.first_name} ${patient.last_name}`;
+        }
+    } catch(e) { console.error('Patient load error:', e); }
+
+    // Fetch all data sources in parallel
+    const [checkins, proms, preops, adverse, notes, surgPrep, rpmLogs, promSchedule, tasks] = await Promise.all([
+        fetchJSON(`/api/checkins?patient_id=${PATIENT_ID}`),
+        fetchJSON(`/api/pro-assessments?patient_id=${PATIENT_ID}`),
+        fetchJSON(`/api/preop-assessments?patient_id=${PATIENT_ID}`),
+        fetchJSON(`/api/adverse-events?patient_id=${PATIENT_ID}`),
+        fetchJSON(`/api/nursing-notes?patient_id=${PATIENT_ID}`),
+        fetchJSON(`/api/surgical-prep?patient_id=${PATIENT_ID}`),
+        fetchJSON(`/api/rpm-logs?patient_id=${PATIENT_ID}`),
+        fetchJSON(`/api/prom-schedule?patient_id=${PATIENT_ID}`),
+        fetchJSON(`/api/tasks?patient_id=${PATIENT_ID}`)
+    ]);
+
+    allEvents = [];
+
+    // Check-ins
+    (checkins || []).forEach(c => {
+        const pain = c.pain_level;
+        const painColor = pain <= 3 ? '#22c55e' : pain <= 6 ? '#fbbf24' : '#ef4444';
+        let summary = `Pain: ${pain}/10`;
+        if (c.pt_exercises !== undefined) summary += ` • PT: ${c.pt_exercises ? '✅' : '❌'}`;
+        if (c.rom_flexion) summary += ` • ROM: ${c.rom_flexion}°`;
+        if (c.swelling) summary += ` • Swelling: ${c.swelling}`;
+
+        let detail = '';
+        if (c.medications) detail += `<div><strong>Medications:</strong> ${c.medications}</div>`;
+        if (c.warning_signs) detail += `<div><strong>Warning Signs:</strong> ${c.warning_signs}</div>`;
+        if (c.concerns) detail += `<div><strong>Concerns:</strong> ${c.concerns}</div>`;
+
+        allEvents.push({
+            date: c.checkin_date || c.created_at,
+            type: 'checkin',
+            icon: '📊',
+            title: 'Daily Check-in',
+            badge: `<span class="tl-badge" style="background:${painColor}20;color:${painColor};">Pain ${pain}</span>`,
+            summary: summary,
+            detail: detail || null
+        });
+
+        // Generate alert events from check-ins
+        if (pain >= 7) {
+            allEvents.push({
+                date: c.checkin_date || c.created_at,
+                type: 'alert',
+                icon: '🚨',
+                title: `High Pain Alert — ${pain}/10`,
+                badge: '<span class="tl-badge" style="background:#fef2f2;color:#dc2626;">⚠️ HIGH PAIN</span>',
+                summary: `Patient reported pain level ${pain}/10`,
+                detail: c.concerns ? `<div><strong>Patient concerns:</strong> ${c.concerns}</div>` : null
+            });
+        }
+    });
+
+    // PROMs
+    (proms || []).forEach(p => {
+        const scoreType = p.assessment_type === 'koos_jr' ? 'KOOS Jr' : p.assessment_type === 'hoos_jr' ? 'HOOS Jr' : 'PROMIS-10';
+        const score = p.score || p.interval_score;
+        const period = p.collection_period || 'preop';
+        const periodLabel = period === 'preop' ? 'Pre-Op' : period === '6_week' ? '6-Week' : period === '3_month' ? '3-Month' : period === '1_year' ? '1-Year' : period;
+
+        allEvents.push({
+            date: p.assessment_date || p.created_at,
+            type: 'prom',
+            icon: '📈',
+            title: `${scoreType} — ${periodLabel}`,
+            badge: `<span class="tl-badge" style="background:#ede9fe;color:#7c3aed;">Score: ${Math.round(score || 0)}</span>`,
+            summary: `${scoreType} score: ${Math.round(score || 0)}/100 (${periodLabel} collection)`,
+            detail: p.raw_responses ? '<div>Full responses recorded.</div>' : null
+        });
+    });
+
+    // PreOp Assessments
+    (preops || []).forEach(p => {
+        let summary = '';
+        if (p.procedure_type) summary += p.procedure_type;
+        if (p.bmi) summary += ` • BMI: ${parseFloat(p.bmi).toFixed(1)}`;
+        if (p.asa_class) summary += ` • ASA ${p.asa_class}`;
+        if (p.joint_score_preop) summary += ` • Score: ${Math.round(p.joint_score_preop)}`;
+
+        let detail = '';
+        if (p.comorbidities) {
+            const comorbs = p.comorbidities.split(',').filter(c => c.trim());
+            if (comorbs.length) detail += `<div><strong>Comorbidities:</strong> ${comorbs.join(', ')}</div>`;
+        }
+        if (p.surgeon_justification) detail += `<div><strong>Surgeon Justification:</strong> ${p.surgeon_justification}</div>`;
+
+        allEvents.push({
+            date: p.assessment_date || p.created_at,
+            type: 'preop',
+            icon: '🩺',
+            title: 'PreOp Assessment Completed',
+            badge: p.asa_class ? `<span class="tl-badge" style="background:#ecfdf5;color:#059669;">ASA ${p.asa_class}</span>` : '',
+            summary: summary,
+            detail: detail || null
+        });
+    });
+
+    // Surgical Prep milestones
+    (surgPrep || []).forEach(sp => {
+        const milestones = [];
+        if (sp.contract_signed_at) milestones.push({ date: sp.contract_signed_at, title: 'Patient Contract Signed', icon: '✍️' });
+        if (sp.consent_signed_at) milestones.push({ date: sp.consent_signed_at, title: 'Informed Consent Signed', icon: '⚕️' });
+        if (sp.history_data) milestones.push({ date: sp.updated_at, title: 'Surgical History & PE Recorded', icon: '📋' });
+        if (sp.insurance_data) {
+            try {
+                const ins = JSON.parse(sp.insurance_data);
+                milestones.push({ date: sp.updated_at, title: 'Insurance Verified', icon: '🏥', extra: ins.carrier ? `Carrier: ${ins.carrier}` : '' });
+            } catch(e) { milestones.push({ date: sp.updated_at, title: 'Insurance Info Saved', icon: '🏥' }); }
+        }
+        if (sp.prosthesis_data) milestones.push({ date: sp.updated_at, title: 'Prosthesis Selection Recorded', icon: '🦴' });
+        if (sp.disposition_data) {
+            try {
+                const disp = JSON.parse(sp.disposition_data);
+                const settings = { '0': 'ASC', '1': 'ASC', '2': 'ASC', '3': 'ASC', '4': 'ASC' };
+                let settingLabel = 'Determined';
+                if (disp.setting_score <= 4) settingLabel = 'ASC';
+                else if (disp.setting_score <= 8) settingLabel = 'HOPD';
+                else settingLabel = 'Inpatient';
+                milestones.push({ date: sp.updated_at, title: `Disposition Set — ${settingLabel}`, icon: '🏠', extra: disp.destination ? `Discharge: ${disp.destination.replace(/_/g, ' ')}` : '' });
+            } catch(e) { milestones.push({ date: sp.updated_at, title: 'Disposition Set', icon: '🏠' }); }
+        }
+        if (sp.prehab_data) milestones.push({ date: sp.updated_at, title: 'Prehab Plan Generated', icon: '💪' });
+
+        milestones.forEach(m => {
+            allEvents.push({
+                date: m.date,
+                type: 'surgprep',
+                icon: m.icon,
+                title: m.title,
+                badge: '<span class="tl-badge" style="background:#ecfeff;color:#0891b2;">Surg Prep</span>',
+                summary: m.extra || 'Milestone completed',
+                detail: null
+            });
+        });
+    });
+
+    // Adverse Events
+    (adverse || []).forEach(a => {
+        allEvents.push({
+            date: a.event_date || a.created_at,
+            type: 'adverse',
+            icon: '🚑',
+            title: `${(a.event_type || 'Adverse Event').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}`,
+            badge: '<span class="tl-badge" style="background:#fef2f2;color:#dc2626;">⚠️ Adverse</span>',
+            summary: a.description || 'Adverse event recorded',
+            detail: a.notes ? `<div><strong>Notes:</strong> ${a.notes}</div>` : null
+        });
+    });
+
+    // Nursing Notes
+    (notes || []).forEach(n => {
+        const typeLabel = (n.note_type || 'note').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        allEvents.push({
+            date: n.created_at,
+            type: 'note',
+            icon: '📝',
+            title: `Nursing Note — ${typeLabel}`,
+            badge: `<span class="tl-badge" style="background:#fffbeb;color:#d97706;">${typeLabel}</span>`,
+            summary: (n.note_text || '').substring(0, 120) + ((n.note_text || '').length > 120 ? '...' : ''),
+            detail: (n.note_text || '').length > 120 ? `<div>${n.note_text}</div>` : null
+        });
+    });
+
+    // PROM Schedule (overdue = alert)
+    (promSchedule || []).forEach(ps => {
+        if (ps.status === 'overdue') {
+            allEvents.push({
+                date: ps.due_date,
+                type: 'alert',
+                icon: '⏰',
+                title: `PROM Overdue — ${(ps.assessment_type || '').replace(/_/g, ' ').toUpperCase()}`,
+                badge: '<span class="tl-badge" style="background:#fff7ed;color:#ea580c;">OVERDUE</span>',
+                summary: `${(ps.collection_period || '').replace(/_/g, ' ')} collection was due ${new Date(ps.due_date).toLocaleDateString()}`,
+                detail: null
+            });
+        }
+    });
+
+    // Tasks
+    const categoryIcons = { follow_up: '📞', workup: '🔬', prom: '📈', referral: '📋', documentation: '📄', other: '📌' };
+    (tasks || []).forEach(t => {
+        const isDone = t.status === 'completed';
+        const priorityBadge = t.priority === 'high' ? '<span class="tl-badge" style="background:#fef2f2;color:#dc2626;">HIGH</span>' :
+            t.priority === 'low' ? '<span class="tl-badge" style="background:#f0fdf4;color:#059669;">LOW</span>' :
+            '<span class="tl-badge" style="background:#fffbeb;color:#d97706;">MED</span>';
+        const statusBadge = isDone ? ' <span class="tl-badge" style="background:#f0fdf4;color:#059669;">✅ DONE</span>' : '';
+        allEvents.push({
+            date: isDone ? t.completed_at : t.created_at,
+            type: 'task',
+            icon: categoryIcons[t.category] || '📌',
+            title: `${isDone ? 'Task Completed' : 'Task'}: ${t.description}`,
+            badge: priorityBadge + statusBadge,
+            summary: `${(t.category || '').replace(/_/g, ' ')}${t.assigned_to ? ' → ' + t.assigned_to : ''}${t.due_date ? ' | Due: ' + new Date(t.due_date + 'T00:00:00').toLocaleDateString() : ''}`,
+            detail: null
+        });
+    });
+
+    // Sort chronologically (newest first)
+    allEvents.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Update banner stats
+    document.getElementById('bannerEvents').textContent = allEvents.length;
+    if (allEvents.length > 0) {
+        const earliest = new Date(allEvents[allEvents.length - 1].date);
+        const latest = new Date(allEvents[0].date);
+        const days = Math.max(1, Math.round((latest - earliest) / (24*60*60*1000)));
+        document.getElementById('bannerDays').textContent = days;
+    }
+    // Latest pain
+    const lastCheckin = allEvents.find(e => e.type === 'checkin');
+    if (lastCheckin) {
+        const painMatch = lastCheckin.summary.match(/Pain: (\d+)/);
+        if (painMatch) {
+            const pv = parseInt(painMatch[1]);
+            const el = document.getElementById('bannerPain');
+            el.textContent = pv;
+            el.style.color = pv <= 3 ? '#22c55e' : pv <= 6 ? '#fbbf24' : '#ef4444';
+        }
+    }
+    // Latest PROM
+    const lastProm = allEvents.find(e => e.type === 'prom');
+    if (lastProm) {
+        const scoreMatch = lastProm.summary.match(/score: (\d+)/);
+        if (scoreMatch) document.getElementById('bannerScore').textContent = scoreMatch[1];
+    }
+
+    renderTimeline();
+}
+
+async function fetchJSON(url) {
+    try {
+        const resp = await fetch(url);
+        if (!resp.ok) return [];
+        return await resp.json();
+    } catch(e) { return []; }
+}
+
+function setFilter(filter) {
+    activeFilter = filter;
+    document.querySelectorAll('.filter-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.filter === filter);
+    });
+    renderTimeline();
+}
+
+function renderTimeline() {
+    const container = document.getElementById('timelineContainer');
+    const filtered = activeFilter === 'all' ? allEvents : allEvents.filter(e => e.type === activeFilter);
+
+    if (filtered.length === 0) {
+        container.innerHTML = '<div class="empty-state">No events found' + (activeFilter !== 'all' ? ' for this filter' : '') + '.</div>';
+        return;
+    }
+
+    let html = '<div class="timeline">';
+    let currentMonth = '';
+
+    filtered.forEach((event, idx) => {
+        const d = new Date(event.date);
+        const month = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+        if (month !== currentMonth) {
+            currentMonth = month;
+            html += `<div class="tl-month">${month}</div>`;
+        }
+
+        const timeStr = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+        html += `<div class="tl-event type-${event.type}" onclick="this.classList.toggle('expanded')">`;
+        html += `<div class="tl-header">`;
+        html += `<div class="tl-title">${event.icon} ${event.title}</div>`;
+        html += `<div class="tl-date">${timeStr}</div>`;
+        html += `</div>`;
+        html += `<div class="tl-summary">${event.badge || ''} ${event.summary}</div>`;
+        if (event.detail) {
+            html += `<div class="tl-detail">${event.detail}</div>`;
+        }
+        html += `</div>`;
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function logout() {
+    sessionStorage.clear();
+    window.location.href = '/index.html';
+}
+
+loadTimeline();
+</script>
+</body>
+</html>

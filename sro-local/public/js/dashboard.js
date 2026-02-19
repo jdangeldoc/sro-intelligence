@@ -133,7 +133,7 @@ async function renderNursePanel() {
     patients.forEach(p => {
         const daysPostOp = p.surgery_date ? Math.floor((Date.now() - new Date(p.surgery_date)) / (1000*60*60*24)) : null;
         const surgeonName = p.surgeon_first_name ? 'Dr. ' + p.surgeon_last_name : '';
-        const patientLabel = p.last_name + ', ' + p.first_name;
+        const patientLabel = p.last_name + ', ' + p.first_name + (p.mrn ? ' [' + p.mrn + ']' : '');
         
         // ER visits
         const aeList = adverseEventsCache[p.id] || [];
@@ -248,7 +248,7 @@ async function renderNursePanel() {
                 priority: 7,
                 icon: '🕐',
                 color: '#d97706',
-                patient: (ps.last_name || '') + ', ' + (ps.first_name || ''),
+                patient: (ps.last_name || '') + ', ' + (ps.first_name || '') + (ps.mrn ? ' [' + ps.mrn + ']' : ''),
                 patientId: ps.patient_id,
                 issue: ps.window_name + ' PROM due in ' + Math.max(0, daysUntil) + ' days (' + ps.assessment_type + ')',
                 detail: (ps.surgeon_first ? 'Dr. ' + ps.surgeon_last : ''),
@@ -339,8 +339,12 @@ async function renderAdminPanel() {
         }
     } catch(e) { console.error('Admin PROM load error:', e); }
     
+    // Filter patients by selected surgeon for stat cards
+    const filterSurgeon = document.getElementById('filterSurgeon')?.value || 'all';
+    const filteredPatients = filterSurgeon === 'all' ? patients : patients.filter(p => p.surgeon_id === filterSurgeon);
+    
     // Check-in rate (patients who checked in within last 3 days / total active)
-    const activePatients = patients.filter(p => p.episode_id);
+    const activePatients = filteredPatients.filter(p => p.episode_id);
     const recentCheckins = activePatients.filter(p => {
         if (!p.last_checkin_date) return false;
         const days = Math.floor((Date.now() - new Date(p.last_checkin_date)) / (1000*60*60*24));
@@ -639,7 +643,7 @@ function renderPatientTable() {
             <tr onclick="openPatientModal('${patient.id}')" class="clickable" data-patient-id="${patient.id}">
                 <td>
                     <strong>${patient.last_name}, ${patient.first_name}</strong>
-                    ${patient.mrn ? `<br><small class="text-muted">MRN: ${patient.mrn}</small>` : ''}
+                    ${patient.mrn ? ` <span style="color:#6b7280;font-size:0.8rem;font-weight:400;">[${patient.mrn}]</span>` : ''}
                 </td>
                 <td>${patient.surgery_type || '-'}</td>
                 <td>${daysPostOp}</td>
@@ -684,6 +688,7 @@ function getPainClass(level) {
 function filterPatients() {
     loadStats();
     renderPatientTable();
+    renderAdminPanel();
 }
 
 // ============ PATIENT MODAL ============
@@ -695,8 +700,9 @@ async function openPatientModal(patientId) {
     
     // Show modal
     document.getElementById('patientModal').style.display = 'flex';
-    document.getElementById('modalPatientName').textContent = 
-        `${currentPatient.first_name} ${currentPatient.last_name}`;
+    document.getElementById('modalPatientName').innerHTML = 
+        `${currentPatient.first_name} ${currentPatient.last_name}` +
+        (currentPatient.mrn ? ` <span style="font-size:0.8rem;color:#6b7280;font-weight:400;">[${currentPatient.mrn}]</span>` : '');
     
     // RPM timer: visible for all roles (nurses log call time, surgeons log review time)
     document.getElementById('startReviewBtn').style.display = 'block';
@@ -724,6 +730,7 @@ async function openPatientModal(patientId) {
     try { await loadPatientNotes(patientId); } catch(e) { console.error('Notes error:', e); }
     try { await loadComplianceScorecard(patientId); } catch(e) { console.error('Scorecard error:', e); }
     try { await loadPromTrendChart(patientId); } catch(e) { console.error('PROM trend error:', e); }
+    try { await loadPatientTasks(patientId); } catch(e) { console.error('Tasks error:', e); }
 }
 
 // ============ SURGEON QUICK SUMMARY CARD ============
@@ -816,7 +823,12 @@ function renderSurgeonSummary(patientId) {
         'diabetes': '🩸 Diabetes',
         'liver_disease': '🟤 Liver Disease',
         'sleep_apnea': '😴 Sleep Apnea',
-        'afib': '💗 Afib'
+        'afib': '💗 Afib',
+        'anticoagul': '💊 Anticoagulant',
+        'rheumatoid': '🦴 RA/Inflammatory',
+        'anemia': '🩸 Anemia',
+        'smoking': '🚬 Active Smoker',
+        'dental': '🦷 Dental Risk'
     };
     
     comorbidities.forEach(c => {
@@ -880,6 +892,8 @@ function renderSurgeonSummary(patientId) {
     
     // PreOp link
     document.getElementById('sumPreopLink').href = '/preop.html?patient=' + patientId;
+    document.getElementById('sumNonopLink').href = '/nonop-plan.html?patient=' + patientId;
+    document.getElementById('sumSurgPrepLink').href = '/surgical-prep.html?patient=' + patientId;
 }
 
 // ============ COMPLIANCE SCORECARD ============
@@ -1340,6 +1354,11 @@ function renderPainChart(checkins) {
     });
 }
 
+function openEpisodeTimeline() {
+    if (!currentPatient) return;
+    window.open(`/episode-timeline.html?patient=${currentPatient.id}`, '_blank');
+}
+
 function closePatientModal() {
     document.getElementById('patientModal').style.display = 'none';
     currentPatient = null;
@@ -1699,7 +1718,7 @@ async function loadPromCompliance() {
         } else {
             overdueDiv.innerHTML = data.overdue_patients.map(p => `
                 <div style="padding: 6px 0; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; cursor:pointer;" onclick="switchTab('patients');openPatientModal('${p.patient_id}')">
-                    <span><strong style="color:#2c5aa0;text-decoration:underline;">${p.last_name}, ${p.first_name}</strong> — ${p.assessment_type === 'koos_jr' ? 'KOOS Jr' : p.assessment_type === 'hoos_jr' ? 'HOOS Jr' : 'PROMIS-10'} (${(p.window_name || '').replace('_', ' ')})</span>
+                    <span><strong style="color:#2c5aa0;text-decoration:underline;">${p.last_name}, ${p.first_name}</strong>${p.mrn ? ' <span style="color:#6b7280;font-weight:400;">[' + p.mrn + ']</span>' : ''} — ${p.assessment_type === 'koos_jr' ? 'KOOS Jr' : p.assessment_type === 'hoos_jr' ? 'HOOS Jr' : 'PROMIS-10'} (${(p.window_name || '').replace('_', ' ')})</span>
                     <span style="color: #dc2626;">Due ${p.due_date}</span>
                 </div>
             `).join('');
@@ -1712,7 +1731,7 @@ async function loadPromCompliance() {
         } else {
             dueSoonDiv.innerHTML = data.due_soon_patients.map(p => `
                 <div style="padding: 6px 0; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center; cursor:pointer;" onclick="switchTab('patients');openPatientModal('${p.patient_id}')">
-                    <span><strong style="color:#2c5aa0;text-decoration:underline;">${p.last_name}, ${p.first_name}</strong> — ${p.assessment_type === 'koos_jr' ? 'KOOS Jr' : p.assessment_type === 'hoos_jr' ? 'HOOS Jr' : 'PROMIS-10'}</span>
+                    <span><strong style="color:#2c5aa0;text-decoration:underline;">${p.last_name}, ${p.first_name}</strong>${p.mrn ? ' <span style="color:#6b7280;font-weight:400;">[' + p.mrn + ']</span>' : ''} — ${p.assessment_type === 'koos_jr' ? 'KOOS Jr' : p.assessment_type === 'hoos_jr' ? 'HOOS Jr' : 'PROMIS-10'}</span>
                     <span style="color: #d97706;">Due ${p.due_date}</span>
                 </div>
             `).join('');
@@ -1998,6 +2017,247 @@ async function clearDemoData() {
     } catch (error) {
         console.error('Error clearing demo data:', error);
     }
+}
+
+// ============ TASKS / TO-DO ============
+async function loadPatientTasks(patientId) {
+    try {
+        const resp = await fetch(`/api/tasks?patient_id=${patientId}`);
+        const tasks = await resp.json();
+        const container = document.getElementById('tasksList');
+        if (!tasks.length) {
+            container.innerHTML = '<p class="text-muted">No tasks.</p>';
+            return;
+        }
+
+        const priorityIcons = { high: '🔴', medium: '🟡', low: '🟢' };
+        const categoryIcons = { follow_up: '📞', workup: '🔬', prom: '📈', referral: '📋', documentation: '📄', other: '📌' };
+
+        let html = '';
+        tasks.forEach(t => {
+            const isDone = t.status === 'completed';
+            const overdue = t.due_date && !isDone && new Date(t.due_date) < new Date();
+            const bgColor = isDone ? '#f0fdf4' : overdue ? '#fef2f2' : '#ffffff';
+            const textDecor = isDone ? 'line-through' : 'none';
+            const opacity = isDone ? '0.6' : '1';
+
+            html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;margin-bottom:6px;background:${bgColor};border-radius:6px;border:1px solid #f3f4f6;opacity:${opacity};">`;
+            html += `<input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleTask('${t.id}', this.checked)" style="width:18px;height:18px;cursor:pointer;">`;
+            html += `<div style="flex:1;text-decoration:${textDecor};">`;
+            html += `<div style="font-weight:600;font-size:0.85rem;">${categoryIcons[t.category] || '📌'} ${t.description}</div>`;
+            const meta = [];
+            if (t.priority) meta.push(`${priorityIcons[t.priority] || ''} ${t.priority}`);
+            if (t.due_date) {
+                const dueStr = new Date(t.due_date + 'T00:00:00').toLocaleDateString();
+                meta.push(overdue ? `<span style="color:#dc2626;font-weight:700;">Due: ${dueStr} (OVERDUE)</span>` : `Due: ${dueStr}`);
+            }
+            if (t.assigned_to) meta.push(`→ ${t.assigned_to}`);
+            if (meta.length) html += `<div style="font-size:0.75rem;color:#9ca3af;margin-top:2px;">${meta.join(' &nbsp;•&nbsp; ')}</div>`;
+            html += `</div>`;
+            html += `<button onclick="deleteTask('${t.id}')" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:1rem;padding:4px;" title="Delete">×</button>`;
+            html += `</div>`;
+        });
+        container.innerHTML = html;
+    } catch(e) { console.error('Load tasks error:', e); }
+}
+
+function openTaskModal() {
+    document.getElementById('taskModal').style.display = 'flex';
+    document.getElementById('taskDescription').value = '';
+    document.getElementById('taskCategory').value = 'follow_up';
+    document.getElementById('taskPriority').value = 'medium';
+    document.getElementById('taskDueDate').value = '';
+    document.getElementById('taskAssignedTo').value = '';
+    document.getElementById('taskDescription').focus();
+}
+
+function closeTaskModal() {
+    document.getElementById('taskModal').style.display = 'none';
+}
+
+async function saveTask() {
+    if (!currentPatient) return;
+    const desc = document.getElementById('taskDescription').value.trim();
+    if (!desc) { alert('Enter a task description.'); return; }
+
+    const body = {
+        patient_id: currentPatient.id,
+        episode_id: currentPatient.episode_id || null,
+        clinic_id: CLINIC_ID,
+        description: desc,
+        category: document.getElementById('taskCategory').value,
+        priority: document.getElementById('taskPriority').value,
+        due_date: document.getElementById('taskDueDate').value || null,
+        assigned_to: document.getElementById('taskAssignedTo').value.trim() || null,
+        created_by: USER_NAME
+    };
+
+    try {
+        await fetch('/api/tasks', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        closeTaskModal();
+        await loadPatientTasks(currentPatient.id);
+    } catch(e) { console.error('Save task error:', e); }
+}
+
+async function toggleTask(taskId, completed) {
+    try {
+        await fetch(`/api/tasks/${taskId}`, {
+            method: 'PUT', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ status: completed ? 'completed' : 'pending' })
+        });
+        if (currentPatient) await loadPatientTasks(currentPatient.id);
+    } catch(e) { console.error('Toggle task error:', e); }
+}
+
+async function deleteTask(taskId) {
+    if (!confirm('Delete this task?')) return;
+    try {
+        await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
+        if (currentPatient) await loadPatientTasks(currentPatient.id);
+    } catch(e) { console.error('Delete task error:', e); }
+}
+
+// ============ PDF EPISODE SUMMARY EXPORT ============
+async function exportEpisodePDF() {
+    if (!currentPatient) return;
+    const p = currentPatient;
+
+    // Gather all data
+    let checkins = [], proms = [], preops = [], adverse = [], notes = [], tasks = [];
+    try { checkins = await (await fetch(`/api/checkins?patient_id=${p.id}`)).json(); } catch(e){}
+    try { proms = await (await fetch(`/api/pro-assessments?patient_id=${p.id}`)).json(); } catch(e){}
+    try { preops = await (await fetch(`/api/preop-assessments?patient_id=${p.id}`)).json(); } catch(e){}
+    try { adverse = await (await fetch(`/api/adverse-events?patient_id=${p.id}`)).json(); } catch(e){}
+    try { notes = await (await fetch(`/api/nursing-notes?patient_id=${p.id}`)).json(); } catch(e){}
+    try { tasks = await (await fetch(`/api/tasks?patient_id=${p.id}`)).json(); } catch(e){}
+
+    const age = p.date_of_birth ? Math.floor((Date.now() - new Date(p.date_of_birth)) / (365.25*24*60*60*1000)) : '-';
+
+    let html = `<!DOCTYPE html><html><head><title>Episode Summary — ${p.first_name} ${p.last_name}</title>
+    <style>
+        body { font-family: Arial, Helvetica, sans-serif; padding: 32px; font-size: 11px; color: #1e293b; line-height: 1.5; }
+        h1 { font-size: 18px; color: #1e3a5f; margin: 0 0 4px 0; }
+        h2 { font-size: 13px; color: #1e3a5f; border-bottom: 2px solid #2c5aa0; padding-bottom: 3px; margin: 18px 0 8px 0; }
+        .header { display: flex; justify-content: space-between; border-bottom: 3px solid #1e3a5f; padding-bottom: 8px; margin-bottom: 16px; }
+        .header-right { text-align: right; font-size: 10px; color: #6b7280; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+        .info-item { padding: 6px 8px; background: #f8fafc; border-radius: 4px; }
+        .info-label { font-size: 9px; color: #6b7280; text-transform: uppercase; font-weight: 700; }
+        .info-val { font-size: 12px; font-weight: 700; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 10px; }
+        th { background: #f1f5f9; padding: 5px 6px; text-align: left; font-weight: 700; border-bottom: 1px solid #cbd5e1; }
+        td { padding: 4px 6px; border-bottom: 1px solid #f1f5f9; }
+        .badge { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 9px; font-weight: 700; }
+        .red { background: #fef2f2; color: #dc2626; }
+        .green { background: #f0fdf4; color: #059669; }
+        .yellow { background: #fffbeb; color: #d97706; }
+        .footer { margin-top: 24px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 9px; color: #9ca3af; text-align: center; }
+        @media print { body { padding: 16px; } }
+    </style></head><body>`;
+
+    // Header
+    html += `<div class="header"><div><h1>${p.first_name} ${p.last_name}</h1>`;
+    html += `<div style="font-size:10px;color:#6b7280;">MRN: ${p.mrn || '-'} &nbsp;|&nbsp; DOB: ${p.date_of_birth || '-'} (Age ${age}) &nbsp;|&nbsp; ${p.procedure_type || '-'}</div></div>`;
+    html += `<div class="header-right">Episode Summary Report<br>Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}<br>SRO Intelligence</div></div>`;
+
+    // Patient Info Grid
+    html += `<div class="info-grid">`;
+    html += `<div class="info-item"><div class="info-label">Surgeon</div><div class="info-val">${p.surgeon_name || '-'}</div></div>`;
+    html += `<div class="info-item"><div class="info-label">Surgery Date</div><div class="info-val">${p.surgery_date ? new Date(p.surgery_date).toLocaleDateString() : 'Not scheduled'}</div></div>`;
+    html += `<div class="info-item"><div class="info-label">Procedure</div><div class="info-val">${p.procedure_type || '-'}</div></div>`;
+    html += `</div>`;
+
+    // PreOp Assessment
+    if (preops.length) {
+        const pre = preops[0];
+        html += `<h2>Pre-Operative Assessment</h2>`;
+        html += `<div class="info-grid">`;
+        html += `<div class="info-item"><div class="info-label">BMI</div><div class="info-val">${pre.bmi ? parseFloat(pre.bmi).toFixed(1) : '-'}</div></div>`;
+        html += `<div class="info-item"><div class="info-label">ASA Class</div><div class="info-val">${pre.asa_class || '-'}</div></div>`;
+        html += `<div class="info-item"><div class="info-label">Pre-Op Score</div><div class="info-val">${pre.joint_score_preop ? Math.round(pre.joint_score_preop) : '-'}</div></div>`;
+        html += `</div>`;
+        if (pre.comorbidities) {
+            const cList = pre.comorbidities.split(',').filter(c => c.trim());
+            if (cList.length) html += `<div style="margin-bottom:8px;"><strong>Comorbidities:</strong> ${cList.join(', ')}</div>`;
+        }
+    }
+
+    // PROMs
+    if (proms.length) {
+        html += `<h2>Patient-Reported Outcome Measures</h2>`;
+        html += `<table><tr><th>Date</th><th>Type</th><th>Period</th><th>Score</th></tr>`;
+        proms.forEach(pr => {
+            const type = pr.assessment_type === 'koos_jr' ? 'KOOS Jr' : pr.assessment_type === 'hoos_jr' ? 'HOOS Jr' : 'PROMIS-10';
+            const period = (pr.collection_period || 'preop').replace(/_/g, ' ');
+            const score = Math.round(pr.score || pr.interval_score || 0);
+            html += `<tr><td>${pr.assessment_date ? new Date(pr.assessment_date).toLocaleDateString() : '-'}</td><td>${type}</td><td>${period}</td><td><strong>${score}</strong>/100</td></tr>`;
+        });
+        html += `</table>`;
+    }
+
+    // Check-ins (last 14)
+    if (checkins.length) {
+        html += `<h2>Check-in History (Last 14)</h2>`;
+        html += `<table><tr><th>Date</th><th>Pain</th><th>PT</th><th>ROM</th><th>Swelling</th><th>Concerns</th></tr>`;
+        checkins.slice(0, 14).forEach(c => {
+            const pc = c.pain_level <= 3 ? 'green' : c.pain_level <= 6 ? 'yellow' : 'red';
+            html += `<tr><td>${c.checkin_date ? new Date(c.checkin_date).toLocaleDateString() : '-'}</td>`;
+            html += `<td><span class="badge ${pc}">${c.pain_level}/10</span></td>`;
+            html += `<td>${c.pt_exercises ? '✅' : '❌'}</td>`;
+            html += `<td>${c.rom_flexion ? c.rom_flexion + '°' : '-'}</td>`;
+            html += `<td>${c.swelling || '-'}</td>`;
+            html += `<td>${(c.concerns || '-').substring(0, 60)}</td></tr>`;
+        });
+        html += `</table>`;
+    }
+
+    // Adverse Events
+    if (adverse.length) {
+        html += `<h2>Adverse Events</h2>`;
+        html += `<table><tr><th>Date</th><th>Type</th><th>Description</th></tr>`;
+        adverse.forEach(a => {
+            html += `<tr><td>${a.event_date ? new Date(a.event_date).toLocaleDateString() : '-'}</td>`;
+            html += `<td><span class="badge red">${(a.event_type || '').replace(/_/g, ' ')}</span></td>`;
+            html += `<td>${a.description || '-'}</td></tr>`;
+        });
+        html += `</table>`;
+    }
+
+    // Notes
+    if (notes.length) {
+        html += `<h2>Nursing Notes</h2>`;
+        html += `<table><tr><th>Date</th><th>Type</th><th>Note</th></tr>`;
+        notes.forEach(n => {
+            html += `<tr><td>${new Date(n.created_at).toLocaleDateString()}</td>`;
+            html += `<td>${(n.note_type || 'note').replace(/_/g, ' ')}</td>`;
+            html += `<td>${(n.note_text || '').substring(0, 120)}</td></tr>`;
+        });
+        html += `</table>`;
+    }
+
+    // Open Tasks
+    const openTasks = tasks.filter(t => t.status !== 'completed');
+    if (openTasks.length) {
+        html += `<h2>Open Tasks (${openTasks.length})</h2>`;
+        html += `<table><tr><th>Priority</th><th>Task</th><th>Category</th><th>Due</th><th>Assigned</th></tr>`;
+        openTasks.forEach(t => {
+            const pc = t.priority === 'high' ? 'red' : t.priority === 'low' ? 'green' : 'yellow';
+            html += `<tr><td><span class="badge ${pc}">${t.priority}</span></td>`;
+            html += `<td>${t.description}</td>`;
+            html += `<td>${(t.category || '').replace(/_/g, ' ')}</td>`;
+            html += `<td>${t.due_date ? new Date(t.due_date + 'T00:00:00').toLocaleDateString() : '-'}</td>`;
+            html += `<td>${t.assigned_to || '-'}</td></tr>`;
+        });
+        html += `</table>`;
+    }
+
+    html += `<div class="footer">Generated by SRO Intelligence &nbsp;|&nbsp; ${new Date().toLocaleDateString()} &nbsp;|&nbsp; CONFIDENTIAL — Contains Protected Health Information</div>`;
+    html += `</body></html>`;
+
+    const win = window.open('', '_blank');
+    win.document.write(html);
+    win.document.close();
+    setTimeout(() => win.print(), 500);
 }
 
 // ============ LOGOUT ============

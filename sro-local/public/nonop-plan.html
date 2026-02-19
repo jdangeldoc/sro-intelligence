@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Non-Operative Plan | SRO Intelligence</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .nop-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .patient-header { background: #f8f9fa; border-radius: 12px; padding: 16px 24px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .patient-header h2 { margin: 0; font-size: 1.3rem; color: #1e293b; }
+        .patient-header .meta { font-size: 0.85rem; color: #6b7280; }
+
+        .joint-toggle { display: flex; gap: 0; margin-bottom: 24px; }
+        .joint-btn { flex: 1; padding: 14px 20px; font-size: 1rem; font-weight: 700; border: 2px solid #d1d5db; background: #f9fafb; cursor: pointer; text-align: center; transition: all 0.2s; color: #6b7280; }
+        .joint-btn:first-child { border-radius: 10px 0 0 10px; }
+        .joint-btn:last-child { border-radius: 0 10px 10px 0; }
+        .joint-btn.active { background: #2c5aa0; border-color: #2c5aa0; color: white; }
+        .joint-btn:hover:not(.active) { background: #eff6ff; border-color: #93c5fd; }
+
+        .nop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        @media (max-width: 900px) { .nop-grid { grid-template-columns: 1fr; } }
+
+        .tx-card { background: white; border-radius: 12px; padding: 20px 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 4px solid #d1d5db; }
+        .tx-card.strong { border-left-color: #059669; }
+        .tx-card.moderate { border-left-color: #2c5aa0; }
+        .tx-card.limited { border-left-color: #d97706; }
+        .tx-card.not-covered { border-left-color: #7c3aed; }
+        .tx-card.against { border-left-color: #dc2626; }
+        .tx-card.consensus { border-left-color: #6b7280; }
+        .tx-card.full-width { grid-column: 1 / -1; }
+
+        .tx-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+        .tx-title { font-size: 1.05rem; font-weight: 700; color: #1e293b; margin: 0; }
+        .tx-badge { font-size: 0.7rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+        .badge-strong { background: #d1fae5; color: #065f46; }
+        .badge-moderate { background: #dbeafe; color: #1e40af; }
+        .badge-limited { background: #fef3c7; color: #92400e; }
+        .badge-consensus { background: #f3f4f6; color: #374151; }
+        .badge-not-covered { background: #ede9fe; color: #5b21b6; }
+        .badge-against { background: #fef2f2; color: #991b1b; }
+
+        .tx-desc { font-size: 0.88rem; color: #4b5563; line-height: 1.6; margin-bottom: 14px; }
+        .tx-details { font-size: 0.82rem; color: #6b7280; line-height: 1.5; }
+        .tx-details strong { color: #374151; }
+
+        .tx-actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; align-items: center; }
+        .tx-check { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.88rem; font-weight: 600; }
+        .tx-check input { width: 18px; height: 18px; accent-color: #2c5aa0; }
+        .tx-check.tried { color: #059669; }
+        .tx-check.tried input { accent-color: #059669; }
+        .tx-check.recommended { color: #2c5aa0; }
+        .tx-note { flex: 1; min-width: 200px; }
+        .tx-note input { width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.85rem; }
+
+        .insurance-warning { background: #faf5ff; border: 1px solid #c4b5fd; border-radius: 8px; padding: 10px 14px; font-size: 0.82rem; color: #5b21b6; display: flex; align-items: flex-start; gap: 8px; margin-top: 10px; }
+
+        .section-header { grid-column: 1 / -1; padding: 12px 0 4px 0; border-bottom: 2px solid #e5e7eb; }
+        .section-header h3 { margin: 0; font-size: 1.1rem; color: #1e293b; }
+        .section-header p { margin: 4px 0 0 0; font-size: 0.82rem; color: #6b7280; }
+
+        .nop-actions { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+        .nop-actions .btn { padding: 12px 28px; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; border: none; }
+        .btn-save { background: #2c5aa0; color: white; }
+        .btn-print { background: #059669; color: white; }
+        .btn-clear { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db !important; }
+
+        .guideline-ref { grid-column: 1 / -1; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px 20px; margin-top: 8px; }
+        .guideline-ref h4 { margin: 0 0 6px 0; font-size: 0.9rem; color: #065f46; }
+        .guideline-ref p { margin: 0; font-size: 0.8rem; color: #374151; line-height: 1.5; }
+
+        .print-handout { display: none; }
+
+        /* Steroid injection tracker */
+        .inj-tracker { margin-top: 10px; }
+        .inj-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
+        .inj-row input[type="date"], .inj-row select { padding: 5px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.82rem; }
+        .inj-row input[type="text"] { flex: 1; min-width: 120px; padding: 5px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.82rem; }
+        .inj-add { background: #eff6ff; border: 1px solid #93c5fd; border-radius: 6px; padding: 4px 12px; font-size: 0.8rem; cursor: pointer; color: #1e40af; font-weight: 600; }
+        .inj-remove { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; cursor: pointer; color: #dc2626; }
+
+        @media print {
+            .navbar, .nop-actions, .joint-toggle, .patient-header select, .tx-actions, .inj-add, .inj-remove, .btn { display: none !important; }
+            .nop-grid { display: block !important; }
+            .tx-card { break-inside: avoid; margin-bottom: 12px; box-shadow: none !important; border: 1px solid #ccc; page-break-inside: avoid; }
+            .tx-card.against { display: none; }
+            .print-handout { display: block !important; margin-bottom: 24px; padding: 16px; border: 2px solid #1e293b; border-radius: 12px; }
+            .print-handout h2 { margin: 0 0 4px 0; }
+            .print-handout p { margin: 0; font-size: 0.9rem; }
+            .guideline-ref { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="nav-logo">🦴</span>
+            <span class="nav-title">SRO Intelligence</span>
+        </div>
+        <div class="nav-links">
+            <a href="/dashboard.html" class="nav-link">Dashboard</a>
+            <a href="/preop.html" class="nav-link">Pre-Op</a>
+            <a href="/surgical-prep.html" class="nav-link">Surg Prep</a>
+            <a href="/nonop-plan.html" class="nav-link active">Non-Op Plan</a>
+            <a href="/analytics.html" class="nav-link">Analytics</a>
+            <a href="/cms-compliance.html" class="nav-link">CMS Compliance</a>
+            <a href="/rpm-report.html" class="nav-link">RPM Billing</a>
+            <a href="/settings.html" class="nav-link">Settings</a>
+        </div>
+        <div class="nav-user">
+            <span id="userDisplay"></span>
+            <button class="btn btn-sm" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="nop-container">
+        <!-- Patient Selection -->
+        <div class="patient-header">
+            <div>
+                <h2>📋 Non-Operative Treatment Plan</h2>
+                <span class="meta">AAOS Evidence-Based Guidelines for Osteoarthritis</span>
+            </div>
+            <div style="display:flex;gap:12px;align-items:center;">
+                <select id="patientSelect" onchange="loadPatient()" style="padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:0.95rem;min-width:280px;">
+                    <option value="">— Select Patient —</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Joint Toggle -->
+        <div class="joint-toggle" id="jointToggle" style="display:none;">
+            <button class="joint-btn active" onclick="setJoint('knee')" id="btnKnee">🦵 Knee Osteoarthritis</button>
+            <button class="joint-btn" onclick="setJoint('hip')" id="btnHip">🦴 Hip Osteoarthritis</button>
+        </div>
+
+        <!-- Print Header (only shows when printing) -->
+        <div class="print-handout" id="printHeader">
+            <h2>Non-Operative Treatment Plan for Osteoarthritis</h2>
+            <p><strong>Patient:</strong> <span id="printPatientName"></span> &nbsp;|&nbsp; <strong>Joint:</strong> <span id="printJoint"></span> &nbsp;|&nbsp; <strong>Date:</strong> <span id="printDate"></span></p>
+            <p><strong>Provider:</strong> <span id="printProvider"></span> &nbsp;|&nbsp; <strong>Clinic:</strong> SRO Intelligence</p>
+            <p style="margin-top:8px;font-size:0.82rem;color:#374151;">This treatment plan is based on the American Academy of Orthopaedic Surgeons (AAOS) Clinical Practice Guidelines. All recommendations are evidence-based. Please follow this plan and report progress at follow-up visits.</p>
+        </div>
+
+        <!-- Treatment Cards Grid -->
+        <div class="nop-grid" id="treatmentGrid" style="display:none;">
+
+            <!-- ============ SECTION 1: LIFESTYLE & SELF-MANAGEMENT ============ -->
+            <div class="section-header">
+                <h3>1. Lifestyle & Self-Management</h3>
+                <p>Foundational treatments — these should be started first and continued throughout care</p>
+            </div>
+
+            <!-- Weight Management -->
+            <div class="tx-card strong" id="card-weight">
+                <div class="tx-header">
+                    <h4 class="tx-title">Weight Management</h4>
+                    <span class="tx-badge badge-strong">STRONG</span>
+                </div>
+                <div class="tx-desc">
+                    For patients with BMI ≥ 25, weight loss is one of the most effective treatments for knee OA. A loss of just 10% of body weight can reduce pain by up to 50%. Weight loss also reduces surgical risk if joint replacement is eventually needed.
+                </div>
+                <div class="tx-details">
+                    <strong>AAOS Knee:</strong> Strong recommendation for participation in self-management programs including weight loss for patients with BMI ≥ 25.<br>
+                    <strong>AAOS Hip:</strong> Elevated BMI may increase risk of adverse events and is associated with lower absolute patient-reported outcomes after THA.<br>
+                    <strong>Goal:</strong> Lose 10-20% of current body weight through diet and exercise. Target BMI &lt; 30 before considering surgery.
+                </div>
+                <div class="tx-actions">
+                    <label class="tx-check tried"><input type="checkbox" data-field="weight_tried"> Tried</label>
+                    <label class="tx-check recommended"><input type="checkbox" data-field="weight_rec"> Recommended</label>
+                    <div class="tx-note"><input type="text" data-field="weight_note" placeholder="Notes (current BMI, target, plan)..."></div>
+                </div>
+            </div>
+
+            <!-- Exercise / Physical Therapy -->
+            <div class="tx-card strong" id="card-pt">
+                <div class="tx-header">
+                    <h4 class="tx-title">Physical Therapy & Exercise</h4>
+                    <span class="tx-badge badge-strong">STRONG</span>
+                </div>
+                <div class="tx-desc">
+                    Structured exercise programs improve pain, function, and quality of life. Both supervised physical therapy and home exercise programs are effective. Focus on strengthening, range of motion, and low-impact aerobic activity.
+                </div>
+                <div class="tx-details" id="ptDetails">
+                    <strong>AAOS Knee:</strong> Strong recommendation for participation in strengthening, low-impact aerobic exercise, and neuromuscular education programs.<br>
+                    <strong>AAOS Hip:</strong> Physical therapy may be considered for patients with mild to moderate symptomatic OA of the hip to improve function and reduce pain.<br>
+                    <strong>Program:</strong> Minimum 6 weeks supervised PT, 2-3×/week. Transition to independent home exercise program. Include quad strengthening, hamstring stretching, stationary bike, walking, pool exercises.
+                </div>
+                <div class="tx-actions">
+                    <label class="tx-check tried"><input type="checkbox" data-field="pt_tried"> Tried</label>
+                    <label class="tx-check recommended"><input type="checkbox" data-field="pt_rec"> Recommended</label>
+                    <div class="tx-note"><input type="text" data-field="pt_note" placeholder="Weeks completed, facility, response..."></div>
+                </div>
+            </div>
+
+            <!-- Activity Modification -->
+            <div class="tx-card moderate" id="card-activity">
+                <div class="tx-header">
+                    <h4 class="tx-title">Activity Modification</h4>
+                    <span class="tx-badge badge-moderate">MODERATE</span>
+                </div>
+                <div class="tx-desc">
+                    Modify activities that increase joint stress. Avoid prolonged standing, squatting, kneeling, and high-impact activities. Switch to low-impact alternatives: swimming, cycling, elliptical.
+                </div>
+                <div class="tx-details">
+                    <strong>Guidance:</strong> Reduce or eliminate activities that provoke symptoms. Use assistive devices (cane on opposite side, walker) for walking if needed. Occupational therapy referral for adaptive strategies at home and work.
+                </div>
+                <div class="tx-actions">
+                    <label class="tx-check tried"><input type="checkbox" data-field="activity_tried"> Tried</label>
+                    <label class="tx-check recommended"><input type="checkbox" data-field="activity_rec"> Recommended</label>
+                    <div class="tx-note"><input type="text" data-field="activity_note" placeholder="Modifications made..."></div>
+                </div>
+            </div>
+
+            <!-- Self-Management Programs -->
+            <div class="tx-card strong" id="card-selfmgmt">
+                <div class="tx-header">
+                    <h4 class="tx-title">Self-Management Programs</h4>
+                    <span class="tx-badge badge-strong">STRONG</span>
+                </div>
+                <div class="tx-desc">
+                    Structured programs that teach patients about their condition, coping strategies, exercise, and pain management. Includes Arthritis Foundation programs, chronic disease self-management workshops, and patient education materials.
+                </div>
+                <div class="tx-details">
+                    <strong>AAOS Knee:</strong> Strong recommendation for self-management education programs.<br>
+                    <strong>Examples:</strong> Arthritis Foundation "Walk With Ease" program, Chronic Disease Self-Management Program (Stanford), clinic-based OA education classes.
+                </div>
+                <div class="tx-actions">
+                    <label class="tx-check tried"><input type="checkbox" data-field="selfmgmt_tried"> Tried</label>
+                    <label class="tx-check recommended"><input type="checkbox" data-field="selfmgmt_rec"> Recommended</label>
+                    <div class="tx-note"><input type="text" data-field="selfmgmt_note" placeholder="Program, dates..."></div>
+                </div>
+            </div>
+
+            <!-- ============ SECTION 2: MEDICATIONS ============ -->
+            <div class="section-header">
+                <h3>2. Medications</h3>
+                <p>Pharmacologic treatments to manage pain and inflammation</p>
+            </div>
+
+            <!-- Oral NSAIDs -->
+            <div class="tx-card strong" id="card-nsaids">
+                <div class="tx-header">
+                    <h4 class="tx-title">Oral NSAIDs (Anti-Inflammatory Medications)</h4>
+                    <span class="tx-badge badge-strong">STRONG</span>
+                </div>
+                <div class="tx-desc">
+                    First-line pharmacologic treatment. Oral NSAIDs reduce pain and improve function. Use the lowest effective dose for the shortest duration needed. Monitor for GI, renal, and cardiovascular side effects.
+                </div>
+                <div class="tx-details">
+                    <strong>AAOS Knee & Hip:</strong> Strong recommendation. When not contraindicated, oral NSAIDs should be used to reduce pain and improve function.<br>
+                    <strong>Options:</strong> Ibuprofen (Advil) 400-800mg TID, Naproxen (Aleve) 250-500mg BID, Meloxicam 7.5-15mg daily, Diclofenac 50mg BID-TID, Celecoxib (Celebrex) 100-200mg daily.<br>
+                    <strong>Precautions:</strong> Avoid with kidney disease, active GI bleed, or heart failure. Consider PPI co-prescription for GI protection in high-risk patients. Avoid in patients on anticoagulants.
+                </div>
+                <div class="tx-actions">
+                    <label class="tx-check tried"><input type="checkbox" data-field="nsaid_tried"> Tried</label>
+                    <label class="tx-check recommended"><input type="checkbox" data-field="nsaid_rec"> Recommended</label>
+                    <div class="tx-note"><input type="text" data-field="nsaid_note" placeholder="Medication, dose, duration, response..."></div>
+                </div>
+            </div>
+
+            <!-- Topical NSAIDs -->
+            <div class="tx-card strong knee-only" id="card-topical">
+                <div class="tx-header">
+                    <h4 class="tx-title">Topical NSAIDs</h4>
+                    <span class="tx-badge badge-strong">STRONG</span>
+                </div>
+                <div class="tx-desc">
+                    Applied directly to the affected joint. Lower risk of systemic side effects compared to oral NSAIDs. Particularly useful for patients who cannot take oral NSAIDs.
+                </div>
+                <div class="tx-details">
+                    <strong>AAOS Knee:</strong> Strong recommendation for topical NSAIDs to improve pain and function.<br>
+                    <strong>Options:</strong> Diclofenac gel (Voltaren) — apply 4g to affected joint 4× daily. Diclofenac solution (Pennsaid). Available OTC and by prescription.<br>
+                    <strong>Note:</strong> Most effective for knee OA because the joint is superficial. Less studied for hip due to deeper joint anatomy.
+                </div>
+                <div class="tx-actions">
+                    <label class="tx-check tried"><input type="checkbox" data-field="topical_tried"> Tried</label>
+                    <label class="tx-check recommended"><input type="checkbox" data-field="topical_rec"> Recommended</label>
+                    <div class="tx-note"><input type="text" data-field="topical_note" placeholder="Product, frequency, response..."></div>
+                </div>
+            </div>
+
+            <!-- Acetaminophen -->
+            <div class="tx-card consensus" id="card-acetaminophen">
+                <div class="tx-header">
+                    <h4 class="tx-title">Acetaminophen (Tylenol)</h4>
+                    <span class="tx-badge badge-consensus">CONSENSUS</span>
+                </div>
+                <div class="tx-desc">
+                    May provide modest pain relief. Less effective than NSAIDs but safer for patients with GI, renal, or cardiovascular concerns. Should not exceed 3,000mg per day.
+                </div>
+                <div class="tx-details">
+                    <strong>AAOS Knee & Hip:</strong> Consensus-based recommendation — may be considered to improve pain and function when NSAIDs are contraindicated.<br>
+                    <strong>Dosing:</strong> 500-1000mg every 6-8 hours. Maximum 3,000mg/day (2,000mg/day if liver disease or heavy alcohol use).<br>
+                    <strong>Note:</strong> Avoid combining with alcohol. Check all other medications for hidden acetaminophen content.
+                </div>
+                <div class="tx-actions">
+                    <label class="tx-check tried"><input type="checkbox" data-field="acet_tried"> Tried</label>
+                    <label class="tx-check recommended"><input type="checkbox" data-field="acet_rec"> Recommended</label>
+                    <div class="tx-note"><input type="text" data-field="acet_note" placeholder="Dose, response..."></div>
+                </div>
+            </div>
+
+            <!-- Opioids — NOT RECOMMENDED -->
+            <div class="tx-card against" id="card-opioids">
+                <div class="tx-header">
+                    <h4 class="tx-title">⛔ Oral Opioids</h4>
+                    <span class="tx-badge badge-against">NOT RECOMMENDED</span>
+                </div>
+                <div class="tx-desc">
+                    Opioids should NOT be used for non-operative treatment of knee or hip OA. Risk of dependence, falls, and adverse effects outweighs any short-term pain relief benefit. This is a consensus-based recommendation from both the knee and hip AAOS guidelines.
+                </div>
+                <div class="tx-details">
+                    <strong>AAOS Knee & Hip:</strong> Oral opioids should not be utilized for nonoperative treatment of symptomatic osteoarthritis.<br>
+                    <strong>If currently taking:</strong> Refer to pain management for weaning protocol. Document opioid use as comorbidity risk factor.
+                </div>
+            </div>
+
+            <!-- ============ SECTION 3: ASSISTIVE DEVICES & BRACING ============ -->
+            <div class="section-header">
+                <h3>3. Assistive Devices & Bracing</h3>
+                <p>Mechanical support to reduce joint stress</p>
+            </div>
+
+            <!-- Bracing (Knee) -->
+            <div class="tx-card moderate knee-only" id="card-brace">
+                <div class="tx-header">
+                    <h4 class="tx-title">Unloader Knee Brace</h4>
+                    <span class="tx-badge badge-moderate">MODERATE</span>
+                </div>
+                <div class="tx-desc">
+                    Valgus-directing (unloader) braces shift weight away from the affected compartment. Most effective for unicompartmental medial knee OA with varus alignment.
+                </div>
+                <div class="tx-details">
+                    <strong>AAOS Knee:</strong> Moderate recommendation for valgus-directing brace for patients with unicompartmental OA of the knee.<br>
+                    <strong>Options:</strong> Custom-fit unloader brace (OA Adjuster, Össur Unloader One) or OTC hinged brace.<br>
+                    <strong>Note:</strong> Patient compliance can be challenging due to bulk and fit. Typically covered by insurance with documented unicompartmental disease.
+                </div>
+                <div class="tx-actions">
+                    <label class="tx-check tried"><input type="checkbox" data-field="brace_tried"> Tried</label>
+                    <label class="tx-check recommended"><input type="checkbox" data-field="brace_rec"> Recommended</label>
+                    <div class="tx-note"><input type="text" data-field="brace_note" placeholder="Type, compliance, response..."></div>
+                </div>
+            </div>
+
+            <!-- Lateral Wedge Insoles — NOT recommended -->
+            <div class="tx-card against knee-only" id="card-insoles">
+                <div class="tx-header">
+                    <h4 class="tx-title">⛔ Lateral Wedge Insoles</h4>
+                    <span class="tx-badge badge-against">NOT RECOMMENDED</span>
+                </div>
+                <div class="tx-desc">
+                    Despite historical use, contemporary evidence does not support lateral wedge insoles for pain relief or functional improvement in knee OA. Not recommended by AAOS.
+                </div>
+                <div class="tx-details">
+                    <strong>AAOS Knee (2021):</strong> Strong recommendation AGAINST lateral wedge insoles for patients with knee osteoarthritis.
+                </div>
+            </div>
+
+            <!-- Assistive Devices -->
+            <div class="tx-card moderate" id="card-assistive">
+                <div class="tx-header">
+                    <h4 class="tx-title">Assistive Walking Devices</h4>
+                    <span class="tx-badge badge-moderate">MODERATE</span>
+                </div>
+                <div class="tx-desc">
+                    Cane, walking stick, or walker to reduce joint loading. Cane should be used in the opposite hand from the affected joint. Can reduce hip/knee joint force by 20-30%.
+                </div>
+                <div class="tx-details">
+                    <strong>Guidance:</strong> Single-point cane in contralateral hand. Properly fitted to height (handle at wrist crease when standing). Upgrade to rolling walker if balance is a concern.
+                </div>
+                <div class="tx-actions">
+                    <label class="tx-check tried"><input type="checkbox" data-field="assist_tried"> Tried</label>
+                    <label class="tx-check recommended"><input type="checkbox" data-field="assist_rec"> Recommended</label>
+                    <div class="tx-note"><input type="text" data-field="assist_note" placeholder="Device type, usage..."></div>
+                </div>
+            </div>
+
+            <!-- ============ SECTION 4: INJECTIONS ============ -->
+            <div class="section-header">
+                <h3>4. Injection Therapies</h3>
+                <p>Intra-articular injections — insurance-covered and non-covered options</p>
+            </div>
+
+            <!-- Corticosteroid Injections -->
+            <div class="tx-card moderate" id="card-steroid">
+                <div class="tx-header">
+                    <h4 class="tx-title">Corticosteroid Injections</h4>
+                    <span class="tx-badge badge-moderate">MODERATE</span>
+                </div>
+                <div class="tx-desc">
+                    Intra-articular corticosteroids provide short-term pain relief (typically 4-12 weeks). May be used for acute flares or as a bridge to other treatments. Limit frequency to avoid cartilage damage.
+                </div>
+                <div class="tx-details" id="steroidDetails">
+                    <strong>AAOS Knee:</strong> Moderate recommendation — intra-articular corticosteroids could be considered to improve pain and function in the short-term.<br>
+                    <strong>AAOS Hip:</strong> Moderate recommendation — could be considered to improve function and reduce pain in the short-term. Often performed with image guidance (ultrasound or fluoroscopy).<br>
+                    <strong>Typical agents:</strong> Triamcinolone 40mg, Methylprednisolone (Depo-Medrol) 40-80mg, Betamethasone 6mg.<br>
+                    <strong>Frequency:</strong> No more than 3-4 injections per joint per year. Minimum 3 months between injections. ⛔ Must be >90 days before any planned surgery (infection risk).<br>
+                    <strong>Coverage:</strong> Covered by Medicare and most commercial insurance.
+                </div>
+                <div class="tx-actions">
+                    <label class="tx-check tried"><input type="checkbox" data-field="steroid_tried"> Tried</label>
+                    <label class="tx-check recommended"><input type="checkbox" data-field="steroid_rec"> Recommended</label>
+                </div>
+                <div class="inj-tracker" id="steroidTracker">
+                    <div style="font-size:0.82rem;font-weight:600;color:#374151;margin-bottom:6px;">Injection History:</div>
+                    <div id="steroidRows"></div>
+                    <button class="inj-add" onclick="addSteroidRow()">+ Add Injection</button>
+                </div>
+            </div>
+
+            <!-- Hyaluronic Acid -->
+            <div class="tx-card limited" id="card-ha">
+                <div class="tx-header">
+                    <h4 class="tx-title">Hyaluronic Acid Injections (Viscosupplementation)</h4>
+                    <span class="tx-badge badge-limited" id="haBadge">INCONCLUSIVE</span>
+                </div>
+                <div class="tx-desc" id="haDesc">
+                    Hyaluronic acid is a naturally occurring substance in joint fluid. Injections aim to improve lubrication and cushioning. Evidence is mixed — some patients report meaningful relief, others do not.
+                </div>
+                <div class="tx-details" id="haDetails">
+                    <strong>AAOS Knee (2021):</strong> No recommendation for or against — the evidence is inconclusive. Work group noted the need for better research stratified by OA severity.<br>
+                    <strong>AAOS Hip (2023):</strong> HA should NOT be considered for hip OA — does not improve function or reduce pain better than placebo.<br>
+                    <strong>Options:</strong> Synvisc (1 or 3 injections), Euflexxa (3 injections), Gel-One (single injection), Hyalgan (3-5 injections).<br>
+                    <strong>Coverage:</strong> Medicare covers for knee. Many commercial plans require prior authorization. NOT recommended for hip.<br>
+                    <strong>Timing:</strong> Cannot be given within 3 months of planned surgery.
+                </div>
+                <div class="tx-actions">
+                    <label class="tx-check tried"><input type="checkbox" data-field="ha_tried"> Tried</label>
+                    <label class="tx-check recommended"><input type="checkbox" data-field="ha_rec"> Recommended</label>
+                    <div class="tx-note"><input type="text" data-field="ha_note" placeholder="Product, # injections, response..."></div>
+                </div>
+            </div>
+
+            <!-- PRP -->
+            <div class="tx-card not-covered" id="card-prp">
+                <div class="tx-header">
+                    <h4 class="tx-title">Platelet-Rich Plasma (PRP) Injections</h4>
+                    <span class="tx-badge badge-not-covered">NOT COVERED BY INSURANCE</span>
+                </div>
+                <div class="tx-desc">
+                    PRP is prepared from the patient's own blood — concentrated platelets and growth factors are injected into the joint. Emerging evidence suggests potential benefit for mild-to-moderate OA, but high-quality studies are limited.
+                </div>
+                <div class="tx-details">
+                    <strong>AAOS Knee (2021):</strong> Limited evidence — the work group could not recommend for or against PRP. Called for better research with standardized preparations.<br>
+                    <strong>Evidence:</strong> Some studies show PRP may reduce pain and improve function for 6-12 months, particularly in mild-moderate OA (KL grades 1-3). Less effective in severe (bone-on-bone) disease. Leukocyte-poor PRP preparations may be more effective.<br>
+                    <strong>Cost:</strong> Typically $500-$1,500 per injection. Series of 1-3 injections recommended. NOT covered by Medicare or most commercial insurance.<br>
+                    <strong>Risks:</strong> Low risk since it uses the patient's own blood. Temporary pain/swelling at injection site. No risk of allergic reaction.
+                </div>
+                <div class="insurance-warning">
+                    ⚠️ <strong>Insurance Notice:</strong> PRP injections are not covered by Medicare or most commercial insurance plans. This is considered an elective, out-of-pocket expense. Patients should be counseled on cost before proceeding.
+                </div>
+                <div class="tx-actions">
+                    <label class="tx-check tried"><input type="checkbox" data-field="prp_tried"> Tried</label>
+                    <label class="tx-check recommended"><input type="checkbox" data-field="prp_rec"> Recommended</label>
+                    <div class="tx-note"><input type="text" data-field="prp_note" placeholder="Date, preparation type, response, cost..."></div>
+                </div>
+            </div>
+
+            <!-- Stem Cell / Orthobiologics -->
+            <div class="tx-card not-covered" id="card-stemcell">
+                <div class="tx-header">
+                    <h4 class="tx-title">Stem Cell / Orthobiologic Injections</h4>
+                    <span class="tx-badge badge-not-covered">NOT COVERED BY INSURANCE</span>
+                </div>
+                <div class="tx-desc">
+                    Includes bone marrow aspirate concentrate (BMAC), adipose-derived stem cells, amniotic tissue products, and other regenerative medicine approaches. These are investigational and not FDA-approved for osteoarthritis treatment.
+                </div>
+                <div class="tx-details">
+                    <strong>AAOS Position:</strong> AAOS has established an Orthobiologics Registry (OBR) to track outcomes but has not issued a recommendation for or against stem cell treatments for OA. The evidence base is currently insufficient to draw conclusions.<br>
+                    <strong>FDA Status:</strong> No stem cell therapy is FDA-approved for osteoarthritis. Products marketed as "stem cell injections" vary widely in composition, cell count, and viability. The FDA has issued warnings about unregulated clinics.<br>
+                    <strong>Cost:</strong> Typically $3,000-$8,000+ per injection. NOT covered by any insurance plan.<br>
+                    <strong>Risks:</strong> Infection, immune reaction (for allograft products), no guarantee of benefit. Wide variation in product quality between providers.
+                </div>
+                <div class="insurance-warning">
+                    ⚠️ <strong>Insurance Notice:</strong> Stem cell and orthobiologic injections are NOT covered by Medicare or any commercial insurance plans. These are investigational, elective procedures. Patients should be fully counseled on limited evidence, risks, and cost before proceeding.
+                </div>
+                <div class="tx-actions">
+                    <label class="tx-check tried"><input type="checkbox" data-field="stem_tried"> Tried</label>
+                    <label class="tx-check recommended"><input type="checkbox" data-field="stem_rec"> Recommended</label>
+                    <div class="tx-note"><input type="text" data-field="stem_note" placeholder="Type, date, provider, response, cost..."></div>
+                </div>
+            </div>
+
+            <!-- ============ SECTION 5: COMPLEMENTARY THERAPIES ============ -->
+            <div class="section-header">
+                <h3>5. Complementary & Adjunctive Therapies</h3>
+                <p>Additional treatments that may complement the core treatment plan</p>
+            </div>
+
+            <!-- Acupuncture -->
+            <div class="tx-card limited knee-only" id="card-acupuncture">
+                <div class="tx-header">
+                    <h4 class="tx-title">Acupuncture</h4>
+                    <span class="tx-badge badge-limited">LIMITED</span>
+                </div>
+                <div class="tx-desc">
+                    May provide modest pain relief for knee OA. Largest effect sizes seen in knee osteoarthritis specifically.
+                </div>
+                <div class="tx-details">
+                    <strong>AAOS Knee:</strong> Limited recommendation — acupuncture may improve pain and function in patients with knee OA.<br>
+                    <strong>ACR/Arthritis Foundation:</strong> Conditionally recommends acupuncture for knee, hip, and hand OA.<br>
+                    <strong>Typical course:</strong> 6-12 sessions over 4-8 weeks.<br>
+                    <strong>Coverage:</strong> Varies by plan. Some Medicare Advantage and commercial plans cover for chronic pain.
+                </div>
+                <div class="tx-actions">
+                    <label class="tx-check tried"><input type="checkbox" data-field="acup_tried"> Tried</label>
+                    <label class="tx-check recommended"><input type="checkbox" data-field="acup_rec"> Recommended</label>
+                    <div class="tx-note"><input type="text" data-field="acup_note" placeholder="# sessions, response..."></div>
+                </div>
+            </div>
+
+            <!-- Heat / Ice -->
+            <div class="tx-card consensus" id="card-thermal">
+                <div class="tx-header">
+                    <h4 class="tx-title">Thermal Therapy (Heat & Ice)</h4>
+                    <span class="tx-badge badge-consensus">CONSENSUS</span>
+                </div>
+                <div class="tx-desc">
+                    Heat before activity loosens stiff joints. Ice after activity reduces swelling and pain. Simple, no-cost, and safe for most patients.
+                </div>
+                <div class="tx-details">
+                    <strong>Heat:</strong> Warm compress, heating pad, or warm bath for 15-20 minutes before activity or morning stiffness. Avoid burns — use towel barrier.<br>
+                    <strong>Ice:</strong> Cold pack for 15-20 minutes after activity or flare-up. Wrap in cloth. Especially helpful after exercise or prolonged activity.<br>
+                    <strong>ACR/Arthritis Foundation:</strong> Conditionally recommends thermal interventions for OA.
+                </div>
+                <div class="tx-actions">
+                    <label class="tx-check tried"><input type="checkbox" data-field="thermal_tried"> Tried</label>
+                    <label class="tx-check recommended"><input type="checkbox" data-field="thermal_rec"> Recommended</label>
+                </div>
+            </div>
+
+            <!-- Aquatic Therapy -->
+            <div class="tx-card moderate" id="card-aquatic">
+                <div class="tx-header">
+                    <h4 class="tx-title">Aquatic Therapy (Pool Exercises)</h4>
+                    <span class="tx-badge badge-moderate">MODERATE</span>
+                </div>
+                <div class="tx-desc">
+                    Water-based exercise reduces joint loading while allowing strengthening and range of motion work. Warm water pools (82-86°F) add thermal benefit. Excellent for patients who cannot tolerate land-based exercise.
+                </div>
+                <div class="tx-details">
+                    <strong>Evidence:</strong> Multiple studies support aquatic exercise for reducing pain and improving function in knee and hip OA. Particularly beneficial for obese patients and those with severe symptoms.<br>
+                    <strong>Program:</strong> 2-3×/week, 30-45 minutes. Water walking, leg raises, gentle stretching. Many community pools offer arthritis-specific classes.
+                </div>
+                <div class="tx-actions">
+                    <label class="tx-check tried"><input type="checkbox" data-field="aquatic_tried"> Tried</label>
+                    <label class="tx-check recommended"><input type="checkbox" data-field="aquatic_rec"> Recommended</label>
+                    <div class="tx-note"><input type="text" data-field="aquatic_note" placeholder="Facility, frequency..."></div>
+                </div>
+            </div>
+
+            <!-- Supplements -->
+            <div class="tx-card consensus" id="card-supplements">
+                <div class="tx-header">
+                    <h4 class="tx-title">Nutritional Supplements</h4>
+                    <span class="tx-badge badge-consensus">INCONCLUSIVE / MIXED</span>
+                </div>
+                <div class="tx-desc">
+                    Glucosamine and chondroitin are widely used but evidence for benefit is mixed. AAOS does not make a strong recommendation for or against these supplements.
+                </div>
+                <div class="tx-details">
+                    <strong>Glucosamine/Chondroitin:</strong> AAOS Knee — inconclusive evidence. Some patients report subjective benefit. Low risk of harm. Typical dose: Glucosamine 1,500mg + Chondroitin 1,200mg daily.<br>
+                    <strong>Turmeric/Curcumin:</strong> Emerging evidence for anti-inflammatory benefit. 500-1,000mg daily. May interact with anticoagulants.<br>
+                    <strong>Vitamin D:</strong> Maintain adequate levels (≥30 ng/mL). Deficiency is common in OA patients and associated with worse outcomes. 2,000 IU daily.<br>
+                    <strong>Omega-3 Fatty Acids:</strong> May have modest anti-inflammatory effect. 1,000-2,000mg daily (fish oil).
+                </div>
+                <div class="tx-actions">
+                    <label class="tx-check tried"><input type="checkbox" data-field="supp_tried"> Tried</label>
+                    <label class="tx-check recommended"><input type="checkbox" data-field="supp_rec"> Recommended</label>
+                    <div class="tx-note"><input type="text" data-field="supp_note" placeholder="Products, duration, response..."></div>
+                </div>
+            </div>
+
+            <!-- ============ SECTION 6: SURGICAL ALTERNATIVES ============ -->
+            <div class="section-header knee-only">
+                <h3>6. Surgical Alternatives (Less Invasive Than Arthroplasty)</h3>
+                <p>Knee-specific procedures that may be considered before joint replacement</p>
+            </div>
+
+            <!-- Arthroscopy -->
+            <div class="tx-card limited knee-only" id="card-scope">
+                <div class="tx-header">
+                    <h4 class="tx-title">Arthroscopic Surgery</h4>
+                    <span class="tx-badge badge-limited">LIMITED / CONDITIONAL</span>
+                </div>
+                <div class="tx-desc">
+                    Arthroscopic debridement or lavage alone is NOT recommended for isolated knee OA. However, arthroscopic partial meniscectomy may be considered for patients with a confirmed meniscal tear AND OA who have failed conservative treatment.
+                </div>
+                <div class="tx-details">
+                    <strong>AAOS Knee (2021/2023):</strong> Arthroscopic lavage and/or debridement is not recommended as treatment for symptomatic OA of the knee. Partial meniscectomy may be considered after failure of conservative care (NSAIDs, steroid injection, PT) in patients with MRI-confirmed meniscal tear and mild-to-moderate OA.<br>
+                    <strong>Note:</strong> Arthroscopy does NOT slow OA progression and should not be offered as a treatment for arthritis itself.
+                </div>
+                <div class="tx-actions">
+                    <label class="tx-check tried"><input type="checkbox" data-field="scope_tried"> Tried</label>
+                    <label class="tx-check recommended"><input type="checkbox" data-field="scope_rec"> Recommended</label>
+                    <div class="tx-note"><input type="text" data-field="scope_note" placeholder="Date, findings, outcome..."></div>
+                </div>
+            </div>
+
+            <!-- Osteotomy -->
+            <div class="tx-card limited knee-only" id="card-osteotomy">
+                <div class="tx-header">
+                    <h4 class="tx-title">Osteotomy (Realignment Surgery)</h4>
+                    <span class="tx-badge badge-limited">LIMITED</span>
+                </div>
+                <div class="tx-desc">
+                    High tibial osteotomy (HTO) may delay the need for knee replacement in younger, active patients with unicompartmental medial knee OA and varus malalignment. Not typically appropriate for patients over 60 or those with tricompartmental disease.
+                </div>
+                <div class="tx-details">
+                    <strong>Best candidates:</strong> Age &lt; 60, active, BMI &lt; 30, isolated medial compartment OA, varus alignment, intact lateral compartment, ROM &gt; 90° flexion.<br>
+                    <strong>Expected outcome:</strong> May delay knee replacement by 10-15 years in appropriately selected patients.
+                </div>
+                <div class="tx-actions">
+                    <label class="tx-check tried"><input type="checkbox" data-field="osteo_tried"> Tried</label>
+                    <label class="tx-check recommended"><input type="checkbox" data-field="osteo_rec"> Recommended</label>
+                    <div class="tx-note"><input type="text" data-field="osteo_note" placeholder="Candidacy assessment..."></div>
+                </div>
+            </div>
+
+            <!-- ============ TREATMENT SUMMARY ============ -->
+            <div class="section-header">
+                <h3>📝 Provider Notes & Follow-Up Plan</h3>
+            </div>
+
+            <div class="tx-card full-width" id="card-summary" style="border-left-color:#1e293b;">
+                <div class="field-row">
+                    <label style="font-size:0.9rem;font-weight:600;">Clinical Assessment & Plan Notes:</label>
+                    <textarea id="clinicalNotes" rows="4" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;resize:vertical;" placeholder="Document clinical findings, rationale for recommended treatments, patient preferences, and follow-up plan..."></textarea>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:12px;">
+                    <div class="field-row">
+                        <label style="font-size:0.85rem;font-weight:600;">Follow-Up Interval:</label>
+                        <select id="followUp" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;">
+                            <option value="">Select...</option>
+                            <option value="4wk">4 weeks</option>
+                            <option value="6wk">6 weeks</option>
+                            <option value="8wk">8 weeks</option>
+                            <option value="3mo">3 months</option>
+                            <option value="6mo">6 months</option>
+                            <option value="1yr">1 year</option>
+                            <option value="prn">As needed / PRN</option>
+                        </select>
+                    </div>
+                    <div class="field-row">
+                        <label style="font-size:0.85rem;font-weight:600;">Conservative Care Duration:</label>
+                        <select id="careDuration" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;">
+                            <option value="">Select...</option>
+                            <option value="6wk">Minimum 6 weeks</option>
+                            <option value="3mo">3 months</option>
+                            <option value="6mo">6 months</option>
+                            <option value="ongoing">Ongoing / indefinite</option>
+                        </select>
+                    </div>
+                    <div class="field-row">
+                        <label style="font-size:0.85rem;font-weight:600;">If No Improvement → Next Step:</label>
+                        <select id="nextStep" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;">
+                            <option value="">Select...</option>
+                            <option value="continue">Continue current plan</option>
+                            <option value="escalate">Escalate treatments</option>
+                            <option value="injection">Consider injection therapy</option>
+                            <option value="preop">Proceed to pre-op evaluation</option>
+                            <option value="secondop">Refer for second opinion</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Guideline Reference -->
+            <div class="guideline-ref">
+                <h4>📚 Guideline References</h4>
+                <p>
+                    <strong>Knee OA:</strong> AAOS Management of Osteoarthritis of the Knee (Non-Arthroplasty), 3rd Edition, August 2021. 29 evidence-based recommendations.<br>
+                    <strong>Hip OA:</strong> AAOS Management of Osteoarthritis of the Hip, 2nd Edition, December 2023. 8 recommendations and 9 options.<br>
+                    <strong>Surgical Knee OA:</strong> AAOS Surgical Management of Osteoarthritis of the Knee, 2nd Edition, January 2023.<br>
+                    <strong>Evidence Strength Key:</strong>
+                    <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;font-weight:700;background:#d1fae5;color:#065f46;margin:0 3px;">STRONG</span> = High-quality evidence
+                    <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;font-weight:700;background:#dbeafe;color:#1e40af;margin:0 3px;">MODERATE</span> = Moderate-quality evidence
+                    <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;font-weight:700;background:#fef3c7;color:#92400e;margin:0 3px;">LIMITED</span> = Low-quality evidence
+                    <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;font-weight:700;background:#f3f4f6;color:#374151;margin:0 3px;">CONSENSUS</span> = Expert opinion
+                </p>
+            </div>
+
+        </div><!-- end treatmentGrid -->
+
+        <!-- Action Buttons -->
+        <div class="nop-actions" id="nopActions" style="display:none;">
+            <button class="btn btn-save" onclick="savePlan()">💾 Save Plan</button>
+            <button class="btn btn-print" onclick="printPlan()">🖨️ Print Patient Handout</button>
+            <button class="btn btn-clear" onclick="clearPlan()">Clear All</button>
+            <span id="saveStatus" style="font-size:0.85rem;color:#059669;font-weight:600;align-self:center;"></span>
+        </div>
+    </div>
+
+    <script>
+    const CLINIC_ID = '11111111-1111-1111-1111-111111111111';
+    let currentJoint = 'knee';
+    let currentPatientId = null;
+    let currentPlanId = null;
+    let steroidInjections = [];
+
+    // ===== INIT =====
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Check role
+        const role = sessionStorage.getItem('userRole');
+        if (role === 'nurse') {
+            document.querySelectorAll('.nav-link').forEach(link => {
+                if (['Analytics','CMS Compliance'].some(t => link.textContent.includes(t))) link.style.display = 'none';
+            });
+        }
+        const userName = sessionStorage.getItem('userName') || '';
+        document.getElementById('userDisplay').textContent = userName;
+
+        await loadPatients();
+
+        // Check URL params
+        const params = new URLSearchParams(window.location.search);
+        const pid = params.get('patient');
+        if (pid) {
+            document.getElementById('patientSelect').value = pid;
+            await loadPatient();
+        }
+    });
+
+    async function loadPatients() {
+        try {
+            const resp = await fetch(`/api/patients?clinic_id=${CLINIC_ID}`);
+            const patients = await resp.json();
+            const sel = document.getElementById('patientSelect');
+            const current = sel.value;
+            sel.innerHTML = '<option value="">— Select Patient —</option>';
+            patients.sort((a, b) => (a.last_name || '').localeCompare(b.last_name || ''));
+            patients.forEach(p => {
+                const mrn = p.mrn ? ` [${p.mrn}]` : '';
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = `${p.last_name}, ${p.first_name}${mrn}`;
+                sel.appendChild(opt);
+            });
+            if (current) sel.value = current;
+        } catch (e) { console.error('Failed to load patients:', e); }
+    }
+
+    async function loadPatient() {
+        const pid = document.getElementById('patientSelect').value;
+        if (!pid) {
+            document.getElementById('jointToggle').style.display = 'none';
+            document.getElementById('treatmentGrid').style.display = 'none';
+            document.getElementById('nopActions').style.display = 'none';
+            return;
+        }
+        currentPatientId = pid;
+
+        // Show UI
+        document.getElementById('jointToggle').style.display = 'flex';
+        document.getElementById('treatmentGrid').style.display = 'grid';
+        document.getElementById('nopActions').style.display = 'flex';
+
+        // Try to load existing plan
+        try {
+            const resp = await fetch(`/api/nonop-plans?patient_id=${pid}&clinic_id=${CLINIC_ID}`);
+            const plans = await resp.json();
+            if (plans.length > 0) {
+                const plan = plans[0];
+                currentPlanId = plan.id;
+                if (plan.joint) setJoint(plan.joint, true);
+                if (plan.plan_data) {
+                    const data = JSON.parse(plan.plan_data);
+                    restorePlan(data);
+                }
+            } else {
+                currentPlanId = null;
+                clearPlan(true);
+                // Auto-detect joint from episode
+                const epResp = await fetch(`/api/episodes?patient_id=${pid}`);
+                const episodes = await epResp.json();
+                if (episodes.length > 0) {
+                    const st = episodes[0].surgery_type || '';
+                    if (st.toLowerCase().includes('hip') || st === 'THA' || st === 'Partial_Hip' || st === 'Hip_Fracture') {
+                        setJoint('hip', true);
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Failed to load plan:', e);
+            currentPlanId = null;
+        }
+    }
+
+    function setJoint(joint, skipSave) {
+        currentJoint = joint;
+        document.getElementById('btnKnee').classList.toggle('active', joint === 'knee');
+        document.getElementById('btnHip').classList.toggle('active', joint === 'hip');
+
+        // Show/hide joint-specific cards
+        document.querySelectorAll('.knee-only').forEach(el => {
+            el.style.display = joint === 'knee' ? '' : 'none';
+        });
+
+        // Update HA card for hip
+        if (joint === 'hip') {
+            document.getElementById('haBadge').textContent = 'NOT RECOMMENDED';
+            document.getElementById('haBadge').className = 'tx-badge badge-against';
+            document.getElementById('card-ha').className = 'tx-card against';
+        } else {
+            document.getElementById('haBadge').textContent = 'INCONCLUSIVE';
+            document.getElementById('haBadge').className = 'tx-badge badge-limited';
+            document.getElementById('card-ha').className = 'tx-card limited';
+        }
+
+        // Update PT details
+        const ptDet = document.getElementById('ptDetails');
+        if (joint === 'hip') {
+            ptDet.innerHTML = `
+                <strong>AAOS Hip (2023):</strong> Physical therapy may be considered for patients with mild to moderate symptomatic OA of the hip to improve function and reduce pain. Either formal PT or unsupervised home exercise is recommended after THA.<br>
+                <strong>Program:</strong> Minimum 6 weeks supervised PT, 2-3×/week. Focus on hip strengthening (glute bridges, clamshells, hip abduction), hip flexor stretching, core stabilization, gait training, stationary bike, pool exercises.`;
+        } else {
+            ptDet.innerHTML = `
+                <strong>AAOS Knee (2021):</strong> Strong recommendation for participation in strengthening, low-impact aerobic exercise, and neuromuscular education programs.<br>
+                <strong>AAOS Hip (2023):</strong> Physical therapy may be considered for patients with mild to moderate symptomatic OA of the hip to improve function and reduce pain.<br>
+                <strong>Program:</strong> Minimum 6 weeks supervised PT, 2-3×/week. Transition to independent home exercise program. Include quad strengthening, hamstring stretching, stationary bike, walking, pool exercises.`;
+        }
+    }
+
+    // ===== STEROID INJECTION TRACKER =====
+    function addSteroidRow(data) {
+        const row = { date: data?.date || '', agent: data?.agent || '', response: data?.response || '' };
+        steroidInjections.push(row);
+        renderSteroidRows();
+    }
+
+    function removeSteroidRow(idx) {
+        steroidInjections.splice(idx, 1);
+        renderSteroidRows();
+    }
+
+    function renderSteroidRows() {
+        const container = document.getElementById('steroidRows');
+        container.innerHTML = '';
+        steroidInjections.forEach((inj, i) => {
+            const div = document.createElement('div');
+            div.className = 'inj-row';
+            div.innerHTML = `
+                <input type="date" value="${inj.date}" onchange="steroidInjections[${i}].date=this.value">
+                <select onchange="steroidInjections[${i}].agent=this.value">
+                    <option value="">Agent...</option>
+                    <option value="Triamcinolone 40mg" ${inj.agent==='Triamcinolone 40mg'?'selected':''}>Triamcinolone 40mg</option>
+                    <option value="Depo-Medrol 40mg" ${inj.agent==='Depo-Medrol 40mg'?'selected':''}>Depo-Medrol 40mg</option>
+                    <option value="Depo-Medrol 80mg" ${inj.agent==='Depo-Medrol 80mg'?'selected':''}>Depo-Medrol 80mg</option>
+                    <option value="Betamethasone 6mg" ${inj.agent==='Betamethasone 6mg'?'selected':''}>Betamethasone 6mg</option>
+                    <option value="Other" ${inj.agent==='Other'?'selected':''}>Other</option>
+                </select>
+                <input type="text" value="${inj.response}" placeholder="Response/duration of relief" onchange="steroidInjections[${i}].response=this.value">
+                <button class="inj-remove" onclick="removeSteroidRow(${i})">✕</button>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    // ===== SAVE / LOAD =====
+    function gatherPlan() {
+        const data = { joint: currentJoint, steroidInjections };
+
+        // Gather all checkbox and text field data
+        document.querySelectorAll('[data-field]').forEach(el => {
+            const key = el.dataset.field;
+            if (el.type === 'checkbox') data[key] = el.checked;
+            else data[key] = el.value;
+        });
+
+        // Gather summary fields
+        data.clinicalNotes = document.getElementById('clinicalNotes').value;
+        data.followUp = document.getElementById('followUp').value;
+        data.careDuration = document.getElementById('careDuration').value;
+        data.nextStep = document.getElementById('nextStep').value;
+
+        return data;
+    }
+
+    function restorePlan(data) {
+        if (!data) return;
+
+        // Restore checkboxes and text fields
+        document.querySelectorAll('[data-field]').forEach(el => {
+            const key = el.dataset.field;
+            if (data[key] !== undefined) {
+                if (el.type === 'checkbox') el.checked = data[key];
+                else el.value = data[key];
+            }
+        });
+
+        // Restore summary fields
+        if (data.clinicalNotes) document.getElementById('clinicalNotes').value = data.clinicalNotes;
+        if (data.followUp) document.getElementById('followUp').value = data.followUp;
+        if (data.careDuration) document.getElementById('careDuration').value = data.careDuration;
+        if (data.nextStep) document.getElementById('nextStep').value = data.nextStep;
+
+        // Restore steroid injections
+        steroidInjections = data.steroidInjections || [];
+        renderSteroidRows();
+    }
+
+    function clearPlan(silent) {
+        document.querySelectorAll('[data-field]').forEach(el => {
+            if (el.type === 'checkbox') el.checked = false;
+            else el.value = '';
+        });
+        document.getElementById('clinicalNotes').value = '';
+        document.getElementById('followUp').value = '';
+        document.getElementById('careDuration').value = '';
+        document.getElementById('nextStep').value = '';
+        steroidInjections = [];
+        renderSteroidRows();
+        if (!silent) document.getElementById('saveStatus').textContent = 'Cleared';
+    }
+
+    async function savePlan() {
+        if (!currentPatientId) return;
+        const data = gatherPlan();
+        const body = {
+            patient_id: currentPatientId,
+            clinic_id: CLINIC_ID,
+            joint: currentJoint,
+            plan_data: JSON.stringify(data)
+        };
+
+        try {
+            let resp;
+            if (currentPlanId) {
+                resp = await fetch(`/api/nonop-plans/${currentPlanId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+            } else {
+                resp = await fetch('/api/nonop-plans', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+            }
+            const result = await resp.json();
+            if (result.id) currentPlanId = result.id;
+            document.getElementById('saveStatus').textContent = '✓ Saved ' + new Date().toLocaleTimeString();
+            setTimeout(() => document.getElementById('saveStatus').textContent = '', 4000);
+        } catch (e) {
+            console.error('Save failed:', e);
+            document.getElementById('saveStatus').textContent = '✕ Save failed';
+        }
+    }
+
+    function printPlan() {
+        // Populate print header
+        const sel = document.getElementById('patientSelect');
+        const pName = sel.options[sel.selectedIndex]?.text || '';
+        document.getElementById('printPatientName').textContent = pName;
+        document.getElementById('printJoint').textContent = currentJoint === 'hip' ? 'Hip' : 'Knee';
+        document.getElementById('printDate').textContent = new Date().toLocaleDateString();
+        document.getElementById('printProvider').textContent = sessionStorage.getItem('userName') || '';
+        window.print();
+    }
+
+    function logout() {
+        sessionStorage.clear();
+        window.location.href = '/index.html';
+    }
+    </script>
+</body>
+</html>
