@@ -177,7 +177,21 @@ db.exec(`
     reason TEXT,
     notes TEXT,
     resolved INTEGER DEFAULT 0,
+    resolved_at DATETIME,
+    resolved_by TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  -- Nurse alert acknowledgments (temporary suppression)
+  CREATE TABLE IF NOT EXISTS nurse_alert_acks (
+    id TEXT PRIMARY KEY,
+    patient_id TEXT REFERENCES patients(id),
+    clinic_id TEXT REFERENCES clinics(id),
+    alert_type TEXT NOT NULL,
+    acknowledged_by TEXT,
+    acknowledged_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME NOT NULL,
+    note TEXT
   );
 
   -- PROM Schedule (tracks which PROMs are due and when)
@@ -1074,8 +1088,39 @@ app.post('/api/adverse-events', (req, res) => {
 });
 
 app.put('/api/adverse-events/:id', (req, res) => {
-  const { resolved, notes } = req.body;
-  db.prepare('UPDATE adverse_events SET resolved = ?, notes = ? WHERE id = ?').run(resolved ? 1 : 0, notes, req.params.id);
+  const { resolved, notes, resolved_by } = req.body;
+  if (resolved) {
+    db.prepare('UPDATE adverse_events SET resolved = 1, resolved_at = CURRENT_TIMESTAMP, resolved_by = ?, notes = COALESCE(?, notes) WHERE id = ?').run(resolved_by || 'staff', notes, req.params.id);
+  } else {
+    db.prepare('UPDATE adverse_events SET resolved = 0, resolved_at = NULL, resolved_by = NULL, notes = COALESCE(?, notes) WHERE id = ?').run(notes, req.params.id);
+  }
+  res.json({ success: true });
+});
+
+// --- Nurse Alert Acknowledgments ---
+app.get('/api/nurse-acks', (req, res) => {
+  const { clinic_id } = req.query;
+  // Return only active (non-expired) acks
+  const acks = db.prepare(`
+    SELECT * FROM nurse_alert_acks 
+    WHERE clinic_id = ? AND expires_at > CURRENT_TIMESTAMP
+  `).all(clinic_id);
+  res.json(acks);
+});
+
+app.post('/api/nurse-ack', (req, res) => {
+  const id = uuid();
+  const { patient_id, clinic_id, alert_type, acknowledged_by, hours, note } = req.body;
+  const expiresAt = new Date(Date.now() + (hours || 24) * 60 * 60 * 1000).toISOString();
+  db.prepare(`
+    INSERT INTO nurse_alert_acks (id, patient_id, clinic_id, alert_type, acknowledged_by, expires_at, note)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(id, patient_id, clinic_id, alert_type, acknowledged_by || 'nurse', expiresAt, note || null);
+  res.json({ id, success: true });
+});
+
+app.delete('/api/nurse-ack/:id', (req, res) => {
+  db.prepare('DELETE FROM nurse_alert_acks WHERE id = ?').run(req.params.id);
   res.json({ success: true });
 });
 
@@ -1221,7 +1266,7 @@ app.get('/api/prom-compliance', (req, res) => {
   const overduePatients = db.prepare(`
     SELECT DISTINCT
       p.id as patient_id,
-      p.first_name, p.last_name, p.mrn,
+      p.first_name, p.last_name, p.mrn, p.token,
       ps.assessment_type, ps.window_name, ps.due_date, ps.window_close,
       e.surgery_type
     FROM prom_schedule ps
@@ -2312,109 +2357,6 @@ async function pollCloudRelay() {
 console.log('[Relay Poll] Starting cloud relay polling every 15 minutes...');
 setInterval(pollCloudRelay, POLL_INTERVAL);
 pollCloudRelay();
-
-// ============ AUTO-SEED DEMO DATA (for Render / cloud deployments) ============
-// When AUTO_SEED_DEMO=true and no patients exist, auto-seed demo data on startup
-// This ensures every fresh Render deploy comes up ready to demo
-if (process.env.AUTO_SEED_DEMO === 'true') {
-  const patientCount = db.prepare('SELECT COUNT(*) as count FROM patients').get();
-  if (patientCount.count === 0) {
-    console.log('[Auto-Seed] No patients found and AUTO_SEED_DEMO=true. Seeding demo data...');
-    try {
-      const clinicId = '11111111-1111-1111-1111-111111111111';
-      const surgeons = db.prepare('SELECT id FROM users WHERE clinic_id = ? AND role = ?').all(clinicId, 'surgeon');
-      
-      if (surgeons.length > 0) {
-        const today = new Date();
-        const fmt = (d) => d.toISOString().split('T')[0];
-        const daysAgo = (n) => { const d = new Date(today); d.setDate(d.getDate() - n); return d; };
-        
-        const demoPatients = [
-          { first: 'Maria', last: 'Rodriguez', mrn: '10001', dob: '1958-03-15', surgery: 'TKA', daysAgoSurgery: 7, surgeonIdx: 0, phone: '555-201-0001', email: 'maria.r@email.com' },
-          { first: 'Robert', last: 'Thompson', mrn: '10002', dob: '1965-11-22', surgery: 'THA', daysAgoSurgery: 14, surgeonIdx: 1, phone: '555-201-0002', email: 'robert.t@email.com' },
-          { first: 'Patricia', last: 'Chen', mrn: '10003', dob: '1972-07-08', surgery: 'TKA', daysAgoSurgery: 21, surgeonIdx: 0, phone: '555-201-0003', email: 'patricia.c@email.com' },
-          { first: 'James', last: 'Williams', mrn: '10004', dob: '1955-01-30', surgery: 'Revision TKA', daysAgoSurgery: 3, surgeonIdx: 2, phone: '555-201-0004', email: 'james.w@email.com' },
-          { first: 'Linda', last: 'Davis', mrn: '10005', dob: '1960-09-12', surgery: 'THA', daysAgoSurgery: 30, surgeonIdx: 1, phone: '555-201-0005', email: 'linda.d@email.com' },
-          { first: 'Michael', last: 'Johnson', mrn: '10006', dob: '1968-05-25', surgery: 'TKA', daysAgoSurgery: 10, surgeonIdx: 2, phone: '555-201-0006', email: 'michael.j@email.com' },
-          { first: 'Dorothy', last: 'Martinez', mrn: '10007', dob: '1962-04-18', surgery: 'TKA', daysAgoSurgery: 60, surgeonIdx: 0, phone: '555-201-0007', email: 'dorothy.m@email.com' },
-          { first: 'William', last: 'Garcia', mrn: '10008', dob: '1957-08-30', surgery: 'THA', daysAgoSurgery: 100, surgeonIdx: 1, phone: '555-201-0008', email: 'william.g@email.com' }
-        ];
-
-        const KOOS_TABLE = {0:100,1:91.975,2:84.6,3:79.914,4:76.332,5:73.342,6:70.704,7:68.284,8:65.994,9:63.776,10:61.583,11:59.381,12:57.14,13:54.84,14:52.465,15:50.012,16:47.487,17:44.905,18:42.281,19:39.625,20:36.931,21:34.174,22:31.307,23:28.251,24:24.875,25:20.941,26:15.939,27:8.291,28:0};
-        const HOOS_TABLE = {0:100,1:92.34,2:85.257,3:80.55,4:76.776,5:73.472,6:70.426,7:67.516,8:64.664,9:61.815,10:58.93,11:55.985,12:52.965,13:49.858,14:46.652,15:43.335,16:39.902,17:36.363,18:32.735,19:29.009,20:25.103,21:20.805,22:15.633,23:8.104,24:0};
-
-        const insertPatient = db.prepare('INSERT OR IGNORE INTO patients (id, clinic_id, first_name, last_name, date_of_birth, email, phone, mrn, token) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
-        const insertEpisode = db.prepare('INSERT OR IGNORE INTO episodes (id, patient_id, clinic_id, surgeon_id, surgery_type, surgery_date, status) VALUES (?, ?, ?, ?, ?, ?, ?)');
-        const insertCheckin = db.prepare('INSERT OR IGNORE INTO checkins (id, patient_id, episode_id, clinic_id, checkin_type, checkin_date, pain_level, pt_exercises, medication_taken, swelling, concerns, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-        const insertAdverse = db.prepare('INSERT OR IGNORE INTO adverse_events (id, patient_id, episode_id, clinic_id, event_type, event_date, reported_by, facility, reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
-        const insertPreop = db.prepare(`INSERT OR IGNORE INTO preop_assessments (id, patient_id, clinic_id, surgeon_id, procedure_type, planned_surgery_date, risk_tier, age, sex, bmi, asa_class, joint_score_type, joint_score_preop, projected_postop_score, expected_improvement, promis_physical_tscore, promis_mental_tscore, low_back_pain, health_literacy_sils, total_painful_joint_count, chronic_narcotics_use, koos_jr_raw, hoos_jr_raw) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-
-        const transaction = db.transaction(() => {
-          demoPatients.forEach((dp, idx) => {
-            const patientId = `demo-patient-${idx + 1}`;
-            const episodeId = `demo-episode-${idx + 1}`;
-            const token = `demo${String(idx + 1).padStart(4, '0')}seed`;
-            const surgeonId = surgeons[dp.surgeonIdx % surgeons.length].id;
-            const surgeryDate = fmt(daysAgo(dp.daysAgoSurgery));
-
-            insertPatient.run(patientId, clinicId, dp.first, dp.last, dp.dob, dp.email, dp.phone, dp.mrn, token);
-            insertEpisode.run(episodeId, patientId, clinicId, surgeonId, dp.surgery, surgeryDate, 'active');
-
-            const age = today.getFullYear() - parseInt(dp.dob.split('-')[0]);
-            const scoreType = dp.surgery.includes('TH') ? 'hoos_jr' : 'koos_jr';
-            const rawScore = scoreType === 'koos_jr' ? (15 + Math.floor(Math.random() * 8)) : (12 + Math.floor(Math.random() * 7));
-            const tbl = scoreType === 'koos_jr' ? KOOS_TABLE : HOOS_TABLE;
-            const preScore = Math.round(tbl[rawScore] * 10) / 10;
-            const scbThresh = scoreType === 'koos_jr' ? 20 : 22;
-            const projectedImprovement = scbThresh + 5 + Math.floor(Math.random() * 8);
-            const riskTier = preScore < 40 ? 'HIGH' : preScore < 55 ? 'MODERATE' : 'LOW';
-            insertPreop.run(`demo-preop-${idx+1}`, patientId, clinicId, surgeonId, dp.surgery, surgeryDate, riskTier, age, idx%2===0?'F':'M', 25+Math.random()*10, idx<3?2:3, scoreType, preScore, Math.min(preScore+projectedImprovement, 100), projectedImprovement, 35+Math.random()*15, 40+Math.random()*15, idx===2||idx===3?1:0, idx===4?1:3, idx===3?3:Math.floor(Math.random()*2), idx===3?1:0, scoreType==='koos_jr'?rawScore:null, scoreType==='hoos_jr'?rawScore:null);
-
-            // Generate check-ins with realistic pain trajectories
-            const checkinDays = Math.min(dp.daysAgoSurgery, 14);
-            for (let d = 0; d < checkinDays; d++) {
-              if (idx === 3 && d > 0 && d < 3) continue;
-              if (idx === 4 && d < 4) continue;
-              const dayOffset = dp.daysAgoSurgery - d;
-              const checkinDate = fmt(daysAgo(dayOffset));
-              let basePain = dp.surgery.includes('Revision') ? 7 : 5;
-              let pain = Math.max(1, Math.min(10, basePain - Math.floor(d * 0.4) + Math.floor(Math.random() * 2)));
-              if (idx === 0) pain = Math.max(1, 5 - Math.floor(d * 0.5));
-              if (idx === 3) pain = Math.min(10, 8 + Math.floor(Math.random() * 2));
-              if (idx === 5) pain = Math.min(10, 3 + Math.floor(d * 0.3) + Math.floor(Math.random() * 2));
-              const ptDone = (idx === 3 || (idx === 5 && d > 5)) ? 0 : 1;
-              const swelling = pain >= 6 ? 'moderate' : pain >= 4 ? 'mild' : 'none';
-              const concerns = (idx === 3 && d === checkinDays - 1) ? 'Fever or chills' : '';
-              const rom = dp.surgery.includes('TK') ? `ROM: ${70 + d * 3}/${Math.max(0, 15 - d)}` : null;
-              insertCheckin.run(`demo-checkin-${idx+1}-${d}`, patientId, episodeId, clinicId, 'daily', checkinDate, pain, ptDone, idx===4&&d<2?0:1, swelling, concerns, rom);
-            }
-
-            // Adverse events
-            if (idx === 3) insertAdverse.run('demo-adverse-1', patientId, episodeId, clinicId, 'er_visit', fmt(daysAgo(2)), 'patient', 'Baptist Medical Center', 'High pain and swelling, concern about infection');
-            if (idx === 4) insertAdverse.run('demo-adverse-2', patientId, episodeId, clinicId, 'readmission', fmt(daysAgo(5)), 'staff', 'University Hospital', 'Wound drainage, possible surgical site infection');
-
-            generatePromSchedule(episodeId, patientId, clinicId, dp.surgery, surgeryDate);
-          });
-        });
-
-        transaction();
-
-        // Mark some PROMs as completed for older patients
-        db.prepare("UPDATE prom_schedule SET status = 'completed', completed_date = ? WHERE id = ?").run(fmt(daysAgo(18)), 'demo-episode-7-6_week-koos_jr');
-        db.prepare("UPDATE prom_schedule SET status = 'completed', completed_date = ? WHERE id = ?").run(fmt(daysAgo(58)), 'demo-episode-8-6_week-hoos_jr');
-        db.prepare("UPDATE prom_schedule SET status = 'completed', completed_date = ? WHERE id = ?").run(fmt(daysAgo(58)), 'demo-episode-8-6_week-promis_10');
-
-        console.log('[Auto-Seed] Successfully seeded 8 demo patients with check-ins, assessments, and PROM schedules.');
-      } else {
-        console.log('[Auto-Seed] No surgeons found, skipping patient seed.');
-      }
-    } catch (err) {
-      console.error('[Auto-Seed] Error:', err.message);
-    }
-  } else {
-    console.log('[Auto-Seed] Patients already exist, skipping seed.');
-  }
-}
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {

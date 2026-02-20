@@ -69,6 +69,13 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
 .workup-status.cleared{background:#dcfce7;color:#166534}
 .workup-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px}
 .workup-item.done{background:#f0fdf4;border-color:#86efac}
+.workup-item.ordered{background:#eff6ff;border-color:#93c5fd}
+.workup-item.results-pending{background:#fefce8;border-color:#fde047}
+.wi-status{font-size:0.72rem;padding:3px 8px;border-radius:5px;cursor:pointer;border:1px solid #d1d5db;background:white;font-weight:600}
+.wi-status.needed{color:#dc2626;background:#fef2f2;border-color:#fecaca}
+.wi-status.ordered{color:#2563eb;background:#eff6ff;border-color:#bfdbfe}
+.wi-status.pending{color:#d97706;background:#fefce8;border-color:#fde047}
+.wi-status.cleared{color:#16a34a;background:#f0fdf4;border-color:#86efac}
 .wi-type{font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:4px;text-transform:uppercase}
 .wi-type.test{background:#dbeafe;color:#1e40af}
 .wi-type.consult{background:#fce7f3;color:#9d174d}
@@ -119,11 +126,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
         <a href="dashboard.html">Dashboard</a>
         <a href="preop.html" style="color:white;font-weight:700;">PreOp</a>
         <a href="surgical-prep.html">Surg Prep</a>
-        <a href="nonop-plan.html">Non-Op Plan</a>
         <a href="analytics.html">Analytics</a>
         <a href="rpm-report.html">RPM</a>
         <a href="settings.html">Settings</a>
-        <button class="btn btn-sm" onclick="logout()" style="margin-left:16px;background:#dc2626;color:white;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:0.8rem;">Logout</button>
     </div>
 </div>
 
@@ -158,7 +163,6 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
     <button class="tab-btn" onclick="switchTab(2)">3. Workup Tracking</button>
     <button class="tab-btn" onclick="switchTab(3)">4. Decision Tool</button>
     <button class="tab-btn" onclick="switchTab(4)">5. Patient View</button>
-    <button class="tab-btn" onclick="goToSurgPrep()" style="color:#059669;">6. Surgical Prep →</button>
 </div>
 
 <!-- TAB 0: INTAKE RESULTS -->
@@ -169,8 +173,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
             <p style="color:#6b7280;text-align:center;padding:30px;">No intake completed yet. Click "Launch Patient Intake" to start.</p>
         </div>
     </div>
-    <div style="text-align:center;padding:16px;"><button class="btn btn-primary" onclick="switchTab(1);">Proceed to Comorbidities &rarr;</button></div>
 </div>
+
+<!-- TAB 1: COMORBIDITIES -->
 <div class="tab-panel" id="panel1">
     <div class="score-bar">
         <div class="score-item"><span class="score-label">HCC Score:</span><span class="score-val" id="hccScore">0.000</span></div>
@@ -259,7 +264,6 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
     <div id="surgPrepLaunchBox" style="display:none;text-align:center;padding:12px;margin-top:4px;">
         <div style="background:linear-gradient(135deg,#312e81,#4338ca);border-radius:12px;padding:16px;display:inline-block;">
             <span style="color:#e0e7ff;font-size:0.9rem;margin-right:12px;">Assessment saved.</span>
-            <button class="btn" style="background:#2563eb;color:white;font-size:1rem;padding:10px 24px;" onclick="switchTab(4)">📊 Patient View →</button>
             <button class="btn" style="background:#22c55e;color:white;font-size:1rem;padding:10px 24px;" onclick="launchSurgPrep()">🦴 Launch Surgical Prep →</button>
         </div>
     </div>
@@ -366,7 +370,6 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
         </div>
         <div style="text-align:center;margin-top:16px;">
             <button class="btn btn-primary" onclick="printPatientView()" style="background:#1e40af;">Print for Patient</button>
-            <button class="btn btn-primary" onclick="goToSurgPrep()" style="background:#059669;margin-left:10px;">Proceed to Surgical Prep →</button>
         </div>
     </div>
     </div>
@@ -495,7 +498,6 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
 
         <div style="text-align:center;margin-top:16px;">
             <button class="btn btn-primary" onclick="printSafetyView()" style="background:#1e40af;">Print for Patient</button>
-            <button class="btn btn-primary" onclick="goToSurgPrep()" style="background:#059669;margin-left:10px;">Proceed to Surgical Prep →</button>
         </div>
     </div>
     </div>
@@ -577,13 +579,7 @@ function buildQuestions(joint) {
     qs.push({id:"cardiac_afib",section:"Medical History — Cardiovascular",text:"Arrhythmia / Atrial Fibrillation?",type:"choice",options:["No","Yes"],conditional:"cardiac:Yes"});
     qs.push({id:"ckd",section:"Medical History",text:"KIDNEY disease?",type:"choice",options:["No","Yes"]});
     qs.push({id:"smoker",section:"Medical History",text:"Smoking status?",type:"choice",options:["Never smoked","Quit >1 year ago","Quit recently","Current smoker"]});
-    qs.push({id:"sleep_apnea",section:"Medical History",text:"SLEEP APNEA?",type:"choice",options:["No","Yes - uses CPAP","Yes - no CPAP","I don't know"]});
-    // STOP-BANG screening (conditional on "I don't know")
-    qs.push({id:"sb_snore",section:"Sleep Screening (STOP-BANG)",text:"Do you SNORE loudly (louder than talking, or heard through closed doors)?",type:"choice",options:["No","Yes"],conditional:"sleep_apnea:I don't know"});
-    qs.push({id:"sb_tired",section:"Sleep Screening (STOP-BANG)",text:"Do you often feel TIRED, fatigued, or sleepy during the daytime?",type:"choice",options:["No","Yes"],conditional:"sleep_apnea:I don't know"});
-    qs.push({id:"sb_observed",section:"Sleep Screening (STOP-BANG)",text:"Has anyone OBSERVED you stop breathing or choking during sleep?",type:"choice",options:["No","Yes"],conditional:"sleep_apnea:I don't know"});
-    qs.push({id:"sb_pressure",section:"Sleep Screening (STOP-BANG)",text:"Are you being treated for high blood PRESSURE?",type:"choice",options:["No","Yes"],conditional:"sleep_apnea:I don't know"});
-    qs.push({id:"sb_neck",section:"Sleep Screening (STOP-BANG)",text:"Is your NECK circumference greater than 16 inches (40 cm)?",type:"choice",options:["No","Yes","Not sure"],conditional:"sleep_apnea:I don't know"});
+    qs.push({id:"sleep_apnea",section:"Medical History",text:"SLEEP APNEA?",type:"choice",options:["No","Yes - uses CPAP","Yes - no CPAP"]});
     qs.push({id:"rheumatoid",section:"Medical History",text:"RHEUMATOID or inflammatory arthritis?",type:"choice",options:["No","Yes - Rheumatoid Arthritis","Yes - Psoriatic Arthritis","Yes - Other inflammatory"]});
     qs.push({id:"anticoagulant",section:"Medical History",text:"On BLOOD THINNERS (anticoagulants)?",type:"choice",options:["No","Yes"]});
     qs.push({id:"anticoag_reason",section:"Medical History",text:"Blood thinner is for?",type:"choice",options:["Heart condition","DVT / blood clot history","Stroke prevention","Other"],conditional:"anticoagulant:Yes"});
@@ -652,17 +648,11 @@ var existingAssessmentId = null;  // Track if editing existing assessment
 function switchTab(n) {
     var btns = document.querySelectorAll('.tab-btn');
     var panels = document.querySelectorAll('.tab-panel');
-    for(var i=0;i<btns.length;i++){btns[i].classList.remove('active');}
-    for(var i=0;i<panels.length;i++){panels[i].classList.remove('active');}
+    for(var i=0;i<btns.length;i++){btns[i].classList.remove('active');panels[i].classList.remove('active');}
     btns[n].classList.add('active');panels[n].classList.add('active');
     if(n===2) generateWorkup();
     if(n===3) updateDecisionTool();
     if(n===4) updateSafetyView();
-}
-
-function goToSurgPrep() {
-    var pid = document.getElementById('patientSelect')?.value || '';
-    window.location.href = '/surgical-prep.html' + (pid ? '?patient=' + pid : '');
 }
 
 function onProcChange() {
@@ -790,52 +780,6 @@ function finishIntake() {
     switchTab(0);
 }
 
-// STOP-BANG Sleep Apnea Screening Calculator
-function calculateStopBang() {
-    var r = intakeResponses;
-    if(!r.sleep_apnea || r.sleep_apnea.answer !== "I don't know") return null;
-    var score = 0;
-    var items = [];
-    // S - Snoring
-    var s1 = (r.sb_snore||{}).answer === 'Yes';
-    if(s1) score++;
-    items.push({letter:'S', label:'Snoring', value: s1 ? 'Yes' : 'No', positive: s1});
-    // T - Tired
-    var s2 = (r.sb_tired||{}).answer === 'Yes';
-    if(s2) score++;
-    items.push({letter:'T', label:'Tired/Fatigued', value: s2 ? 'Yes' : 'No', positive: s2});
-    // O - Observed apnea
-    var s3 = (r.sb_observed||{}).answer === 'Yes';
-    if(s3) score++;
-    items.push({letter:'O', label:'Observed apnea', value: s3 ? 'Yes' : 'No', positive: s3});
-    // P - Blood Pressure treatment
-    var s4 = (r.sb_pressure||{}).answer === 'Yes';
-    if(s4) score++;
-    items.push({letter:'P', label:'Blood Pressure Rx', value: s4 ? 'Yes' : 'No', positive: s4});
-    // B - BMI > 35 (auto-calculated from intake)
-    var bmiVal = 28;
-    try { var hf=parseInt(r.height_ft.answer); var hi=parseInt(r.height_in.answer); bmiVal=(r.weight.answer/Math.pow(hf*12+hi,2))*703; } catch(e){}
-    var s5 = bmiVal > 35;
-    if(s5) score++;
-    items.push({letter:'B', label:'BMI > 35', value: s5 ? 'Yes ('+bmiVal.toFixed(1)+')' : 'No ('+bmiVal.toFixed(1)+')', positive: s5, auto: true});
-    // A - Age > 50 (auto-calculated from intake)
-    var ageVal = parseInt((r.age||{}).answer) || 0;
-    var s6 = ageVal > 50;
-    if(s6) score++;
-    items.push({letter:'A', label:'Age > 50', value: s6 ? 'Yes ('+ageVal+')' : 'No ('+ageVal+')', positive: s6, auto: true});
-    // N - Neck > 16 inches
-    var s7 = (r.sb_neck||{}).answer === 'Yes';
-    if(s7) score++;
-    items.push({letter:'N', label:'Neck > 16 in', value: (r.sb_neck||{}).answer || 'N/A', positive: s7});
-    // G - Gender = Male (auto-calculated from intake)
-    var genderVal = (r.gender||{}).answer || '';
-    var s8 = genderVal === 'Male';
-    if(s8) score++;
-    items.push({letter:'G', label:'Gender: Male', value: s8 ? 'Yes' : 'No', positive: s8, auto: true});
-    var risk = score >= 5 ? 'high' : score >= 3 ? 'intermediate' : 'low';
-    return { score: score, risk: risk, items: items };
-}
-
 // Official HSS Rasch Interval Conversion Tables
 var KOOS_JR_TABLE = {0:100,1:91.975,2:84.6,3:79.914,4:76.332,5:73.342,6:70.704,7:68.284,8:65.994,9:63.776,10:61.583,11:59.381,12:57.14,13:54.84,14:52.465,15:50.012,16:47.487,17:44.905,18:42.281,19:39.625,20:36.931,21:34.174,22:31.307,23:28.251,24:24.875,25:20.941,26:15.939,27:8.291,28:0};
 var HOOS_JR_TABLE = {0:100,1:92.34,2:85.257,3:80.55,4:76.776,5:73.472,6:70.426,7:67.516,8:64.664,9:61.815,10:58.93,11:55.985,12:52.965,13:49.858,14:46.652,15:43.335,16:39.902,17:36.363,18:32.735,19:29.009,20:25.103,21:20.805,22:15.633,23:8.104,24:0};
@@ -901,13 +845,7 @@ function calculateScores() {
     var chronicUti = (intakeResponses.chronic_uti||{}).answer||"No";
     if(chronicUti==="Yes") alerts.push({text:"Chronic UTI - perioperative infection risk",level:"warn"});
     var sleepApnea = (intakeResponses.sleep_apnea||{}).answer||"No";
-    var stopBang = calculateStopBang();
     if(sleepApnea==="Yes - no CPAP") alerts.push({text:"Sleep apnea without CPAP - anesthesia risk",level:"danger"});
-    else if(sleepApnea==="Yes - uses CPAP") alerts.push({text:"Sleep apnea - verify CPAP compliance (>4 hrs/night)",level:"info"});
-    else if(stopBang) {
-        if(stopBang.risk==='high') alerts.push({text:"STOP-BANG "+stopBang.score+"/8 — HIGH risk for OSA. Refer to Pulmonology/Sleep Medicine before surgery.",level:"danger"});
-        else if(stopBang.risk==='intermediate') alerts.push({text:"STOP-BANG "+stopBang.score+"/8 — Intermediate risk for OSA. Consider sleep study.",level:"warn"});
-    }
     var dietGlp1 = (intakeResponses.diet_glp1||{}).answer||"No";
     if(dietGlp1==="Yes") alerts.push({text:"GLP-1 medication - review hold protocol before surgery",level:"warn"});
     var otherMedical = (intakeResponses.other_medical||{}).answer||"";
@@ -917,7 +855,7 @@ function calculateScores() {
         phq:phq, gad:gad, bmi:bmi, statedWeight:statedWeight, actualWeight:actualWeight, alerts:alerts,
         cmsLowBackPain:cmsLowBackPain, cmsHealthLiteracy:cmsHealthLiteracy,
         cmsOtherJointPain:cmsOtherJointPain, cmsNarcotics90d:cmsNarcotics90d,
-        asaClass:asaClass, otherMedical:otherMedical, stopBang:stopBang
+        asaClass:asaClass, otherMedical:otherMedical
     };
 }
 
@@ -948,31 +886,6 @@ function displayIntakeResults(s) {
     if (s.alerts.length) {
         html += '<div class="card"><h3>Alerts</h3>';
         for(var i=0;i<s.alerts.length;i++) html += '<div class="alert-item ' + s.alerts[i].level + '">' + s.alerts[i].text + '</div>';
-        html += '</div>';
-    }
-    // STOP-BANG results card
-    if(s.stopBang) {
-        var sb = s.stopBang;
-        var riskColor = sb.risk==='high' ? '#dc2626' : sb.risk==='intermediate' ? '#d97706' : '#16a34a';
-        var riskLabel = sb.risk==='high' ? 'HIGH RISK' : sb.risk==='intermediate' ? 'INTERMEDIATE' : 'LOW RISK';
-        html += '<div class="card" style="border-left:4px solid '+riskColor+';">';
-        html += '<h3>STOP-BANG Sleep Apnea Screening</h3>';
-        html += '<div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;">';
-        html += '<div style="font-size:2rem;font-weight:800;color:'+riskColor+';">'+sb.score+'/8</div>';
-        html += '<div><div style="font-weight:700;color:'+riskColor+';font-size:1.1rem;">'+riskLabel+'</div>';
-        html += '<div style="font-size:0.8rem;color:#6b7280;">0-2 Low | 3-4 Intermediate | 5-8 High</div></div></div>';
-        html += '<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">';
-        for(var si=0;si<sb.items.length;si++){
-            var it = sb.items[si];
-            var valColor = it.positive ? '#dc2626' : '#16a34a';
-            var autoTag = it.auto ? ' <span style="font-size:0.7rem;color:#9ca3af;">(auto)</span>' : '';
-            html += '<tr><td style="padding:5px 8px;border-bottom:1px solid #f3f4f6;font-weight:700;width:30px;color:'+riskColor+';">'+it.letter+'</td>';
-            html += '<td style="padding:5px 8px;border-bottom:1px solid #f3f4f6;">'+it.label+autoTag+'</td>';
-            html += '<td style="padding:5px 8px;border-bottom:1px solid #f3f4f6;font-weight:600;color:'+valColor+';">'+it.value+'</td></tr>';
-        }
-        html += '</table>';
-        if(sb.risk==='high') html += '<div style="margin-top:10px;padding:10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;font-size:0.85rem;color:#991b1b;font-weight:600;">⚠️ Refer to Pulmonology / Sleep Medicine before scheduling surgery</div>';
-        else if(sb.risk==='intermediate') html += '<div style="margin-top:10px;padding:10px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;font-size:0.85rem;color:#92400e;">Consider ordering a sleep study before proceeding</div>';
         html += '</div>';
     }
     // Nutrition summary card
@@ -1025,15 +938,8 @@ function autoPopulateComorbidities() {
     if(r.ckd && r.ckd.answer==='Yes') setCC('ckd_stage_3',true,true);
     if(r.smoker && r.smoker.answer.indexOf('Current')>=0) setCC('smoking_current',true,true);
     if(r.opioid && r.opioid.answer.indexOf('more than 3')>=0) setCC('opioid_chronic',true,true);
-    // Sleep apnea (direct answer or STOP-BANG result)
-    if(r.sleep_apnea && r.sleep_apnea.answer!=='No') {
-        if(r.sleep_apnea.answer === "I don't know") {
-            var sb = calculateStopBang();
-            if(sb && sb.score >= 3) setCC('sleep_apnea',true,true);
-        } else {
-            setCC('sleep_apnea',true,true);
-        }
-    }
+    // Sleep apnea
+    if(r.sleep_apnea && r.sleep_apnea.answer!=='No') setCC('sleep_apnea',true,true);
     // Rheumatoid / inflammatory arthritis
     if(r.rheumatoid && r.rheumatoid.answer!=='No') setCC('rheumatoid_arthritis',true,true);
     // Anticoagulant
@@ -1131,7 +1037,7 @@ function updateScores(){
 // WORKUP
 function generateWorkup(){
     workupItems=[];
-    for(var cid in comorbChecked){if(comorbChecked[cid].workup){var d=HCC_LIB.comorbidities[cid];if(!d)continue;var wu=d.workup_required;for(var i=0;i<wu.tests.length;i++)workupItems.push({type:'test',name:wu.tests[i],comorbId:cid,comorbName:d.display_name,criteria:wu.clearance_criteria,cleared:false});for(var i=0;i<wu.consults.length;i++)workupItems.push({type:'consult',name:wu.consults[i],comorbId:cid,comorbName:d.display_name,criteria:wu.clearance_criteria,cleared:false});}}
+    for(var cid in comorbChecked){if(comorbChecked[cid].workup){var d=HCC_LIB.comorbidities[cid];if(!d)continue;var wu=d.workup_required;for(var i=0;i<wu.tests.length;i++)workupItems.push({type:'test',name:wu.tests[i],comorbId:cid,comorbName:d.display_name,criteria:wu.clearance_criteria,cleared:false,status:'needed'});for(var i=0;i<wu.consults.length;i++)workupItems.push({type:'consult',name:wu.consults[i],comorbId:cid,comorbName:d.display_name,criteria:wu.clearance_criteria,cleared:false,status:'needed'});}}
     // Add custom items
     for(var ci=0;ci<customWorkupItems.length;ci++){workupItems.push(customWorkupItems[ci]);}
     renderWorkup();
@@ -1155,20 +1061,190 @@ function addCustomWorkupItem(){
     var type=document.getElementById('customItemType').value;
     var name=document.getElementById('customItemName').value.trim();
     if(!name){alert('Enter an item name.');return;}
-    var item={type:type,name:name,comorbId:'custom',comorbName:'Custom',criteria:'',cleared:false,custom:true};
+    var item={type:type,name:name,comorbId:'custom',comorbName:'Custom',criteria:'',cleared:false,custom:true,status:'needed'};
     customWorkupItems.push(item);
     workupItems.push(item);
     document.getElementById('customItemName').value='';
     renderWorkup();
 }
 
+// Group mapping for test names
+var WORKUP_GROUPS = {
+    labs: { label: '🩸 Pre-Op Labs', desc: 'One blood draw covers all', color: '#dc2626',
+        tests: ['hba1c','bmp','fructosamine','bnp','cbc','coags','gfr','phosphorus','pth',
+            'fasting glucose','lipid panel','albumin','prealbumin','transferrin','crp','esr',
+            'rf','anti-ccp','iron studies','retic count','b12/folate','lfts','inr','platelets',
+            'meld','cotinine','renal function','inr if warfarin'] },
+    cardiac: { label: '❤️ Cardiac Testing', desc: 'EKG, imaging, stress', color: '#7c3aed',
+        tests: ['ekg','echocardiogram','echo','stress test'] },
+    pulmonary: { label: '🫁 Pulmonary Testing', desc: 'Lung function & imaging', color: '#2563eb',
+        tests: ['pfts','chest x-ray','sleep study'] },
+    urine: { label: '🧪 Urine / Screening', desc: 'UA, drug screen, cultures', color: '#d97706',
+        tests: ['urinalysis','urine culture','post-void residual','urine drug screen','pdmp check','mme calc'] },
+    exams: { label: '🔍 Other Tests / Exams', desc: 'Dental, vascular, assessments', color: '#059669',
+        tests: ['dental exam','abi','arterial duplex','bmi','phq-9'] }
+};
+
+function getTestGroup(testName) {
+    var lower = testName.toLowerCase();
+    for (var gid in WORKUP_GROUPS) {
+        var tests = WORKUP_GROUPS[gid].tests;
+        for (var i = 0; i < tests.length; i++) {
+            if (lower.indexOf(tests[i]) >= 0 || tests[i].indexOf(lower) >= 0) return gid;
+        }
+    }
+    return 'exams';
+}
+
+var workupGroupStatus = {};
+
 function renderWorkup(){
     var list=document.getElementById('workupList');
     if(!workupItems.length){list.innerHTML='<p style="text-align:center;color:#6b7280;padding:40px;">No workup items. Check "Needs Workup" on comorbidities or add custom items below.</p>';return;}
-    var html='';
-    for(var i=0;i<workupItems.length;i++){var w=workupItems[i];html+='<div class="workup-item'+(w.cleared?' done':'')+'"><input type="checkbox" class="wi-check" '+(w.cleared?'checked':'')+' onchange="toggleWorkup('+i+',this.checked)"><span class="wi-type '+w.type+'">'+w.type+'</span><span class="wi-name">'+w.name+'</span><span class="wi-comorb">'+w.comorbName+'</span>'+(w.custom?'<button onclick="removeCustomItem('+i+')" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:1rem;padding:0 4px;" title="Remove">&times;</button>':'')+'</div>';}
+    
+    var testItems = workupItems.filter(function(w){ return w.type === 'test' && !w.custom; });
+    var consultItems = workupItems.filter(function(w){ return w.type === 'consult'; });
+    var customItems = workupItems.filter(function(w){ return w.custom; });
+    
+    // Group tests
+    var groups = {};
+    for (var i = 0; i < testItems.length; i++) {
+        var gid = getTestGroup(testItems[i].name);
+        if (!groups[gid]) groups[gid] = { items: [], triggers: {} };
+        var exists = groups[gid].items.some(function(x){ return x.name === testItems[i].name; });
+        if (!exists) groups[gid].items.push(testItems[i]);
+        groups[gid].triggers[testItems[i].comorbName] = true;
+    }
+    for (var gid in groups) { if (!workupGroupStatus[gid]) workupGroupStatus[gid] = 'needed'; }
+    
+    var statusBg = { needed:'#fef2f2', ordered:'#eff6ff', pending:'#fefce8', cleared:'#f0fdf4' };
+    var statusBorder = { needed:'#fecaca', ordered:'#bfdbfe', pending:'#fde047', cleared:'#86efac' };
+    var html = '';
+    
+    // Grouped test cards
+    var groupOrder = ['labs','cardiac','pulmonary','urine','exams'];
+    for (var gi = 0; gi < groupOrder.length; gi++) {
+        var gid = groupOrder[gi];
+        if (!groups[gid]) continue;
+        var g = WORKUP_GROUPS[gid];
+        var st = workupGroupStatus[gid] || 'needed';
+        var items = groups[gid].items;
+        var triggers = Object.keys(groups[gid].triggers);
+        
+        html += '<div style="border:1px solid '+statusBorder[st]+';border-left:4px solid '+g.color+';border-radius:10px;padding:14px 16px;margin-bottom:12px;background:'+statusBg[st]+';">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
+        html += '<div><strong style="font-size:1.05rem;">'+g.label+'</strong><div style="font-size:0.78rem;color:#6b7280;margin-top:2px;">'+g.desc+'</div></div>';
+        html += '<select class="wi-status '+st+'" onchange="setGroupStatus(\''+gid+'\',this.value)" style="font-size:0.78rem;padding:4px 10px;border-radius:6px;border:1px solid #d1d5db;font-weight:600;cursor:pointer;">';
+        html += '<option value="needed"'+(st==='needed'?' selected':'')+'>⬜ Needed</option>';
+        html += '<option value="ordered"'+(st==='ordered'?' selected':'')+'>📤 Ordered</option>';
+        html += '<option value="pending"'+(st==='pending'?' selected':'')+'>⏳ Results Pending</option>';
+        html += '<option value="cleared"'+(st==='cleared'?' selected':'')+'>✅ Cleared</option>';
+        html += '</select></div>';
+        html += '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;">';
+        for (var ti = 0; ti < items.length; ti++) {
+            html += '<span style="font-size:0.75rem;padding:3px 8px;background:white;border:1px solid #e5e7eb;border-radius:5px;color:#374151;">'+items[ti].name+'</span>';
+        }
+        html += '</div>';
+        html += '<div style="font-size:0.72rem;color:#9ca3af;">Triggered by: '+triggers.join(', ')+'</div>';
+        html += '</div>';
+    }
+    
+    // Individual consults - deduplicated by specialty
+    if (consultItems.length > 0) {
+        html += '<div style="margin-top:16px;margin-bottom:8px;"><strong style="font-size:0.95rem;color:#374151;">📞 Clearance Consults</strong><span style="font-size:0.78rem;color:#9ca3af;margin-left:8px;">Each tracked separately</span></div>';
+        // Group by specialty (extract base specialty name)
+        var specialtyMap = {};
+        for (var ci = 0; ci < consultItems.length; ci++) {
+            var c = consultItems[ci];
+            // Extract base specialty: "Cardiology for bridging" → "Cardiology", "Cardiology if active symptoms" → "Cardiology"
+            var baseName = c.name.replace(/\s*(if|for|—|when|only)\s.*/i, '').replace(/\s*\(.*\)/, '').trim();
+            // Normalize common variants
+            if (baseName.toLowerCase().indexOf('cardiology') >= 0) baseName = 'Cardiology';
+            if (baseName.toLowerCase().indexOf('pulmonology') >= 0) baseName = 'Pulmonology';
+            if (baseName.toLowerCase().indexOf('nephrology') >= 0) baseName = 'Nephrology';
+            if (baseName.toLowerCase().indexOf('endocrinology') >= 0) baseName = 'Endocrinology';
+            if (baseName.toLowerCase().indexOf('hematology') >= 0) baseName = 'Hematology';
+            if (baseName.toLowerCase().indexOf('sleep') >= 0) baseName = 'Sleep Medicine';
+            if (baseName.toLowerCase().indexOf('prescribing md') >= 0) baseName = 'Prescribing MD';
+            if (baseName.toLowerCase().indexOf('pain management') >= 0) baseName = 'Pain Management';
+            if (baseName.toLowerCase().indexOf('bariatric') >= 0) baseName = 'Bariatric Surgery';
+            if (baseName.toLowerCase().indexOf('rheumatology') >= 0) baseName = 'Rheumatology';
+            if (baseName.toLowerCase().indexOf('psychiatry') >= 0) baseName = 'Psychiatry';
+            if (baseName.toLowerCase().indexOf('urology') >= 0) baseName = 'Urology';
+            if (baseName.toLowerCase().indexOf('hepatology') >= 0) baseName = 'Hepatology';
+            if (baseName.toLowerCase().indexOf('vascular') >= 0) baseName = 'Vascular Surgery';
+            if (baseName.toLowerCase().indexOf('nutrition') >= 0) baseName = 'Nutrition';
+            if (baseName.toLowerCase().indexOf('anesthesia') >= 0) baseName = 'Anesthesia';
+            if (baseName.toLowerCase().indexOf('smoking') >= 0) baseName = 'Smoking Cessation';
+            if (baseName.toLowerCase().indexOf('dentist') >= 0 || baseName.toLowerCase().indexOf('dental') >= 0) baseName = 'Dentist';
+            
+            if (!specialtyMap[baseName]) specialtyMap[baseName] = { items: [], triggers: {}, reasons: [] };
+            specialtyMap[baseName].items.push(c);
+            specialtyMap[baseName].triggers[c.comorbName] = true;
+            // Capture the specific reason (e.g., "for bridging", "if active symptoms")
+            var reason = c.name.replace(new RegExp('^' + baseName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*', 'i'), '').trim();
+            if (!reason || reason === baseName) reason = c.name.replace(/^[^—]*—?\s*/, '').trim();
+            if (reason && reason !== c.name && reason !== baseName) specialtyMap[baseName].reasons.push(reason);
+        }
+        for (var specName in specialtyMap) {
+            var spec = specialtyMap[specName];
+            // Use first item's status as the group status
+            var cst = spec.items[0].status || 'needed';
+            var cTriggers = Object.keys(spec.triggers);
+            var reasonStr = spec.reasons.length > 0 ? ' — ' + spec.reasons.filter(function(r,i,a){return a.indexOf(r)===i;}).join(', ') : '';
+            html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:6px;'+(cst==='cleared'?'background:#f0fdf4;border-color:#86efac;':cst==='ordered'?'background:#eff6ff;border-color:#93c5fd;':cst==='pending'?'background:#fefce8;border-color:#fde047;':'')+'">';
+            html += '<select class="wi-status '+cst+'" onchange="setConsultStatus(\''+specName.replace(/'/g,"\\'")+'\',this.value)" style="font-size:0.73rem;padding:3px 8px;border-radius:5px;border:1px solid #d1d5db;font-weight:600;cursor:pointer;">';
+            html += '<option value="needed"'+(cst==='needed'?' selected':'')+'>⬜ Needed</option>';
+            html += '<option value="ordered"'+(cst==='ordered'?' selected':'')+'>📤 Referred</option>';
+            html += '<option value="pending"'+(cst==='pending'?' selected':'')+'>📅 Scheduled</option>';
+            html += '<option value="cleared"'+(cst==='cleared'?' selected':'')+'>✅ Cleared</option>';
+            html += '</select>';
+            html += '<span style="font-weight:600;flex:1;">'+specName+'<span style="font-weight:400;font-size:0.8rem;color:#6b7280;">'+reasonStr+'</span></span>';
+            html += '<span style="font-size:0.72rem;color:#9ca3af;">'+cTriggers.join(', ')+'</span>';
+            html += '</div>';
+        }
+    }
+    
+    // Custom items
+    for (var xi = 0; xi < customItems.length; xi++) {
+        var cx = customItems[xi]; var cxst = cx.status||'needed';
+        html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:6px;">';
+        html += '<select class="wi-status '+cxst+'" onchange="setWorkupStatus('+workupItems.indexOf(cx)+',this.value)" style="font-size:0.73rem;padding:3px 8px;border-radius:5px;border:1px solid #d1d5db;font-weight:600;cursor:pointer;">';
+        html += '<option value="needed"'+(cxst==='needed'?' selected':'')+'>⬜ Needed</option><option value="ordered"'+(cxst==='ordered'?' selected':'')+'>📤 Ordered</option><option value="pending"'+(cxst==='pending'?' selected':'')+'>⏳ Pending</option><option value="cleared"'+(cxst==='cleared'?' selected':'')+'>✅ Cleared</option></select>';
+        html += '<span style="font-weight:600;flex:1;">'+cx.name+' (Custom)</span>';
+        html += '<button onclick="removeCustomItem('+workupItems.indexOf(cx)+')" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:1rem;padding:0 4px;" title="Remove">&times;</button></div>';
+    }
+    
     list.innerHTML=html;checkClearance();
 }
+
+function setGroupStatus(gid, val) {
+    workupGroupStatus[gid] = val;
+    var testItems = workupItems.filter(function(w){ return w.type==='test' && !w.custom; });
+    for (var i=0;i<testItems.length;i++) {
+        if (getTestGroup(testItems[i].name) === gid) { testItems[i].status=val; testItems[i].cleared=(val==='cleared'); }
+    }
+    renderWorkup();
+}
+
+function setConsultStatus(specialtyName, val) {
+    // Match all consults that belong to this specialty
+    var specLower = specialtyName.toLowerCase();
+    for (var i=0;i<workupItems.length;i++) {
+        if (workupItems[i].type !== 'consult') continue;
+        var itemName = workupItems[i].name.toLowerCase();
+        // Check if this consult belongs to the specialty
+        if (itemName.indexOf(specLower) >= 0 || specLower.indexOf(itemName.split(/\s+(if|for|—)/)[0].trim()) >= 0) {
+            workupItems[i].status = val;
+            workupItems[i].cleared = (val === 'cleared');
+        }
+    }
+    renderWorkup();
+}
+
+function setWorkupStatus(idx,val){workupItems[idx].status=val;workupItems[idx].cleared=(val==='cleared');renderWorkup();}
+
+function toggleWorkup(idx,val){workupItems[idx].cleared=val;workupItems[idx].status=val?'cleared':'needed';renderWorkup();}
 
 function removeCustomItem(idx){
     var item=workupItems[idx];
@@ -1178,14 +1254,36 @@ function removeCustomItem(idx){
     renderWorkup();
 }
 
-function toggleWorkup(idx,val){workupItems[idx].cleared=val;renderWorkup();}
-
 function checkClearance(){
     if(!workupItems.length){document.getElementById('workupStatus').className='workup-status cleared';document.getElementById('workupStatus').textContent='No Workup Required';return true;}
-    var allDone=workupItems.every(function(w){return w.cleared;});
+    // Check both individual items and group statuses
+    var allGroupsCleared = true;
+    for (var gid in workupGroupStatus) {
+        if (workupGroupStatus[gid] !== 'cleared') { allGroupsCleared = false; break; }
+    }
+    var consultsDone = workupItems.filter(function(w){return w.type==='consult';}).every(function(w){return w.status==='cleared'||w.cleared;});
+    var customsDone = workupItems.filter(function(w){return w.custom;}).every(function(w){return w.status==='cleared'||w.cleared;});
+    var allDone = allGroupsCleared && consultsDone && customsDone;
+    
     var st=document.getElementById('workupStatus');
-    if(allDone){st.className='workup-status cleared';st.textContent='ALL WORKUP COMPLETE - CLEARED FOR SURGERY';}
-    else{var done=workupItems.filter(function(w){return w.cleared;}).length;st.className='workup-status pending';st.textContent='Workup In Progress ('+done+'/'+workupItems.length+' complete)';}
+    if(allDone){st.className='workup-status cleared';st.textContent='ALL WORKUP COMPLETE — CLEARED FOR SURGERY';}
+    else{
+        // Count by group status
+        var groupCounts = {needed:0,ordered:0,pending:0,cleared:0};
+        for (var gid in workupGroupStatus) groupCounts[workupGroupStatus[gid]]++;
+        // Count consults
+        var consults = workupItems.filter(function(w){return w.type==='consult';});
+        var seenC = {};
+        consults.forEach(function(c){ if(!seenC[c.name]){seenC[c.name]=c.status||'needed';} });
+        for (var cn in seenC) groupCounts[seenC[cn]]++;
+        
+        var parts=[];
+        if(groupCounts.needed>0)parts.push(groupCounts.needed+' needed');
+        if(groupCounts.ordered>0)parts.push(groupCounts.ordered+' ordered');
+        if(groupCounts.pending>0)parts.push(groupCounts.pending+' pending');
+        var total = groupCounts.needed+groupCounts.ordered+groupCounts.pending+groupCounts.cleared;
+        parts.push(groupCounts.cleared+'/'+total+' cleared');
+        st.className='workup-status pending';st.textContent='Workup In Progress — '+parts.join(' · ');}
     return allDone;
 }
 
@@ -1617,6 +1715,7 @@ function loadPatient(){
     comorbChecked = {};
     workupItems = [];
     customWorkupItems = [];
+    workupGroupStatus = {};
     selectedASA = null;
     document.getElementById('draftBadge').style.display = 'none';
     document.getElementById('surgPrepLaunchBox').style.display = 'none';
@@ -1641,6 +1740,26 @@ function loadPatient(){
 // INIT
 renderComorbTable();
 loadPatientList();
+
+// Role-based adjustments
+(function(){
+    var role = (typeof sessionStorage !== 'undefined') ? sessionStorage.getItem('userRole') : null;
+    if (role === 'nurse') {
+        // Hide surgeon-only Decision Tool controls
+        var notIndBtn = document.getElementById('notIndicatedBtn');
+        if (notIndBtn) notIndBtn.style.display = 'none';
+        var justBox = document.getElementById('surgeonJustifyBox');
+        if (justBox) { justBox.style.display = 'none'; justBox.setAttribute('data-nurse-hidden', '1'); }
+        // Make surgeon justification textarea read-only
+        var justText = document.getElementById('surgeonJustification');
+        if (justText) { justText.readOnly = true; justText.placeholder = 'Surgeon will complete this section'; justText.style.background = '#f3f4f6'; }
+        // Hide nav items
+        document.querySelectorAll('.nav-link').forEach(function(link) {
+            var href = link.getAttribute('href');
+            if (href === '/analytics.html' || href === '/settings.html') link.style.display = 'none';
+        });
+    }
+})();
 
 // SURGERY NOT INDICATED
 function markSurgeryNotIndicated() {
@@ -1674,11 +1793,6 @@ function confirmNotIndicated() {
         document.getElementById('notIndicatedDone').style.display='block';
         document.querySelector('#surgeryNotIndicatedBox p').style.display='none';
     });
-}
-
-function logout() {
-    sessionStorage.clear();
-    window.location.href = '/index.html';
 }
 </script>
 </body>

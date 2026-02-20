@@ -57,25 +57,9 @@
         .patient-header { background: #f8f9fa; border-radius: 12px; padding: 16px 24px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; }
         .patient-header h2 { margin: 0; font-size: 1.3rem; color: #1e293b; }
         .patient-header .meta { font-size: 0.85rem; color: #6b7280; }
-
-        .code-badge { display:inline-block; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:4px 10px; font-family:monospace; font-size:0.95rem; font-weight:700; color:#1e40af; margin-right:6px; }
-        .hard-stop { background:#fef2f2; border:2px solid #dc2626; border-radius:8px; padding:12px 16px; color:#991b1b; font-weight:600; margin-top:8px; }
-        .xray-compartment-sub { margin-left:28px; padding:8px 12px; background:#f9fafb; border-left:3px solid #d1d5db; border-radius:0 6px 6px 0; margin-top:4px; margin-bottom:8px; }
-        .xray-check { display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;font-size:0.85rem;transition:all 0.15s; }
-        .xray-check:hover { background:#eff6ff;border-color:#93c5fd; }
-        .xray-check input:checked + strong, .xray-check:has(input:checked) { background:#eff6ff; }
-        .xray-comp-card { background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px; }
-        .xray-comp-detail { display:none;margin-top:8px;display:flex;gap:8px;align-items:center; }
-        .xray-comp-detail select { padding:4px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:0.8rem; }
-        .xray-comp-detail input { padding:4px;border:1px solid #d1d5db;border-radius:4px;font-size:0.8rem; }
-
-        .proceed-bar { display:flex; gap:10px; margin-top:24px; padding-top:16px; border-top:1px solid #e5e7eb; justify-content:flex-end; }
-        .proceed-bar .btn { padding:10px 24px; border-radius:8px; font-size:0.95rem; font-weight:600; cursor:pointer; border:none; }
-        .proceed-bar .btn-save { background:#2c5aa0; color:white; }
-        .proceed-bar .btn-next { background:#059669; color:white; }
-
+        
         @media print {
-            .navbar, .prep-tabs, .print-bar, .btn, .proceed-bar { display: none !important; }
+            .navbar, .prep-tabs, .print-bar, .btn { display: none !important; }
             .result-card { color: black !important; background: white !important; border: 2px solid #000 !important; }
             .rec-main, .rec-item-value { color: black !important; }
             .rec-item-label, .rec-sub, .reason-box p, .equip-cat { color: #333 !important; }
@@ -95,9 +79,7 @@
             <a href="/dashboard.html" class="nav-link">Dashboard</a>
             <a href="/preop.html" class="nav-link">Pre-Op</a>
             <a href="/surgical-prep.html" class="nav-link active">Surg Prep</a>
-            <a href="/nonop-plan.html" class="nav-link">Non-Op Plan</a>
             <a href="/analytics.html" class="nav-link">Analytics</a>
-            <a href="/cms-compliance.html" class="nav-link">CMS Compliance</a>
             <a href="/rpm-report.html" class="nav-link">RPM Billing</a>
             <a href="/settings.html" class="nav-link">Settings</a>
         </div>
@@ -121,195 +103,19 @@
             </div>
         </div>
 
-        <!-- Tabs — Hist/PE FIRST -->
+        <!-- Tabs -->
         <div class="prep-tabs">
-            <button class="prep-tab active" onclick="switchPrepTab('histpe')">📋 Hist/PE</button>
-            <button class="prep-tab" onclick="switchPrepTab('prosthesis')">🦴 Prosthesis</button>
+            <button class="prep-tab active" id="prepTabProsthesis" onclick="switchPrepTab('prosthesis')">🦴 Prosthesis</button>
             <button class="prep-tab" onclick="switchPrepTab('equipment')">📦 Equipment</button>
             <button class="prep-tab" onclick="switchPrepTab('precert')">📋 Precert</button>
             <button class="prep-tab" onclick="switchPrepTab('contract')">✍️ Contract</button>
             <button class="prep-tab" onclick="switchPrepTab('consent')">⚕️ Consent</button>
+            <button class="prep-tab" onclick="switchPrepTab('history')">📁 History</button>
             <button class="prep-tab" onclick="switchPrepTab('insurance')">🏥 Insurance</button>
-            <button class="prep-tab" onclick="switchPrepTab('disposition')">🏠 Disposition</button>
-            <button class="prep-tab" onclick="switchPrepTab('prehab')">💪 Prehab/Prep</button>
-            <button class="prep-tab" onclick="switchPrepTab('education')">📚 Patient Ed</button>
-        </div>
-
-        <!-- ============ TAB 1: HIST/PE ============ -->
-        <div id="panelHistpe" class="prep-panel active">
-            <div class="calc-grid">
-                <div>
-                    <!-- Planned Procedure & Diagnosis -->
-                    <div class="input-card">
-                        <h3>Planned Procedure & Diagnosis</h3>
-                        <div class="field-row">
-                            <label>Planned Procedure</label>
-                            <select id="histProcedure" onchange="onProcedureChange()" style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;">
-                                <option value="">Select procedure...</option>
-                                <option value="TKA">Total Knee Arthroplasty (TKA)</option>
-                                <option value="Partial_Knee">Partial Knee / Unicompartmental (UKA)</option>
-                                <option value="THA">Total Hip Arthroplasty (THA)</option>
-                                <option value="Partial_Hip">Partial Hip / Hemiarthroplasty (degenerative)</option>
-                                <option value="Hip_Fracture">Hip Fracture Hemiarthroplasty</option>
-                                <option value="TSA">Total Shoulder Arthroplasty (TSA)</option>
-                            </select>
-                            <div id="histCPTBadge" style="margin-top:8px;"></div>
-                        </div>
-                        <div class="field-row">
-                            <label>Primary Diagnosis (ICD-10)</label>
-                            <select id="histDiagnosis" style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;">
-                                <option value="">Select diagnosis...</option>
-                                <optgroup label="Knee — Primary Osteoarthritis">
-                                    <option value="M17.11">M17.11 — Primary OA, Right Knee</option>
-                                    <option value="M17.12">M17.12 — Primary OA, Left Knee</option>
-                                </optgroup>
-                                <optgroup label="Knee — Post-traumatic OA">
-                                    <option value="M17.31">M17.31 — Post-traumatic OA, Right Knee</option>
-                                    <option value="M17.32">M17.32 — Post-traumatic OA, Left Knee</option>
-                                </optgroup>
-                                <optgroup label="Knee — Rheumatoid Arthritis">
-                                    <option value="M05.761">M05.761 — RA, Right Knee</option>
-                                    <option value="M05.762">M05.762 — RA, Left Knee</option>
-                                </optgroup>
-                                <optgroup label="Knee — AVN">
-                                    <option value="M87.061">M87.061 — AVN, Right Knee</option>
-                                    <option value="M87.062">M87.062 — AVN, Left Knee</option>
-                                </optgroup>
-                                <optgroup label="Hip — Primary Osteoarthritis">
-                                    <option value="M16.11">M16.11 — Primary OA, Right Hip</option>
-                                    <option value="M16.12">M16.12 — Primary OA, Left Hip</option>
-                                </optgroup>
-                                <optgroup label="Hip — Post-traumatic OA">
-                                    <option value="M16.31">M16.31 — Post-traumatic OA, Right Hip</option>
-                                    <option value="M16.32">M16.32 — Post-traumatic OA, Left Hip</option>
-                                </optgroup>
-                                <optgroup label="Hip — Rheumatoid Arthritis">
-                                    <option value="M05.751">M05.751 — RA, Right Hip</option>
-                                    <option value="M05.752">M05.752 — RA, Left Hip</option>
-                                </optgroup>
-                                <optgroup label="Hip — AVN">
-                                    <option value="M87.051">M87.051 — AVN, Right Hip</option>
-                                    <option value="M87.052">M87.052 — AVN, Left Hip</option>
-                                </optgroup>
-                                <optgroup label="Hip Fracture (TEAM-eligible)">
-                                    <option value="S72.001A">S72.001A — Fx Neck of Femur, Right</option>
-                                    <option value="S72.002A">S72.002A — Fx Neck of Femur, Left</option>
-                                    <option value="S72.091A">S72.091A — Other Fx Head/Neck Femur, Right</option>
-                                    <option value="S72.092A">S72.092A — Other Fx Head/Neck Femur, Left</option>
-                                    <option value="S72.101A">S72.101A — Unspecified Trochanteric Fx, Right</option>
-                                    <option value="S72.102A">S72.102A — Unspecified Trochanteric Fx, Left</option>
-                                    <option value="S72.141A">S72.141A — Displaced Intertrochanteric Fx, Right</option>
-                                    <option value="S72.142A">S72.142A — Displaced Intertrochanteric Fx, Left</option>
-                                    <option value="S72.21XA">S72.21XA — Subtrochanteric Fx, Right</option>
-                                    <option value="S72.22XA">S72.22XA — Subtrochanteric Fx, Left</option>
-                                </optgroup>
-                                <optgroup label="Shoulder — Primary Osteoarthritis">
-                                    <option value="M19.011">M19.011 — Primary OA, Right Shoulder</option>
-                                    <option value="M19.012">M19.012 — Primary OA, Left Shoulder</option>
-                                </optgroup>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Surgical History -->
-                    <div class="input-card" style="margin-top:16px;">
-                        <h3>📁 Surgical History</h3>
-                        <div id="historyEntries">
-                            <div style="color:#6b7280;padding:12px;text-align:center;">No surgical history recorded. Click "Add Entry" below.</div>
-                        </div>
-                        <button class="btn" style="background:#2c5aa0;color:white;margin-top:12px;" onclick="addHistoryEntry('surgery')">+ Add Surgery</button>
-                    </div>
-                </div>
-
-                <div>
-                    <!-- Prior Injuries -->
-                    <div class="input-card">
-                        <h3>Previous Injuries to This Joint</h3>
-                        <div class="field-row">
-                            <label>Prior Injuries</label>
-                            <textarea id="histPriorInjuries" rows="3" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;resize:vertical;" placeholder="ACL tear, meniscus tear, fracture, etc."></textarea>
-                        </div>
-                        <div class="field-row">
-                            <label>Prior Treatments for This Joint</label>
-                            <div style="display:flex;flex-direction:column;gap:6px;">
-                                <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;">
-                                    <input type="checkbox" id="histPT" onchange="togglePTWeeks()"> Physical Therapy and/or Formal Home Therapy/Exercises
-                                </label>
-                                <div id="histPTWeeksRow" style="display:none;margin-left:28px;">
-                                    <label style="font-size:0.85rem;font-weight:500;">How many weeks? <input type="number" id="histPTWeeks" min="1" max="104" style="width:70px;padding:6px;border:1px solid #d1d5db;border-radius:6px;margin-left:6px;"></label>
-                                </div>
-
-                                <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;">
-                                    <input type="checkbox" id="histInjCort" onchange="toggleSteroidCheck()"> Corticosteroid Injections
-                                </label>
-                                <div id="histSteroidDateRow" style="display:none;margin-left:28px;">
-                                    <label style="font-size:0.85rem;font-weight:500;">Date of last injection: <input type="date" id="histSteroidDate" onchange="checkSteroid3Months()" style="padding:6px;border:1px solid #d1d5db;border-radius:6px;margin-left:6px;"></label>
-                                    <div id="histSteroidWarning" style="display:none;" class="hard-stop">
-                                        ⛔ HARD STOP — Surgery must be &gt;3 months after last corticosteroid injection. Current gap is insufficient. Postpone surgery date or confirm injection date.
-                                    </div>
-                                </div>
-
-                                <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;"><input type="checkbox" id="histInjHA"> Hyaluronic Acid (Gel) Injections</label>
-                                <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;"><input type="checkbox" id="histInjPRP"> PRP Injections</label>
-                                <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;"><input type="checkbox" id="histArthroscopy"> Prior Arthroscopy</label>
-                                <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;"><input type="checkbox" id="histBracing"> Bracing</label>
-
-                                <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;">
-                                    <input type="checkbox" id="histNSAIDs" onchange="toggleNSAIDAllergy()"> NSAIDs / Anti-inflammatory
-                                </label>
-                                <div id="histNSAIDAllergyRow" style="margin-left:28px;margin-top:4px;">
-                                    <label style="font-size:0.85rem;font-weight:500;color:#dc2626;">
-                                        Do you have an allergy to NSAIDs? 
-                                        <select id="histNSAIDAllergy" style="padding:6px;border:1px solid #d1d5db;border-radius:6px;margin-left:6px;">
-                                            <option value="">Select...</option>
-                                            <option value="no">No</option>
-                                            <option value="yes">Yes</option>
-                                        </select>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Other Relevant History -->
-                    <div class="input-card" style="margin-top:16px;">
-                        <h3>Other Relevant History</h3>
-                        <div class="field-row">
-                            <label>Allergies (medications, latex, metals)</label>
-                            <textarea id="histAllergies" rows="2" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;resize:vertical;" placeholder="e.g., Penicillin — hives, Latex — anaphylaxis, Nickel — rash"></textarea>
-                        </div>
-                        <div class="field-row">
-                            <label>Current Medications</label>
-                            <textarea id="histMedications" rows="3" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;resize:vertical;" placeholder="List current medications with doses..."></textarea>
-                        </div>
-                        <div class="field-row">
-                            <label>Surgeon Notes</label>
-                            <textarea id="histSurgeonNotes" rows="3" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;resize:vertical;" placeholder="Any additional clinical notes..."></textarea>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Physical Exam & X-Ray Findings — opens in popup -->
-            <div class="input-card" style="margin-top:16px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <h3>🩻 Physical Exam &amp; X-Ray Findings</h3>
-                    <button class="btn" style="background:#2c5aa0;color:white;padding:10px 20px;" onclick="openXrayModal()">Open X-Ray Assessment ↗</button>
-                </div>
-                <div id="xraySummaryPreview" style="padding:12px;background:#f8fafc;border-radius:8px;margin-top:10px;font-size:0.85rem;color:#6b7280;">
-                    No x-ray data entered yet. Click "Open X-Ray Assessment" above.
-                </div>
-            </div>
-
-            <!-- Hist/PE Proceed -->
-            <div class="proceed-bar">
-                <button class="btn btn-save" onclick="saveHistory()">💾 Save Hist/PE</button>
-                <button class="btn btn-next" onclick="saveHistory();switchPrepTab('prosthesis')">Save &amp; Proceed to Prosthesis →</button>
-            </div>
         </div>
 
         <!-- Tab 1: Prosthesis Calculator -->
-        <div id="panelProsthesis" class="prep-panel">
+        <div id="panelProsthesis" class="prep-panel active">
             <div class="calc-grid">
                 <!-- Inputs -->
                 <div>
@@ -369,7 +175,6 @@
                         <div class="field-row">
                             <label>Deformity (degrees)</label>
                             <input type="number" id="calcDeformity" min="0" max="60" step="1" value="0" oninput="runCalculator()">
-                            <span id="deformitySource" style="font-size:0.8rem;color:#6b7280;font-style:italic;"></span>
                         </div>
                     </div>
                 </div>
@@ -386,12 +191,7 @@
                     </div>
                 </div>
             </div>
-            
-            <div class="proceed-bar">
-                <button class="btn btn-next" onclick="switchPrepTab('equipment')">Proceed to Equipment →</button>
-            </div>
         </div>
-
 
         <!-- Tab 2: Equipment List -->
         <div id="panelEquipment" class="prep-panel">
@@ -404,68 +204,67 @@
                     <button class="btn" style="background: #2c5aa0; color: white;" onclick="printEquipment()">🖨️ Print Equipment List</button>
                 </div>
             </div>
-        
-            <div class="proceed-bar">
-                <button class="btn btn-next" onclick="switchPrepTab('precert')">Proceed to Precert →</button>
-            </div>
         </div>
 
-
-        <!-- Tab 4: Precertification (modified — CPT/ICD-10 + auto-pull X-ray) -->
+        <!-- Tab 3: Precertification -->
         <div id="panelPrecert" class="prep-panel">
             <div class="calc-grid">
-                <div>
-                    <!-- Procedure Codes -->
-                    <div class="input-card">
-                        <h3>📋 Procedure & Diagnosis Codes</h3>
-                        <div class="field-row">
-                            <label>CPT Code (from Planned Procedure)</label>
-                            <div id="precertCPT" style="font-size:1rem;padding:8px 0;">
-                                <span style="color:#6b7280;">Select procedure on Hist/PE tab</span>
-                            </div>
-                        </div>
-                        <div class="field-row">
-                            <label>ICD-10 Diagnosis (from Hist/PE)</label>
-                            <div id="precertICD" style="font-size:1rem;padding:8px 0;">
-                                <span style="color:#6b7280;">Select diagnosis on Hist/PE tab</span>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Conservative Care auto-pulled -->
-                    <div class="input-card" style="margin-top:16px;">
-                        <h3>📋 Conservative Care Completed</h3>
-                        <p style="font-size:0.8rem;color:#6b7280;margin:-8px 0 12px 0;">Auto-populated from Hist/PE tab. Check any additional items below.</p>
-                        <div class="field-row">
-                            <div style="display: flex; flex-direction: column; gap: 10px;">
-                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
-                                    <input type="checkbox" id="consPT" style="width:18px;height:18px;"> Physical Therapy (≥6 weeks)
-                                </label>
-                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
-                                    <input type="checkbox" id="consNSAIDs" style="width:18px;height:18px;"> NSAIDs / Anti-inflammatory
-                                </label>
-                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
-                                    <input type="checkbox" id="consInjections" style="width:18px;height:18px;"> Corticosteroid / HA Injections
-                                </label>
-                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
-                                    <input type="checkbox" id="consBracing" style="width:18px;height:18px;"> Bracing / Assistive Device
-                                </label>
-                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
-                                    <input type="checkbox" id="consActivity" style="width:18px;height:18px;"> Activity Modification
-                                </label>
-                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
-                                    <input type="checkbox" id="consWeight" style="width:18px;height:18px;"> Weight Loss Counseling
-                                </label>
-                            </div>
+                <div class="input-card">
+                    <h3>📋 Conservative Care Completed</h3>
+                    <div class="field-row">
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
+                                <input type="checkbox" id="consPT" style="width:18px;height:18px;"> Physical Therapy (≥6 weeks)
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
+                                <input type="checkbox" id="consNSAIDs" style="width:18px;height:18px;"> NSAIDs / Anti-inflammatory
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
+                                <input type="checkbox" id="consInjections" style="width:18px;height:18px;"> Corticosteroid / HA Injections
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
+                                <input type="checkbox" id="consBracing" style="width:18px;height:18px;"> Bracing / Assistive Device
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
+                                <input type="checkbox" id="consActivity" style="width:18px;height:18px;"> Activity Modification
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
+                                <input type="checkbox" id="consWeight" style="width:18px;height:18px;"> Weight Loss Counseling
+                            </label>
                         </div>
                     </div>
                 </div>
-                <div>
-                    <!-- X-Ray Summary from Hist/PE -->
-                    <div class="input-card">
-                        <h3>🩻 X-Ray Summary <span style="font-size:0.8rem;font-weight:400;color:#6b7280;">(from Hist/PE)</span></h3>
-                        <div id="precertXraySummary" style="background:#f9fafb;border-radius:8px;padding:16px;font-size:0.9rem;line-height:1.7;color:#374151;min-height:80px;">
-                            Complete X-ray findings on the Hist/PE tab to auto-populate.
-                        </div>
+                <div class="input-card">
+                    <h3>🩻 X-Ray Findings</h3>
+                    <div class="field-row">
+                        <label>Joint Space Narrowing</label>
+                        <select id="xrayNarrowing" style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;">
+                            <option value="">Select...</option>
+                            <option value="mild">Mild</option>
+                            <option value="moderate">Moderate</option>
+                            <option value="severe">Severe — Bone-on-Bone</option>
+                        </select>
+                    </div>
+                    <div class="field-row">
+                        <label>Osteophytes</label>
+                        <select id="xrayOsteophytes" style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;">
+                            <option value="">Select...</option>
+                            <option value="none">None</option>
+                            <option value="mild">Mild</option>
+                            <option value="moderate">Moderate</option>
+                            <option value="severe">Severe</option>
+                        </select>
+                    </div>
+                    <div class="field-row">
+                        <label>Alignment</label>
+                        <select id="xrayAlignment" style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;">
+                            <option value="">Select...</option>
+                            <option value="neutral">Neutral</option>
+                            <option value="varus_mild">Mild Varus (&lt;10°)</option>
+                            <option value="varus_severe">Severe Varus (≥10°)</option>
+                            <option value="valgus_mild">Mild Valgus (&lt;10°)</option>
+                            <option value="valgus_severe">Severe Valgus (≥10°)</option>
+                        </select>
                     </div>
                 </div>
             </div>
@@ -481,9 +280,6 @@
                     <button class="btn" style="background: #2c5aa0; color: white;" onclick="printPrecert()">🖨️ Print Precertification</button>
                     <button class="btn" style="background: #059669; color: white;" onclick="copyPrecert()">📋 Copy to Clipboard</button>
                 </div>
-            </div>
-            <div class="proceed-bar">
-                <button class="btn btn-next" onclick="switchPrepTab('contract')">Proceed to Contract →</button>
             </div>
         </div>
 
@@ -552,13 +348,7 @@
                     </div>
                 </div>
             </div>
-        
-            <div class="proceed-bar">
-                <button class="btn btn-save" onclick="saveContract()">💾 Save Contract</button>
-                <button class="btn btn-next" onclick="switchPrepTab('consent')">Proceed to Consent →</button>
-            </div>
         </div>
-
 
         <!-- Tab 5: Informed Consent (B3) -->
         <div id="panelConsent" class="prep-panel">
@@ -633,22 +423,70 @@
                     </div>
                 </div>
             </div>
-        
-            <div class="proceed-bar">
-                <button class="btn btn-save" onclick="saveConsent()">💾 Save Consent</button>
-                <button class="btn btn-next" onclick="switchPrepTab('insurance')">Proceed to Insurance →</button>
+        </div>
+
+        <!-- Tab 6: Previous Injuries & Treatments (B6) -->
+        <div id="panelHistory" class="prep-panel">
+            <div class="calc-grid">
+                <div class="input-card">
+                    <h3>📁 Surgical History</h3>
+                    <div id="historyEntries">
+                        <div style="color:#6b7280;padding:12px;text-align:center;">No surgical history recorded. Click "Add Entry" below.</div>
+                    </div>
+                    <button class="btn" style="background:#2c5aa0;color:white;margin-top:12px;" onclick="addHistoryEntry('surgery')">+ Add Surgery</button>
+                </div>
+                <div>
+                    <div class="input-card">
+                        <h3>Previous Injuries to This Joint</h3>
+                        <div class="field-row">
+                            <label>Prior Injuries</label>
+                            <textarea id="histPriorInjuries" rows="3" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;resize:vertical;" placeholder="ACL tear, meniscus tear, fracture, etc."></textarea>
+                        </div>
+                        <div class="field-row">
+                            <label>Prior Treatments for This Joint</label>
+                            <div style="display:flex;flex-direction:column;gap:6px;">
+                                <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;"><input type="checkbox" id="histPT"> Physical Therapy</label>
+                                <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;"><input type="checkbox" id="histInjCort"> Corticosteroid Injections</label>
+                                <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;"><input type="checkbox" id="histInjHA"> Hyaluronic Acid (Gel) Injections</label>
+                                <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;"><input type="checkbox" id="histInjPRP"> PRP Injections</label>
+                                <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;"><input type="checkbox" id="histArthroscopy"> Prior Arthroscopy</label>
+                                <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;"><input type="checkbox" id="histBracing"> Bracing</label>
+                                <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;"><input type="checkbox" id="histNSAIDs"> NSAIDs / Anti-inflammatory</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-card" style="margin-top:16px;">
+                        <h3>Other Relevant History</h3>
+                        <div class="field-row">
+                            <label>Allergies (medications, latex, metals)</label>
+                            <textarea id="histAllergies" rows="2" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;resize:vertical;" placeholder="e.g., Penicillin — hives, Latex — anaphylaxis, Nickel — rash"></textarea>
+                        </div>
+                        <div class="field-row">
+                            <label>Current Medications</label>
+                            <textarea id="histMedications" rows="3" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;resize:vertical;" placeholder="List current medications with doses..."></textarea>
+                        </div>
+                        <div class="field-row">
+                            <label>Surgeon Notes</label>
+                            <textarea id="histSurgeonNotes" rows="3" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;resize:vertical;" placeholder="Any additional clinical notes..."></textarea>
+                        </div>
+                        <button class="btn" style="background:#2c5aa0;color:white;margin-top:8px;" onclick="saveHistory()">💾 Save History</button>
+                    </div>
+                </div>
             </div>
         </div>
 
-
-        <!-- Tab 7: Insurance (simplified) -->
+        <!-- Tab 7: Insurance Information (B7) -->
         <div id="panelInsurance" class="prep-panel">
             <div class="calc-grid">
                 <div class="input-card">
                     <h3>🏥 Insurance Information</h3>
                     <div class="field-row">
-                        <label>Primary Plan Type</label>
-                        <select id="insPlanType" onchange="onPlanTypeChange()" style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;">
+                        <label>Primary Insurance Carrier</label>
+                        <input type="text" id="insCarrier" placeholder="e.g., Blue Cross Blue Shield, Aetna, Medicare..." style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;">
+                    </div>
+                    <div class="field-row">
+                        <label>Plan Type</label>
+                        <select id="insPlanType" style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;">
                             <option value="">Select...</option>
                             <option value="medicare_ffs">Medicare Fee-for-Service</option>
                             <option value="medicare_advantage">Medicare Advantage</option>
@@ -663,13 +501,21 @@
                         </select>
                     </div>
                     <div class="field-row">
+                        <label>Policy / Member ID</label>
+                        <input type="text" id="insPolicyNum" placeholder="Policy number..." style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;">
+                    </div>
+                    <div class="field-row">
+                        <label>Group Number</label>
+                        <input type="text" id="insGroupNum" placeholder="Group number..." style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;">
+                    </div>
+                    <div class="field-row">
                         <label>Secondary Insurance (if applicable)</label>
                         <input type="text" id="insSecondary" placeholder="Secondary carrier and ID..." style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;">
                     </div>
                 </div>
                 <div>
                     <div class="input-card">
-                        <h3>Quality Programs &amp; Bundles <span style="font-size:0.8rem;font-weight:400;color:#6b7280;">(auto-selected by plan type)</span></h3>
+                        <h3>Quality Programs & Bundles</h3>
                         <div style="display:flex;flex-direction:column;gap:8px;" id="insQualityPrograms">
                             <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;"><input type="checkbox" id="insTEAM" style="width:16px;height:16px;"> CMS TEAM (Transforming Episode Accountability Model)</label>
                             <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;"><input type="checkbox" id="insBPCI" style="width:16px;height:16px;"> BPCI Advanced</label>
@@ -683,10 +529,10 @@
                         </div>
                     </div>
                     <div class="input-card" style="margin-top:16px;">
-                        <h3>Prior Authorization <span id="insAuthRequiredNote" style="font-size:0.8rem;font-weight:400;color:#6b7280;"></span></h3>
+                        <h3>Prior Authorization</h3>
                         <div class="field-row">
                             <label>Authorization Status</label>
-                            <select id="insAuthStatus" onchange="updateAuthBadge()" style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;">
+                            <select id="insAuthStatus" style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;">
                                 <option value="not_submitted">Not Submitted</option>
                                 <option value="submitted">Submitted — Pending</option>
                                 <option value="approved">Approved</option>
@@ -699,542 +545,13 @@
                             <label>Authorization Number</label>
                             <input type="text" id="insAuthNum" placeholder="Auth number if approved..." style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;">
                         </div>
-                        <div class="calc-grid" style="gap:12px;">
-                            <div class="field-row">
-                                <label>Auth Start Date</label>
-                                <input type="date" id="insAuthStart" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;">
-                            </div>
-                            <div class="field-row">
-                                <label>Auth End Date</label>
-                                <input type="date" id="insAuthEnd" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;">
-                            </div>
+                        <div class="field-row">
+                            <label>Auth Expiration Date</label>
+                            <input type="date" id="insAuthExpiry" style="padding:10px;border:1px solid #d1d5db;border-radius:8px;">
                         </div>
                         <div id="insAuthBadge" style="display:none;border-radius:8px;padding:10px;text-align:center;margin-top:8px;font-weight:700;"></div>
+                        <button class="btn" style="background:#2c5aa0;color:white;margin-top:12px;" onclick="saveInsurance()">💾 Save Insurance Info</button>
                     </div>
-                </div>
-            </div>
-            <div class="proceed-bar">
-                <button class="btn btn-save" onclick="saveInsurance()">💾 Save Insurance Info</button>
-                <button class="btn btn-next" onclick="saveInsurance();switchPrepTab('disposition')">Proceed to Disposition →</button>
-            </div>
-        </div>
-
-        <!-- Tab 8: Post-Op Disposition -->
-        <div id="panelDisposition" class="prep-panel">
-            <div class="input-card">
-                <h3>📋 Surgical Setting & Post-Op Disposition</h3>
-                <p style="color:#6b7280;font-size:0.85rem;margin-bottom:16px;">Determines ASC vs HOPD vs Inpatient setting AND post-op discharge destination. Based on published patient selection criteria (AAHKS 2024, Meneghini risk stratification, Bodrogi outpatient THA criteria).</p>
-
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                    <div>
-                        <h4 style="margin:0 0 12px 0;color:#1e3a5f;">Patient Assessment</h4>
-                        <div class="field-row"><label>Age</label>
-                            <select id="dispAge" onchange="runDisposition()">
-                                <option value="">-- Select --</option>
-                                <option value="0">&lt; 65 years</option>
-                                <option value="1">65 – 74 years</option>
-                                <option value="2">75 – 80 years</option>
-                                <option value="3">&gt; 80 years</option>
-                            </select>
-                        </div>
-                        <div class="field-row"><label>BMI</label>
-                            <select id="dispBMI" onchange="runDisposition()">
-                                <option value="">-- Select --</option>
-                                <option value="0">&lt; 35</option>
-                                <option value="1">35 – 39.9</option>
-                                <option value="2">40 – 44.9</option>
-                                <option value="3">≥ 45</option>
-                            </select>
-                        </div>
-                        <div class="field-row"><label>ASA Classification</label>
-                            <select id="dispASA" onchange="runDisposition()">
-                                <option value="">-- Select --</option>
-                                <option value="0">ASA I – II</option>
-                                <option value="1">ASA III (well-controlled)</option>
-                                <option value="2">ASA III (poorly controlled)</option>
-                                <option value="3">ASA IV</option>
-                            </select>
-                        </div>
-                        <div class="field-row"><label>TUG Test (Timed Up &amp; Go)</label>
-                            <select id="dispTUG" onchange="runDisposition()">
-                                <option value="">-- Select --</option>
-                                <option value="0">&lt; 10 seconds (normal mobility)</option>
-                                <option value="1">10 – 14 seconds (mostly independent)</option>
-                                <option value="2">15 – 19 seconds (impaired, variable)</option>
-                                <option value="3">≥ 20 seconds (poor mobility / fall risk)</option>
-                            </select>
-                        </div>
-                        <div class="field-row"><label>TUG Time (seconds)</label>
-                            <input type="number" id="dispTUGsec" min="3" max="120" step="0.1" placeholder="e.g. 12.5" style="max-width:120px;">
-                        </div>
-                    </div>
-                    <div>
-                        <h4 style="margin:0 0 12px 0;color:#1e3a5f;">Social &amp; Functional</h4>
-                        <div class="field-row"><label>Help at Home</label>
-                            <select id="dispHome" onchange="runDisposition()">
-                                <option value="">-- Select --</option>
-                                <option value="0">Capable adult helper available 24–72 hrs</option>
-                                <option value="1">Helper available but limited (elderly spouse, part-time)</option>
-                                <option value="2">No help / lives alone</option>
-                            </select>
-                        </div>
-                        <div class="field-row"><label>Contralateral Leg Status</label>
-                            <select id="dispContra" onchange="runDisposition()">
-                                <option value="">-- Select --</option>
-                                <option value="0">Normal / mild arthritis</option>
-                                <option value="1">Severe arthritis (limits weight-bearing)</option>
-                                <option value="2">Amputee / non-weight-bearing</option>
-                            </select>
-                        </div>
-                        <div class="field-row"><label>Cardiac / Pulmonary Status</label>
-                            <select id="dispCardPulm" onchange="runDisposition()">
-                                <option value="">-- Select --</option>
-                                <option value="0">None or well-controlled mild disease</option>
-                                <option value="1">Moderate (e.g. controlled CHF, stable COPD)</option>
-                                <option value="2">Severe / uncontrolled (CHF EF&lt;40%, O2-dependent)</option>
-                            </select>
-                        </div>
-                        <div class="field-row"><label>Senescence / Frailty Concern</label>
-                            <select id="dispFrailty" onchange="runDisposition()">
-                                <option value="">-- Select --</option>
-                                <option value="0">No frailty concerns</option>
-                                <option value="1">Mild frailty (slow gait, mild weakness)</option>
-                                <option value="2">Moderate-severe frailty (poor endurance, sarcopenia)</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Surgical Setting Result -->
-            <div class="input-card" id="dispSettingResult" style="display:none;">
-                <h3>⚕️ Recommended Surgical Setting</h3>
-                <div id="dispSettingContent"></div>
-            </div>
-
-            <!-- Post-Op Discharge Destination -->
-            <div class="input-card">
-                <h3>🏠 Post-Op Discharge Destination</h3>
-                <p style="color:#6b7280;font-size:0.85rem;margin-bottom:12px;">Select planned post-op care pathway. This drives check-in schedule and alert thresholds.</p>
-                <div class="field-row"><label>Discharge Destination</label>
-                    <select id="dispDestination" onchange="updateDischargeDetail()">
-                        <option value="">-- Select --</option>
-                        <option value="home_outpt_pt">Home → Outpatient PT</option>
-                        <option value="home_home_pt">Home → Home PT (therapist comes to patient)</option>
-                        <option value="home_health">Home Health (nursing + therapy visits)</option>
-                        <option value="snf">Skilled Nursing Facility (SNF) / Inpatient Rehab</option>
-                    </select>
-                </div>
-                <div id="dischargeDetail" style="display:none;margin-top:12px;padding:12px;background:#f0f9ff;border-radius:8px;font-size:0.85rem;"></div>
-            </div>
-
-            <div class="proceed-bar">
-                <button class="btn btn-save" onclick="saveDisposition()">💾 Save Disposition</button>
-                <button class="btn btn-next" onclick="saveDisposition();switchPrepTab('prehab')">Proceed to Prehab/Prep →</button>
-            </div>
-        </div>
-
-        <!-- Tab 9: Prehab & Patient Prep -->
-        <div id="panelPrehab" class="prep-panel">
-            <div class="input-card">
-                <h3>💪 Prehabilitation & Patient Preparation</h3>
-                <p style="color:#6b7280;font-size:0.85rem;margin-bottom:12px;">Evidence-based recommendations generated from this patient's comorbidity profile. Print for patient handout.</p>
-                <button class="btn" style="background:#2c5aa0;color:white;" onclick="generatePrehabPlan()">🔄 Generate Prehab Plan from Patient Data</button>
-            </div>
-
-            <!-- Prehab Exercise Section -->
-            <div class="input-card" id="prehabExerciseCard" style="display:none;">
-                <h3>🏃 Pre-Operative Exercise Program</h3>
-                <div id="prehabExerciseContent"></div>
-            </div>
-
-            <!-- Supplement Section -->
-            <div class="input-card" id="prehabSupplementCard" style="display:none;">
-                <h3>💊 Supplement & Nutrition Recommendations</h3>
-                <div id="prehabSupplementContent"></div>
-            </div>
-
-            <!-- Comorbidity-Driven Tests & Consults -->
-            <div class="input-card" id="prehabTestsCard" style="display:none;">
-                <h3>🔬 Required Pre-Op Tests & Consults</h3>
-                <p style="color:#6b7280;font-size:0.8rem;margin-bottom:8px;">Based on patient's comorbidity profile from PreOp assessment.</p>
-                <div id="prehabTestsContent"></div>
-            </div>
-
-            <!-- Medication Management -->
-            <div class="input-card" id="prehabMedsCard" style="display:none;">
-                <h3>💉 Medication Management Before Surgery</h3>
-                <div id="prehabMedsContent"></div>
-            </div>
-
-            <!-- Print -->
-            <div class="input-card" id="prehabPrintCard" style="display:none;">
-                <div style="text-align:center;">
-                    <button class="btn" style="background:#1e40af;color:white;font-size:1rem;padding:12px 32px;" onclick="printPrehab()">🖨️ Print Patient Preparation Packet</button>
-                </div>
-            </div>
-
-            <div class="proceed-bar">
-                <button class="btn btn-save" onclick="savePrehab()">💾 Save Prehab Plan</button>
-            </div>
-        </div>
-
-        <!-- Tab 10: Patient Education -->
-        <div id="panelEducation" class="prep-panel">
-            <div class="input-card">
-                <h3>📚 Pre-Operative Patient Education</h3>
-                <p style="color:#6b7280;font-size:0.85rem;margin-bottom:16px;">Printable patient education materials. Review with patient and provide handout.</p>
-                <button class="btn" style="background:#1e40af;color:white;padding:10px 20px;" onclick="printEducation()">🖨️ Print Patient Education Packet</button>
-            </div>
-
-            <!-- Skin Care -->
-            <div class="input-card" style="margin-top:16px;">
-                <h3 style="color:#dc2626;">⚠️ Skin Care — CRITICAL</h3>
-                <div style="background:#fef2f2;border:2px solid #fca5a5;border-radius:8px;padding:16px;margin-bottom:12px;">
-                    <p style="font-weight:700;color:#991b1b;font-size:1rem;margin-bottom:8px;">YOUR SURGERY WILL BE CANCELLED IF:</p>
-                    <div style="display:flex;flex-direction:column;gap:6px;font-size:0.9rem;color:#1e293b;">
-                        <span>❌ Any open wounds, cuts, or scratches on or near the operative leg/hip</span>
-                        <span>❌ Any pimples, boils, rashes, or skin irritation on the operative limb</span>
-                        <span>❌ Any skin infections anywhere on the operative leg/hip</span>
-                        <span>❌ Any severe infection anywhere on the body (UTI, dental abscess, cellulitis, etc.)</span>
-                        <span>❌ Any insect bites that are infected or open on the operative area</span>
-                    </div>
-                </div>
-                <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:16px;">
-                    <p style="font-weight:700;color:#166534;margin-bottom:8px;">INSTRUCTIONS:</p>
-                    <div style="display:flex;flex-direction:column;gap:6px;font-size:0.9rem;color:#1e293b;">
-                        <span>✅ Keep the operative leg/hip clean and moisturized — use unscented lotion</span>
-                        <span>✅ Do NOT shave the operative leg for 2 weeks before surgery</span>
-                        <span>✅ Shower with Chlorhexidine (Hibiclens) soap the night before AND morning of surgery</span>
-                        <span>✅ Use fresh, clean bed linens the night before surgery</span>
-                        <span>✅ Wear clean, loose-fitting clothes to the hospital</span>
-                        <span>✅ Remove all nail polish, jewelry, and body piercings before arrival</span>
-                        <span>✅ Report ANY new skin issues to our office IMMEDIATELY — even small ones</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Nutrition -->
-            <div class="input-card" style="margin-top:16px;">
-                <h3>🥗 Nutrition — Before & After Surgery</h3>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                    <div>
-                        <h4 style="color:#059669;font-size:0.95rem;">Before Surgery (2-4 weeks prior)</h4>
-                        <div style="display:flex;flex-direction:column;gap:6px;font-size:0.9rem;">
-                            <span>🥩 <strong>High-protein diet:</strong> 1.2-1.5 g/kg/day — chicken, fish, eggs, Greek yogurt, beans</span>
-                            <span>🥤 <strong>Protein supplement:</strong> 1-2 shakes daily (20-30g protein per serving)</span>
-                            <span>🥦 <strong>Fruits & vegetables:</strong> Rich in Vitamin C for wound healing</span>
-                            <span>💧 <strong>Hydration:</strong> At least 8 glasses of water daily</span>
-                            <span>🚫 <strong>Limit:</strong> Processed foods, excess sugar, alcohol</span>
-                        </div>
-                    </div>
-                    <div>
-                        <h4 style="color:#2563eb;font-size:0.95rem;">After Surgery</h4>
-                        <div style="display:flex;flex-direction:column;gap:6px;font-size:0.9rem;">
-                            <span>🥩 <strong>Continue high protein</strong> — critical for tissue healing and muscle recovery</span>
-                            <span>🥤 <strong>Protein shakes</strong> if appetite is low in first few days</span>
-                            <span>🥬 <strong>High-fiber foods</strong> — prevent constipation from pain medications</span>
-                            <span>💧 <strong>Extra hydration</strong> — dehydration increases fall risk</span>
-                            <span>🍎 <strong>Iron-rich foods</strong> if anemic — spinach, red meat, fortified cereals</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Supplements -->
-            <div class="input-card" style="margin-top:16px;">
-                <h3>💊 Supplements</h3>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:0.9rem;">
-                    <div style="background:#f8fafc;padding:12px;border-radius:8px;border-left:4px solid #f59e0b;">
-                        <strong>Vitamin D3:</strong> 2,000 IU daily (or 50,000 IU/week if deficient). Target ≥30 ng/mL. Start 4-6 weeks before surgery.
-                    </div>
-                    <div style="background:#f8fafc;padding:12px;border-radius:8px;border-left:4px solid #3b82f6;">
-                        <strong>Protein Supplement:</strong> 20-30g per serving, 1-2x daily. Whey, pea, or collagen protein. Start 2 weeks before.
-                    </div>
-                    <div style="background:#f8fafc;padding:12px;border-radius:8px;border-left:4px solid #10b981;">
-                        <strong>Calcium:</strong> 1,200 mg daily (with Vitamin D). Especially if age >65 or female.
-                    </div>
-                    <div style="background:#f8fafc;padding:12px;border-radius:8px;border-left:4px solid #ef4444;">
-                        <strong>Iron:</strong> 325 mg ferrous sulfate daily (ONLY if anemic). Take with Vitamin C for absorption. Take on empty stomach.
-                    </div>
-                </div>
-            </div>
-
-            <!-- Walking/Exercise -->
-            <div class="input-card" style="margin-top:16px;">
-                <h3>🚶 Walking & Exercise — Prehab Program</h3>
-                <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:16px;margin-bottom:12px;">
-                    <p style="font-weight:700;color:#1e40af;margin-bottom:8px;">Goal: Get as strong and fit as possible BEFORE surgery</p>
-                    <p style="font-size:0.85rem;color:#374151;">Patients who do prehab exercises for 4+ weeks before surgery have shorter hospital stays, better pain control, and faster recovery.</p>
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                    <div>
-                        <h4 style="font-size:0.95rem;">Daily Walking</h4>
-                        <div style="display:flex;flex-direction:column;gap:4px;font-size:0.9rem;">
-                            <span>📏 Start: 10-15 minutes daily (or as tolerated)</span>
-                            <span>📏 Goal: 30 minutes daily by surgery date</span>
-                            <span>👟 Steps goal: 5,000-7,000 steps/day</span>
-                            <span>⚠️ Use walker/cane if needed for safety</span>
-                        </div>
-                    </div>
-                    <div>
-                        <h4 style="font-size:0.95rem;">Exercises (2-3x daily)</h4>
-                        <div style="display:flex;flex-direction:column;gap:4px;font-size:0.9rem;" id="eduExerciseList">
-                            <span>• Quad sets — 10 reps, hold 5 sec</span>
-                            <span>• Straight leg raises — 10 reps each</span>
-                            <span>• Heel slides — 10 reps</span>
-                            <span>• Ankle pumps — 20 reps</span>
-                            <span>• Mini squats (hold onto counter) — 10 reps</span>
-                        </div>
-                    </div>
-                </div>
-                <p style="font-size:0.85rem;color:#6b7280;margin-top:12px;font-style:italic;">See Prehab/Prep tab for full, personalized exercise plan generated from patient data.</p>
-            </div>
-
-            <!-- Medications -->
-            <div class="input-card" style="margin-top:16px;">
-                <h3>💉 Medications — What to Keep & What to Stop</h3>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                    <div>
-                        <h4 style="color:#dc2626;font-size:0.95rem;">🛑 STOP Before Surgery</h4>
-                        <div style="display:flex;flex-direction:column;gap:6px;font-size:0.85rem;">
-                            <div style="background:#fef2f2;padding:8px;border-radius:6px;"><strong>NSAIDs</strong> (Ibuprofen, Aleve, Meloxicam) — STOP 7 days before</div>
-                            <div style="background:#fef2f2;padding:8px;border-radius:6px;"><strong>Warfarin (Coumadin)</strong> — STOP 5 days before; may need Lovenox bridge</div>
-                            <div style="background:#fef2f2;padding:8px;border-radius:6px;"><strong>Eliquis/Xarelto/Pradaxa</strong> — STOP 48-72 hours before (varies by drug)</div>
-                            <div style="background:#fef2f2;padding:8px;border-radius:6px;"><strong>Methotrexate</strong> — HOLD 1 week before; resume 2 weeks after wound healed</div>
-                            <div style="background:#fef2f2;padding:8px;border-radius:6px;"><strong>Biologics</strong> (Humira, Enbrel) — HOLD 1-2 dosing cycles per rheumatology</div>
-                            <div style="background:#fef2f2;padding:8px;border-radius:6px;"><strong>GLP-1</strong> (Ozempic, Wegovy, Mounjaro) — HOLD 1 week before (aspiration risk)</div>
-                            <div style="background:#fef2f2;padding:8px;border-radius:6px;"><strong>Herbal/Supplements</strong> (fish oil, ginkgo, garlic) — STOP 2 weeks before</div>
-                        </div>
-                    </div>
-                    <div>
-                        <h4 style="color:#059669;font-size:0.95rem;">✅ CONTINUE / Day-Of Instructions</h4>
-                        <div style="display:flex;flex-direction:column;gap:6px;font-size:0.85rem;">
-                            <div style="background:#f0fdf4;padding:8px;border-radius:6px;"><strong>Blood pressure meds</strong> — TAKE morning of surgery with sip of water</div>
-                            <div style="background:#f0fdf4;padding:8px;border-radius:6px;"><strong>Heart medications</strong> — TAKE as usual unless told otherwise</div>
-                            <div style="background:#f0fdf4;padding:8px;border-radius:6px;"><strong>Aspirin 81mg</strong> — CONTINUE unless surgeon says stop</div>
-                            <div style="background:#fffbeb;padding:8px;border-radius:6px;"><strong>Metformin</strong> — HOLD day of surgery and 48 hours after</div>
-                            <div style="background:#fffbeb;padding:8px;border-radius:6px;"><strong>Insulin</strong> — HALF dose morning of surgery; bring insulin to hospital</div>
-                            <div style="background:#f0fdf4;padding:8px;border-radius:6px;"><strong>Anxiety/Depression meds</strong> — TAKE as usual</div>
-                            <div style="background:#f0fdf4;padding:8px;border-radius:6px;"><strong>Thyroid medication</strong> — TAKE morning of surgery with sip of water</div>
-                        </div>
-                    </div>
-                </div>
-                <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:12px;margin-top:12px;">
-                    <p style="font-weight:700;color:#92400e;margin-bottom:4px;">⚠️ IMPORTANT: Bring ALL medications to the hospital</p>
-                    <p style="font-size:0.85rem;color:#78350f;">Bring the actual bottles so the surgical team can verify names, doses, and medications. If you are unsure about ANY medication, call our office before surgery.</p>
-                </div>
-            </div>
-
-            <!-- Joint Class / Resources -->
-            <div class="input-card" style="margin-top:16px;">
-                <h3>🎓 Joint Replacement Class & Resources</h3>
-                <div style="display:flex;flex-direction:column;gap:10px;">
-                    <div style="background:#f8fafc;padding:12px;border-radius:8px;border-left:4px solid #2c5aa0;">
-                        <strong>Joint Replacement Education Class</strong> — Attendance required before surgery<br>
-                        <span style="font-size:0.85rem;color:#6b7280;">Contact our office for schedule. Available in-person and virtual. Covers: what to expect, home preparation, exercises, recovery timeline.</span>
-                        <div class="field-row" style="margin-top:8px;">
-                            <label style="font-size:0.85rem;">Class Link/URL (optional):</label>
-                            <input type="text" id="eduClassLink" placeholder="https://... or 'In-person — see schedule'" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;">
-                        </div>
-                    </div>
-                    <div style="background:#f8fafc;padding:12px;border-radius:8px;border-left:4px solid #059669;">
-                        <strong>Home Preparation Checklist:</strong><br>
-                        <span style="font-size:0.85rem;">☐ Raised toilet seat &nbsp; ☐ Grab bars in shower &nbsp; ☐ Remove trip hazards (rugs, cords) &nbsp; ☐ Stock easy-to-prepare meals &nbsp; ☐ Arrange ride home and help for first 1-2 weeks &nbsp; ☐ Ice machine or ice packs &nbsp; ☐ Walker/crutches available</span>
-                    </div>
-                    <div style="background:#f8fafc;padding:12px;border-radius:8px;border-left:4px solid #f59e0b;">
-                        <strong>Nothing to Eat or Drink After Midnight</strong> the night before surgery (unless specifically instructed otherwise by anesthesia).
-                    </div>
-                </div>
-            </div>
-
-            <div class="proceed-bar">
-                <button class="btn" style="background:#1e40af;color:white;padding:10px 20px;" onclick="printEducation()">🖨️ Print Patient Education Packet</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- X-Ray Assessment Modal -->
-    <div id="xrayModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:2000;overflow-y:auto;">
-        <div style="max-width:900px;margin:30px auto;background:white;border-radius:12px;overflow:hidden;">
-            <div style="background:linear-gradient(135deg,#1e3a5f,#2c5aa0);color:white;padding:16px 24px;display:flex;justify-content:space-between;align-items:center;">
-                <h2 style="margin:0;font-size:1.2rem;">🩻 X-Ray & Physical Exam Assessment</h2>
-                <button onclick="closeXrayModal()" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:1rem;">✕ Close</button>
-            </div>
-            <div style="padding:24px;">
-                <!-- Knee-specific X-ray Findings -->
-                <div id="xrayKneeSection">
-                    <h3 style="color:#1e3a5f;border-bottom:2px solid #e5e7eb;padding-bottom:6px;">Knee X-Ray Findings</h3>
-
-                    <!-- Alignment — radio buttons all visible -->
-                    <div style="margin-bottom:16px;">
-                        <label style="font-weight:600;display:block;margin-bottom:6px;">Alignment</label>
-                        <div style="display:flex;flex-wrap:wrap;gap:8px;" id="xrayAlignmentGroup">
-                            <label class="xray-check"><input type="radio" name="xrayAlign" value="" checked> Not assessed</label>
-                            <label class="xray-check"><input type="radio" name="xrayAlign" value="neutral"> Neutral</label>
-                            <label class="xray-check"><input type="radio" name="xrayAlign" value="varus_mild"> Mild Varus</label>
-                            <label class="xray-check"><input type="radio" name="xrayAlign" value="varus_moderate"> Moderate Varus</label>
-                            <label class="xray-check"><input type="radio" name="xrayAlign" value="varus_severe"> Severe Varus</label>
-                            <label class="xray-check"><input type="radio" name="xrayAlign" value="valgus_mild"> Mild Valgus</label>
-                            <label class="xray-check"><input type="radio" name="xrayAlign" value="valgus_moderate"> Moderate Valgus</label>
-                            <label class="xray-check"><input type="radio" name="xrayAlign" value="valgus_severe"> Severe Valgus</label>
-                        </div>
-                    </div>
-
-                    <!-- Joint Space Narrowing — compartment checkboxes -->
-                    <div style="margin-bottom:16px;">
-                        <label style="font-weight:600;display:block;margin-bottom:6px;">Joint Space Narrowing</label>
-                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
-                            <div class="xray-comp-card">
-                                <label class="xray-check"><input type="checkbox" id="xmNarrowMedial" onchange="xrayModalChanged()"> <strong>Medial</strong></label>
-                                <div class="xray-comp-detail" id="xmNarrowMedialD">
-                                    <select id="xmNarrowMedialSev"><option value="mild">Mild</option><option value="moderate">Moderate</option><option value="severe">Severe (Bone-on-Bone)</option></select>
-                                    <input type="number" id="xmNarrowMedialMM" placeholder="mm" min="0" max="10" step="0.5" style="width:60px;">
-                                </div>
-                            </div>
-                            <div class="xray-comp-card">
-                                <label class="xray-check"><input type="checkbox" id="xmNarrowLateral" onchange="xrayModalChanged()"> <strong>Lateral</strong></label>
-                                <div class="xray-comp-detail" id="xmNarrowLateralD">
-                                    <select id="xmNarrowLateralSev"><option value="mild">Mild</option><option value="moderate">Moderate</option><option value="severe">Severe (Bone-on-Bone)</option></select>
-                                    <input type="number" id="xmNarrowLateralMM" placeholder="mm" min="0" max="10" step="0.5" style="width:60px;">
-                                </div>
-                            </div>
-                            <div class="xray-comp-card">
-                                <label class="xray-check"><input type="checkbox" id="xmNarrowPF" onchange="xrayModalChanged()"> <strong>Patellofemoral</strong></label>
-                                <div class="xray-comp-detail" id="xmNarrowPFD">
-                                    <select id="xmNarrowPFSev"><option value="mild">Mild</option><option value="moderate">Moderate</option><option value="severe">Severe (Bone-on-Bone)</option></select>
-                                    <input type="number" id="xmNarrowPFMM" placeholder="mm" min="0" max="10" step="0.5" style="width:60px;">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Osteophytes — compartment checkboxes -->
-                    <div style="margin-bottom:16px;">
-                        <label style="font-weight:600;display:block;margin-bottom:6px;">Osteophytes</label>
-                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
-                            <div class="xray-comp-card">
-                                <label class="xray-check"><input type="checkbox" id="xmOsteoMedial" onchange="xrayModalChanged()"> <strong>Medial</strong></label>
-                                <div class="xray-comp-detail" id="xmOsteoMedialD">
-                                    <select id="xmOsteoMedialSev"><option value="mild">Mild</option><option value="moderate">Moderate</option><option value="severe">Severe</option></select>
-                                </div>
-                            </div>
-                            <div class="xray-comp-card">
-                                <label class="xray-check"><input type="checkbox" id="xmOsteoLateral" onchange="xrayModalChanged()"> <strong>Lateral</strong></label>
-                                <div class="xray-comp-detail" id="xmOsteoLateralD">
-                                    <select id="xmOsteoLateralSev"><option value="mild">Mild</option><option value="moderate">Moderate</option><option value="severe">Severe</option></select>
-                                </div>
-                            </div>
-                            <div class="xray-comp-card">
-                                <label class="xray-check"><input type="checkbox" id="xmOsteoPF" onchange="xrayModalChanged()"> <strong>Patellofemoral</strong></label>
-                                <div class="xray-comp-detail" id="xmOsteoPFD">
-                                    <select id="xmOsteoPFSev"><option value="mild">Mild</option><option value="moderate">Moderate</option><option value="severe">Severe</option></select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Sclerosis — simple checkboxes -->
-                    <div style="margin-bottom:16px;">
-                        <label style="font-weight:600;display:block;margin-bottom:6px;">Subchondral Sclerosis</label>
-                        <div style="display:flex;gap:16px;">
-                            <label class="xray-check"><input type="checkbox" id="xmSclerosisMedial"> Medial</label>
-                            <label class="xray-check"><input type="checkbox" id="xmSclerosisLateral"> Lateral</label>
-                            <label class="xray-check"><input type="checkbox" id="xmSclerosisPF"> Patellofemoral</label>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Hip-specific X-ray Findings -->
-                <div id="xrayHipSection" style="display:none;">
-                    <h3 style="color:#1e3a5f;border-bottom:2px solid #e5e7eb;padding-bottom:6px;">Hip X-Ray Findings</h3>
-
-                    <!-- Joint Space -->
-                    <div style="margin-bottom:16px;">
-                        <label style="font-weight:600;display:block;margin-bottom:6px;">Joint Space Narrowing</label>
-                        <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                            <label class="xray-check"><input type="radio" name="hipNarrow" value=""> Not assessed</label>
-                            <label class="xray-check"><input type="radio" name="hipNarrow" value="none"> Normal</label>
-                            <label class="xray-check"><input type="radio" name="hipNarrow" value="superior_mild"> Superior — Mild</label>
-                            <label class="xray-check"><input type="radio" name="hipNarrow" value="superior_severe"> Superior — Severe/Bone-on-Bone</label>
-                            <label class="xray-check"><input type="radio" name="hipNarrow" value="medial_mild"> Medial — Mild</label>
-                            <label class="xray-check"><input type="radio" name="hipNarrow" value="medial_severe"> Medial — Severe</label>
-                            <label class="xray-check"><input type="radio" name="hipNarrow" value="global"> Global Narrowing</label>
-                        </div>
-                    </div>
-
-                    <!-- Femoral Head -->
-                    <div style="margin-bottom:16px;">
-                        <label style="font-weight:600;display:block;margin-bottom:6px;">Femoral Head</label>
-                        <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                            <label class="xray-check"><input type="radio" name="hipFemHead" value=""> Not assessed</label>
-                            <label class="xray-check"><input type="radio" name="hipFemHead" value="round"> Round (normal)</label>
-                            <label class="xray-check"><input type="radio" name="hipFemHead" value="flattened"> Flattened</label>
-                            <label class="xray-check"><input type="radio" name="hipFemHead" value="collapsed"> Collapsed (AVN)</label>
-                            <label class="xray-check"><input type="radio" name="hipFemHead" value="large_cysts"> Large subchondral cysts</label>
-                        </div>
-                    </div>
-
-                    <!-- Acetabulum -->
-                    <div style="margin-bottom:16px;">
-                        <label style="font-weight:600;display:block;margin-bottom:6px;">Acetabular Changes</label>
-                        <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                            <label class="xray-check"><input type="checkbox" id="hipAcetSclerosis"> Sclerosis</label>
-                            <label class="xray-check"><input type="checkbox" id="hipAcetCysts"> Subchondral cysts</label>
-                            <label class="xray-check"><input type="checkbox" id="hipAcetOsteo"> Osteophytes</label>
-                            <label class="xray-check"><input type="checkbox" id="hipProtrusio"> Protrusio acetabuli</label>
-                            <label class="xray-check"><input type="checkbox" id="hipDysplasia"> Dysplasia</label>
-                        </div>
-                    </div>
-
-                    <!-- Femoral Osteophytes -->
-                    <div style="margin-bottom:16px;">
-                        <label style="font-weight:600;display:block;margin-bottom:6px;">Femoral Osteophytes</label>
-                        <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                            <label class="xray-check"><input type="checkbox" id="hipFemOsteo"> Present</label>
-                            <label class="xray-check"><input type="checkbox" id="hipFemSclerosis"> Femoral neck sclerosis</label>
-                        </div>
-                    </div>
-
-                    <!-- Additional Hip findings -->
-                    <div style="margin-bottom:16px;">
-                        <label style="font-weight:600;display:block;margin-bottom:6px;">Additional Findings</label>
-                        <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                            <label class="xray-check"><input type="checkbox" id="hipHO"> Heterotopic ossification</label>
-                            <label class="xray-check"><input type="checkbox" id="hipLLD"> Leg length discrepancy</label>
-                            <label class="xray-check"><input type="checkbox" id="hipCAM"> CAM impingement</label>
-                            <label class="xray-check"><input type="checkbox" id="hipPincer"> Pincer impingement</label>
-                        </div>
-                        <div style="margin-top:8px;">
-                            <label style="font-size:0.85rem;">Leg length difference (mm): <input type="number" id="hipLLDmm" min="0" max="50" step="1" style="width:70px;padding:5px;border:1px solid #d1d5db;border-radius:6px;"></label>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Shared: KL Grade & Other Findings -->
-                <div style="margin-top:16px;border-top:2px solid #e5e7eb;padding-top:16px;">
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                        <div>
-                            <label style="font-weight:600;display:block;margin-bottom:6px;">Kellgren-Lawrence Grade</label>
-                            <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                                <label class="xray-check"><input type="radio" name="klGrade" value=""> N/A</label>
-                                <label class="xray-check"><input type="radio" name="klGrade" value="1"> I — Doubtful</label>
-                                <label class="xray-check"><input type="radio" name="klGrade" value="2"> II — Minimal</label>
-                                <label class="xray-check"><input type="radio" name="klGrade" value="3"> III — Moderate</label>
-                                <label class="xray-check"><input type="radio" name="klGrade" value="4"> IV — Severe</label>
-                            </div>
-                        </div>
-                        <div>
-                            <label style="font-weight:600;display:block;margin-bottom:6px;">Additional Findings</label>
-                            <textarea id="xmAdditionalFindings" rows="3" placeholder="e.g., loose bodies, AVN changes, hardware from prior surgery..." style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;resize:vertical;"></textarea>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Action buttons -->
-                <div style="display:flex;gap:12px;margin-top:20px;justify-content:flex-end;">
-                    <button class="btn" style="background:#059669;color:white;padding:10px 24px;" onclick="saveXrayFromModal()">💾 Save & Close</button>
-                    <button class="btn" style="background:#6b7280;color:white;padding:10px 24px;" onclick="closeXrayModal()">Cancel</button>
                 </div>
             </div>
         </div>
@@ -1250,16 +567,6 @@
         let currentPreop = null;
         let lastRecommendation = null;
 
-        // CPT code mapping
-        const CPT_MAP = {
-            'TKA': { code: '27447', desc: 'Total Knee Arthroplasty' },
-            'Partial_Knee': { code: '27446', desc: 'Unicompartmental Knee Arthroplasty' },
-            'THA': { code: '27130', desc: 'Total Hip Arthroplasty' },
-            'Partial_Hip': { code: '27125', desc: 'Hemiarthroplasty, Hip (degenerative)' },
-            'Hip_Fracture': { code: '27236', desc: 'Hemiarthroplasty for Hip Fracture' },
-            'TSA': { code: '23472', desc: 'Total Shoulder Arthroplasty' }
-        };
-
         document.addEventListener('DOMContentLoaded', async () => {
             if (!CLINIC_ID) { window.location.href = '/index.html'; return; }
             
@@ -1270,6 +577,7 @@
                 ';color:white;padding:2px 8px;border-radius:10px;font-size:0.75rem;margin-left:6px;">' + 
                 (roleLabels[USER_ROLE] || USER_ROLE) + '</span>';
             
+            // Role-based nav
             document.querySelectorAll('.nav-link').forEach(link => {
                 const href = link.getAttribute('href');
                 if (USER_ROLE === 'nurse') {
@@ -1279,28 +587,37 @@
                 }
             });
             
+            // Role-based tab filtering
+            if (USER_ROLE === 'nurse') {
+                // Hide Prosthesis Calculator (surgeon-only tool)
+                var prosthTab = document.getElementById('prepTabProsthesis');
+                if (prosthTab) prosthTab.style.display = 'none';
+                // Default to History tab for nurses (most common nurse task)
+                switchPrepTab('history');
+            }
+            
             await loadPatients();
             
+            // Check URL param
             const params = new URLSearchParams(window.location.search);
             const patientId = params.get('patient');
             if (patientId) {
                 document.getElementById('patientSelect').value = patientId;
                 selectPatient();
             }
-            // Initialize NSAID allergy visibility
-            toggleNSAIDAllergy();
         });
 
         async function loadPatients() {
             try {
                 const resp = await fetch(`/api/patients?clinic_id=${CLINIC_ID}`);
                 patients = await resp.json();
+                
                 const select = document.getElementById('patientSelect');
                 select.innerHTML = '<option value="">Select patient...</option>';
                 patients.filter(p => p.episode_id).forEach(p => {
                     const opt = document.createElement('option');
                     opt.value = p.id;
-                    opt.textContent = `${p.last_name}, ${p.first_name}${p.mrn ? ' [' + p.mrn + ']' : ''} — ${p.surgery_type || 'No surgery'}`;
+                    opt.textContent = `${p.last_name}, ${p.first_name} — ${p.surgery_type || 'No surgery'}`;
                     select.appendChild(opt);
                 });
             } catch(e) { console.error('Error loading patients:', e); }
@@ -1308,70 +625,35 @@
 
         async function selectPatient() {
             const id = document.getElementById('patientSelect').value;
-            if (!id) { currentPatient = null; currentPreop = null; document.getElementById('patientName').textContent = 'Select a Patient'; document.getElementById('patientMeta').textContent = ''; return; }
+            if (!id) {
+                currentPatient = null;
+                currentPreop = null;
+                document.getElementById('patientName').textContent = 'Select a Patient';
+                document.getElementById('patientMeta').textContent = '';
+                return;
+            }
             
             currentPatient = patients.find(p => p.id === id);
             if (!currentPatient) return;
             
+            // Reset surgical prep state
             surgPrepId = null;
             historyEntries = [];
             renderHistoryEntries();
-            
-            // Clear all form fields
-            ['contractSignature','contractCaregiver','contractCaregiverPhone','consentPatientSig','consentWitness','consentAdditional',
-             'histPriorInjuries','histAllergies','histMedications','histSurgeonNotes','insSecondary','insProgramNotes','insAuthNum'].forEach(id => {
-                const el = document.getElementById(id); if (el) el.value = '';
-            });
-            ['contractContactMethod','contractTransport','insPlanType','insAuthStatus','histProcedure','histDiagnosis',
-             'histNSAIDAllergy'].forEach(id => {
-                const el = document.getElementById(id); if (el) el.selectedIndex = 0;
-            });
-            ['histPT','histInjCort','histInjHA','histInjPRP','histArthroscopy','histBracing','histNSAIDs',
-             'insTEAM','insBPCI','insCJR','insCommBundle','insMSSP',
-             'xmNarrowMedial','xmNarrowLateral','xmNarrowPF','xmOsteoMedial','xmOsteoLateral','xmOsteoPF',
-             'xmSclerosisMedial','xmSclerosisLateral','xmSclerosisPF',
-             'hipAcetSclerosis','hipAcetCysts','hipAcetOsteo','hipProtrusio','hipDysplasia',
-             'hipFemOsteo','hipFemSclerosis','hipHO','hipLLD','hipCAM','hipPincer'].forEach(id => {
-                const el = document.getElementById(id); if (el) el.checked = false;
-            });
-            // Reset x-ray radio buttons
-            document.querySelectorAll('input[name="xrayAlign"], input[name="hipNarrow"], input[name="hipFemHead"], input[name="klGrade"]').forEach(r => { if (r.value === '') r.checked = true; else r.checked = false; });
+            // Clear form fields
+            ['contractSignature','contractCaregiver','contractCaregiverPhone','consentPatientSig','consentWitness','consentAdditional','histPriorInjuries','histAllergies','histMedications','histSurgeonNotes','insCarrier','insPolicyNum','insGroupNum','insSecondary','insProgramNotes','insAuthNum'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            ['contractContactMethod','contractTransport','insPlanType','insAuthStatus'].forEach(id => { const el = document.getElementById(id); if (el) el.selectedIndex = 0; });
+            ['histPT','histInjCort','histInjHA','histInjPRP','histArthroscopy','histBracing','histNSAIDs','insTEAM','insBPCI','insCJR','insCommBundle','insMSSP'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
             document.querySelectorAll('#consentGeneralRisks input').forEach(cb => cb.checked = false);
-            ['contractSignedBadge','consentSignedBadge','insAuthBadge'].forEach(id => {
-                const el = document.getElementById(id); if (el) el.style.display = 'none';
-            });
-            // Hide sub-sections
-            ['histPTWeeksRow','histSteroidDateRow'].forEach(id => {
-                const el = document.getElementById(id); if (el) el.style.display = 'none';
-            });
-            ['histPTWeeks','histSteroidDate','insAuthStart','insAuthEnd',
-             'xmNarrowMedialMM','xmNarrowLateralMM','xmNarrowPFMM','hipLLDmm','xmAdditionalFindings'].forEach(id => {
-                const el = document.getElementById(id); if (el) el.value = '';
-            });
-            // Clear dynamic displays
-            ['histCPTBadge','precertCPT','precertICD','deformitySource','insAuthRequiredNote','histSteroidWarning'].forEach(id => {
-                const el = document.getElementById(id); if (el) { el.innerHTML = ''; if(el.style) el.style.display = (id === 'histSteroidWarning') ? 'none' : ''; }
-            });
-            document.getElementById('histNSAIDAllergyRow').style.display = 'block'; // shown by default (no NSAIDs)
+            ['contractSignedBadge','consentSignedBadge','insAuthBadge'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
             
-            document.getElementById('patientName').innerHTML = `${currentPatient.first_name} ${currentPatient.last_name}` +
-                (currentPatient.mrn ? ` <span style="font-size:0.85rem;color:#94a3b8;font-weight:400;">[${currentPatient.mrn}]</span>` : '');
-            const daysPostOp = currentPatient.surgery_date ? Math.floor((Date.now() - new Date(currentPatient.surgery_date)) / (1000*60*60*24)) : null;
+            document.getElementById('patientName').textContent = 
+                `${currentPatient.first_name} ${currentPatient.last_name}`;
+            
+            const daysPostOp = currentPatient.surgery_date ? 
+                Math.floor((Date.now() - new Date(currentPatient.surgery_date)) / (1000*60*60*24)) : null;
             document.getElementById('patientMeta').textContent = 
                 `${currentPatient.surgery_type || ''} · ${currentPatient.surgeon_first_name ? 'Dr. ' + currentPatient.surgeon_last_name : ''} · ${daysPostOp !== null && daysPostOp >= 0 ? 'Day ' + daysPostOp + ' post-op' : currentPatient.surgery_date ? Math.abs(daysPostOp) + ' days to surgery' : 'No surgery date'}`;
-            
-            // Auto-set procedure from surgery_type and LOCK it
-            const stMap = {'Total Knee Arthroplasty':'TKA','TKA':'TKA','Total Hip Arthroplasty':'THA','THA':'THA','Total Shoulder Arthroplasty':'TSA','TSA':'TSA','Partial Knee':'Partial_Knee','UKA':'Partial_Knee','Partial_Knee':'Partial_Knee','Partial Hip':'Partial_Hip','Partial_Hip':'Partial_Hip','Hemiarthroplasty':'Partial_Hip','Hip Fracture':'Hip_Fracture','Hip_Fracture':'Hip_Fracture','Revision TKA':'TKA','Revision THA':'THA'};
-            const mapped = stMap[currentPatient.surgery_type];
-            const procSelect = document.getElementById('histProcedure');
-            if (mapped) {
-                procSelect.value = mapped;
-                // Lock procedure — disable options that don't match the episode
-                Array.from(procSelect.options).forEach(opt => {
-                    if (opt.value && opt.value !== mapped) opt.disabled = true;
-                });
-                onProcedureChange();
-            }
             
             // Load preop data
             try {
@@ -1379,6 +661,7 @@
                 const data = await resp.json();
                 if (data.hasPreop) {
                     currentPreop = data.preop;
+                    // Try full preop record
                     const fullResp = await fetch(`/api/preop-assessments?patient_id=${id}`);
                     const fullList = await fullResp.json();
                     if (fullList.length > 0) {
@@ -1388,248 +671,17 @@
                 }
             } catch(e) {}
             
+            // Auto-fill age and BMI from preop
             if (currentPreop?.age) document.getElementById('calcAge').value = currentPreop.age;
             else if (currentPatient.date_of_birth) {
                 const age = Math.floor((Date.now() - new Date(currentPatient.date_of_birth)) / (365.25*24*60*60*1000));
                 document.getElementById('calcAge').value = age;
             }
+            
             if (currentPreop?.bmi) document.getElementById('calcBMI').value = parseFloat(currentPreop.bmi).toFixed(1);
             
             runCalculator();
             await loadSurgPrepData(id);
-            // Auto-populate disposition from preop if fields are empty
-            autoPopulateDisposition();
-        }
-
-        // ============ PROCEDURE / DIAGNOSIS HELPERS ============
-        function onProcedureChange() {
-            const proc = document.getElementById('histProcedure').value;
-            const badge = document.getElementById('histCPTBadge');
-            if (proc && CPT_MAP[proc]) {
-                badge.innerHTML = '<span class="code-badge">CPT ' + CPT_MAP[proc].code + '</span> <span style="font-size:0.85rem;color:#374151;">' + CPT_MAP[proc].desc + '</span>';
-            } else {
-                badge.innerHTML = '';
-            }
-            // Toggle knee vs hip x-ray sections in modal
-            const isHip = ['THA','Partial_Hip','Hip_Fracture'].includes(proc);
-            const kneeSection = document.getElementById('xrayKneeSection');
-            const hipSection = document.getElementById('xrayHipSection');
-            if (kneeSection) kneeSection.style.display = isHip ? 'none' : 'block';
-            if (hipSection) hipSection.style.display = isHip ? 'block' : 'none';
-            // Toggle knee-specific prosthesis fields
-            const pclRow = document.querySelector('[name="pclStatus"]')?.closest('.field-row');
-            const collRow = document.querySelector('[name="collaterals"]')?.closest('.field-row');
-            if (pclRow) pclRow.style.display = isHip ? 'none' : 'block';
-            if (collRow) collRow.style.display = isHip ? 'none' : 'block';
-            // Update education exercises for hip
-            const exList = document.getElementById('eduExerciseList');
-            if (exList) {
-                if (isHip) {
-                    exList.innerHTML = '<span>• Glute bridges — 10 reps, hold 5 sec</span><span>• Clamshells — 10 reps each side</span><span>• Hip abduction (side lying) — 10 reps</span><span>• Ankle pumps — 20 reps</span><span>• Seated marching — 10 reps each</span>';
-                } else {
-                    exList.innerHTML = '<span>• Quad sets — 10 reps, hold 5 sec</span><span>• Straight leg raises — 10 reps each</span><span>• Heel slides — 10 reps</span><span>• Ankle pumps — 20 reps</span><span>• Mini squats (hold onto counter) — 10 reps</span>';
-                }
-            }
-        }
-
-        // ============ TOGGLE HELPERS ============
-        function togglePTWeeks() {
-            document.getElementById('histPTWeeksRow').style.display = document.getElementById('histPT').checked ? 'block' : 'none';
-        }
-
-        function toggleSteroidCheck() {
-            const show = document.getElementById('histInjCort').checked;
-            document.getElementById('histSteroidDateRow').style.display = show ? 'block' : 'none';
-            if (!show) document.getElementById('histSteroidWarning').style.display = 'none';
-        }
-
-        function checkSteroid3Months() {
-            const injDate = document.getElementById('histSteroidDate').value;
-            const surgDate = currentPatient?.surgery_date;
-            const warn = document.getElementById('histSteroidWarning');
-            if (!injDate || !surgDate) { warn.style.display = 'none'; return; }
-            const inj = new Date(injDate);
-            const surg = new Date(surgDate);
-            const diffDays = (surg - inj) / (1000*60*60*24);
-            if (diffDays < 90) {
-                warn.style.display = 'block';
-                warn.innerHTML = '⛔ HARD STOP — Surgery date (' + surgDate + ') is only ' + Math.round(diffDays) + ' days after last corticosteroid injection (' + injDate + '). Must be >90 days (3 months). Postpone surgery or verify injection date.';
-            } else {
-                warn.style.display = 'none';
-            }
-        }
-
-        function toggleNSAIDAllergy() {
-            // Show allergy question when NSAIDs NOT checked
-            document.getElementById('histNSAIDAllergyRow').style.display = document.getElementById('histNSAIDs').checked ? 'none' : 'block';
-        }
-
-        function toggleXraySub() {} // No-op — x-ray now in modal
-        function toggleCompartmentDetail() {} // No-op — x-ray now in modal
-        function xrayChanged() { updatePrecertXraySummary(); } // Delegate to precert update
-
-        function updatePrecertXraySummary() {
-            const d = getXrayData();
-            let parts = [];
-            const alignText = { neutral:'neutral alignment', varus_mild:'mild varus', varus_moderate:'moderate varus', varus_severe:'severe varus', valgus_mild:'mild valgus', valgus_moderate:'moderate valgus', valgus_severe:'severe valgus' };
-            if (d.alignment) parts.push('Alignment: ' + (alignText[d.alignment] || d.alignment));
-            
-            // Knee narrowing
-            const narrowComps = [];
-            ['medial','lateral','pf'].forEach(c => {
-                if (d['narrow_' + c]) {
-                    const capC = c === 'pf' ? 'patellofemoral' : c;
-                    let t = d['narrow_' + c + '_sev'] || 'present';
-                    if (t === 'severe') t = 'severe (bone-on-bone)';
-                    let mm = d['narrow_' + c + '_mm'];
-                    narrowComps.push(capC + ': ' + t + (mm ? ', ' + mm + 'mm remaining' : ''));
-                }
-            });
-            if (narrowComps.length) parts.push('Joint space narrowing — ' + narrowComps.join('; '));
-
-            // Knee osteophytes
-            const osteoComps = [];
-            ['medial','lateral','pf'].forEach(c => {
-                if (d['osteo_' + c]) {
-                    const capC = c === 'pf' ? 'patellofemoral' : c;
-                    osteoComps.push(capC + ': ' + (d['osteo_' + c + '_sev'] || 'present'));
-                }
-            });
-            if (osteoComps.length) parts.push('Osteophytes — ' + osteoComps.join('; '));
-
-            // Knee sclerosis
-            const sclerosisComps = [];
-            ['medial','lateral','pf'].forEach(c => {
-                if (d['sclerosis_' + c]) sclerosisComps.push(c === 'pf' ? 'patellofemoral' : c);
-            });
-            if (sclerosisComps.length) parts.push('Subchondral sclerosis in ' + sclerosisComps.join(', ') + ' compartment(s)');
-
-            // Hip findings
-            if (d.hip_narrowing) parts.push('Hip narrowing: ' + d.hip_narrowing.replace(/_/g, ' '));
-            if (d.hip_femoral_head && d.hip_femoral_head !== 'round') parts.push('Femoral head: ' + d.hip_femoral_head);
-            const hipFindings = [];
-            if (d.hip_acet_sclerosis) hipFindings.push('acetabular sclerosis');
-            if (d.hip_acet_cysts) hipFindings.push('subchondral cysts');
-            if (d.hip_acet_osteo) hipFindings.push('acetabular osteophytes');
-            if (d.hip_protrusio) hipFindings.push('protrusio');
-            if (d.hip_dysplasia) hipFindings.push('dysplasia');
-            if (d.hip_fem_osteo) hipFindings.push('femoral osteophytes');
-            if (d.hip_ho) hipFindings.push('heterotopic ossification');
-            if (d.hip_lld) hipFindings.push('leg length discrepancy' + (d.hip_lld_mm ? ' (' + d.hip_lld_mm + 'mm)' : ''));
-            if (hipFindings.length) parts.push('Hip: ' + hipFindings.join(', '));
-
-            if (d.kl_grade) parts.push('Kellgren-Lawrence Grade ' + d.kl_grade);
-            if (d.additional) parts.push('Notes: ' + d.additional.substring(0, 80));
-            
-            const el = document.getElementById('precertXraySummary');
-            if (el) el.innerHTML = parts.length > 0 ? parts.map(p => '<div style="margin-bottom:6px;">• ' + p + '</div>').join('') : '<span style="color:#6b7280;">Complete X-ray findings on the Hist/PE tab to auto-populate.</span>';
-        }
-
-        // ============ TAB SWITCHING ============
-        function switchPrepTab(tab) {
-            document.querySelectorAll('.prep-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.prep-panel').forEach(p => p.classList.remove('active'));
-            
-            const panels = { histpe:'panelHistpe', prosthesis:'panelProsthesis', equipment:'panelEquipment', precert:'panelPrecert', contract:'panelContract', consent:'panelConsent', insurance:'panelInsurance', disposition:'panelDisposition', prehab:'panelPrehab', education:'panelEducation' };
-            document.getElementById(panels[tab]).classList.add('active');
-            
-            const tabOrder = ['histpe','prosthesis','equipment','precert','contract','consent','insurance','disposition','prehab','education'];
-            const tabs = document.querySelectorAll('.prep-tab');
-            const idx = tabOrder.indexOf(tab);
-            if (idx >= 0 && tabs[idx]) tabs[idx].classList.add('active');
-            
-            if (tab === 'contract') populateContract();
-            if (tab === 'consent') populateConsent();
-            if (tab === 'insurance') updateAuthBadge();
-            if (tab === 'precert') {
-                updatePrecertXraySummary();
-                updatePrecertCodes();
-                // Auto-check conservative care from history
-                if (document.getElementById('histPT').checked) document.getElementById('consPT').checked = true;
-                if (document.getElementById('histNSAIDs').checked) document.getElementById('consNSAIDs').checked = true;
-                if (document.getElementById('histInjCort').checked || document.getElementById('histInjHA').checked) document.getElementById('consInjections').checked = true;
-                if (document.getElementById('histBracing').checked) document.getElementById('consBracing').checked = true;
-            }
-        }
-
-        function updatePrecertCodes() {
-            const proc = document.getElementById('histProcedure').value;
-            const diag = document.getElementById('histDiagnosis');
-            const cptDiv = document.getElementById('precertCPT');
-            const icdDiv = document.getElementById('precertICD');
-            
-            if (proc && CPT_MAP[proc]) {
-                cptDiv.innerHTML = '<span class="code-badge">CPT ' + CPT_MAP[proc].code + '</span> ' + CPT_MAP[proc].desc;
-            } else {
-                cptDiv.innerHTML = '<span style="color:#6b7280;">Select procedure on Hist/PE tab</span>';
-            }
-            if (diag.value) {
-                const txt = diag.options[diag.selectedIndex].textContent;
-                icdDiv.innerHTML = '<span class="code-badge">' + diag.value + '</span> ' + txt.split(' — ')[1];
-            } else {
-                icdDiv.innerHTML = '<span style="color:#6b7280;">Select diagnosis on Hist/PE tab</span>';
-            }
-        }
-
-        // ============ INSURANCE HELPERS ============
-        function onPlanTypeChange() {
-            const plan = document.getElementById('insPlanType').value;
-            // Auto-select quality programs
-            ['insTEAM','insBPCI','insCJR','insCommBundle','insMSSP'].forEach(id => document.getElementById(id).checked = false);
-            const note = document.getElementById('insAuthRequiredNote');
-            const authStatus = document.getElementById('insAuthStatus');
-            
-            if (plan === 'medicare_ffs') {
-                document.getElementById('insTEAM').checked = true;
-                document.getElementById('insBPCI').checked = true;
-                note.textContent = '(typically not required for Medicare FFS)';
-                authStatus.value = 'not_required';
-            } else if (plan === 'medicare_advantage') {
-                note.textContent = '(prior auth typically required)';
-                authStatus.value = 'not_submitted';
-            } else if (plan === 'commercial_hmo') {
-                document.getElementById('insCommBundle').checked = true;
-                note.textContent = '(prior auth typically required)';
-                authStatus.value = 'not_submitted';
-            } else if (plan === 'commercial_ppo' || plan === 'commercial_epo') {
-                document.getElementById('insCommBundle').checked = true;
-                note.textContent = '(prior auth may be required)';
-                authStatus.value = 'not_submitted';
-            } else if (plan === 'workers_comp' || plan === 'medicaid') {
-                note.textContent = '(prior auth typically required)';
-                authStatus.value = 'not_submitted';
-            } else if (plan === 'tricare') {
-                note.textContent = '(referral/auth may be needed)';
-                authStatus.value = 'not_submitted';
-            } else if (plan === 'self_pay') {
-                note.textContent = '(not applicable)';
-                authStatus.value = 'not_required';
-            } else {
-                note.textContent = '';
-            }
-            updateAuthBadge();
-        }
-
-        function updateAuthBadge() {
-            const status = document.getElementById('insAuthStatus').value;
-            const badge = document.getElementById('insAuthBadge');
-            const colors = { approved:{bg:'#dcfce7',border:'#86efac',color:'#166534',text:'✅ APPROVED'}, denied:{bg:'#fee2e2',border:'#fca5a5',color:'#991b1b',text:'❌ DENIED'}, submitted:{bg:'#fef3c7',border:'#fde68a',color:'#92400e',text:'⏳ PENDING'}, appeal:{bg:'#fef3c7',border:'#fde68a',color:'#92400e',text:'⏳ UNDER APPEAL'}, not_required:{bg:'#f0f9ff',border:'#bae6fd',color:'#1e40af',text:'ℹ️ NOT REQUIRED'} };
-            const c = colors[status];
-            if (c) {
-                badge.style.display = 'block';
-                badge.style.background = c.bg;
-                badge.style.border = '1px solid ' + c.border;
-                badge.style.color = c.color;
-                badge.textContent = c.text;
-                if (status === 'approved') {
-                    const num = document.getElementById('insAuthNum').value;
-                    const start = document.getElementById('insAuthStart').value;
-                    const end = document.getElementById('insAuthEnd').value;
-                    if (num) badge.textContent += ' — #' + num;
-                    if (start && end) badge.textContent += ' (' + start + ' to ' + end + ')';
-                    else if (end) badge.textContent += ' (expires ' + end + ')';
-                }
-            } else { badge.style.display = 'none'; }
         }
 
         // ============ PROSTHESIS CALCULATOR ============
@@ -1640,93 +692,14 @@
             const pcl = document.querySelector('input[name="pclStatus"]:checked')?.value || 'intact';
             const coll = document.querySelector('input[name="collaterals"]:checked')?.value || 'intact';
             const deformity = parseFloat(document.getElementById('calcDeformity').value) || 0;
-            const proc = document.getElementById('histProcedure').value;
-            const isHip = ['THA','Partial_Hip','Hip_Fracture'].includes(proc);
             
             if (!age || !bmi) {
                 document.getElementById('calcResult').innerHTML = '<div style="text-align:center;padding:40px;color:#64748b;">Enter age and BMI to generate recommendation</div>';
                 return;
             }
             
-            let fixation, bearing, stem, constraint, reasons = [];
-
-            if (isHip) {
-                // ===== HIP PROSTHESIS LOGIC =====
-                let headSize = '32mm';
-                let bearingSurface = 'Cobalt-Chrome on Highly Cross-linked Poly';
-                let cupType = 'Uncemented Porous-Coated';
-                let stemType = 'Standard Taper';
-                
-                // Fixation decision
-                if (age >= 75 || bone === 'soft') {
-                    fixation = 'Cemented'; stem = 'Polished Taper';
-                    reasons.push(age >= 75 ? `Age ${age} (≥75) — cemented stem for reliable fixation` : 'Soft bone — cemented stem for immediate stability');
-                } else if (age < 55 && bone === 'good' && bmi <= 35) {
-                    fixation = 'Uncemented'; stem = 'Short Stem';
-                    reasons.push(`Age ${age} (<55) — bone-preserving short stem with biological fixation`);
-                    reasons.push('Good bone quality supports press-fit');
-                } else {
-                    fixation = 'Uncemented'; stem = 'Standard Taper';
-                    reasons.push('Standard uncemented tapered stem — workhorse for most patients');
-                    if (bone === 'good') reasons.push('Good bone quality supports biological fixation');
-                }
-                
-                // Bearing surface
-                if (age < 55) {
-                    bearingSurface = 'Ceramic on Highly Cross-linked Poly';
-                    headSize = '36mm';
-                    reasons.push(`Age ${age} (<55) — ceramic head for lower wear in active patient`);
-                    reasons.push('36mm head for improved stability and range of motion');
-                } else if (age >= 75) {
-                    headSize = '36mm';
-                    bearingSurface = 'Cobalt-Chrome on Highly Cross-linked Poly';
-                    reasons.push('36mm head — reduces dislocation risk in elderly');
-                } else {
-                    headSize = '32mm';
-                    reasons.push('Standard 32mm cobalt-chrome head on highly cross-linked poly');
-                }
-                
-                // BMI adjustments
-                if (bmi > 40) {
-                    headSize = '36mm';
-                    if (fixation === 'Uncemented') { fixation = 'Cemented'; stem = 'Polished Taper'; }
-                    reasons.push(`BMI ${bmi.toFixed(1)} (>40) — cemented stem, larger head for stability under high load`);
-                } else if (bmi > 35) {
-                    headSize = '36mm';
-                    reasons.push(`BMI ${bmi.toFixed(1)} (>35) — 36mm head for enhanced stability`);
-                }
-                
-                // Cup — always uncemented unless very poor bone
-                if (bone === 'soft' && age >= 80) {
-                    cupType = 'Cemented All-Poly';
-                    reasons.push('Very elderly + soft bone — cemented all-poly cup');
-                }
-                
-                bearing = bearingSurface;
-                constraint = headSize;
-                lastRecommendation = { fixation, bearing, stem, constraint, reasons, age, bmi, bone, isHip: true, headSize, cupType, bearingSurface, stemType: stem };
-                
-                const mainLabel = `${fixation} THA — ${headSize} Head`;
-                const subLabel = `${stem} Stem · ${cupType}`;
-                
-                let html = `
-                    <div class="rec-main">${mainLabel}</div>
-                    <div class="rec-sub">${subLabel}</div>
-                    <div class="rec-sub" style="margin-top:4px;font-size:0.8rem;color:#059669;">${bearingSurface}</div>
-                    <div style="margin-top: 16px; text-align: left;">
-                        <div style="font-weight: 600; margin-bottom: 8px;">Clinical Rationale:</div>
-                        ${reasons.map(r => '<div style="padding: 4px 0; font-size: 0.85rem; color: #374151;">• ' + r + '</div>').join('')}
-                    </div>
-                    <div style="margin-top: 16px;">
-                        <button class="btn" style="background: #059669; color: white;" onclick="generateEquipmentList();switchPrepTab('equipment')">📦 Generate Equipment List</button>
-                    </div>`;
-                document.getElementById('calcResult').innerHTML = html;
-                generateEquipmentList();
-                return;
-            }
-            
-            // ===== KNEE PROSTHESIS LOGIC (existing) =====
             // Decision tree (priority order — most constrained first)
+            let fixation, bearing, stem, constraint, reasons = [];
             
             if (coll === 'torn') {
                 // Collaterals torn — maximum constraint needed
@@ -1844,37 +817,7 @@
             
             let items = [];
             
-            if (r.isHip) {
-                // ===== HIP EQUIPMENT =====
-                items.push({ cat: 'Implant System', item: 'Primary THA System Tray' });
-                items.push({ cat: 'Implant System', item: `Acetabular Cup — ${r.cupType}` });
-                items.push({ cat: 'Implant System', item: `Acetabular Liner — ${r.bearingSurface}` });
-                items.push({ cat: 'Implant System', item: `Femoral Head — ${r.headSize} (sized intraop)` });
-                items.push({ cat: 'Implant System', item: `Femoral Stem — ${r.stemType} (${r.fixation})` });
-                
-                if (r.fixation === 'Cemented') {
-                    items.push({ cat: 'Cement', item: 'Bone Cement (PMMA) — Antibiotic-loaded' });
-                    items.push({ cat: 'Cement', item: 'Cement Mixing System' });
-                    items.push({ cat: 'Cement', item: 'Cement Gun + Nozzles' });
-                    items.push({ cat: 'Cement', item: 'Cement Restrictor' });
-                    items.push({ cat: 'Cement', item: 'Femoral Canal Brush + Lavage' });
-                }
-                
-                items.push({ cat: 'Instruments', item: 'Acetabular Reamers (sequential sizes)' });
-                items.push({ cat: 'Instruments', item: 'Cup Impactor' });
-                items.push({ cat: 'Instruments', item: 'Acetabular Screws (backup, 2-3)' });
-                items.push({ cat: 'Instruments', item: 'Femoral Broaches (sequential sizes)' });
-                items.push({ cat: 'Instruments', item: 'Femoral Offset / Neck Length Trials' });
-                items.push({ cat: 'Instruments', item: 'Head-Neck Trial Set' });
-                items.push({ cat: 'Instruments', item: 'Leg Length Measurement Device / Caliper' });
-                
-                items.push({ cat: 'Surgical Supplies', item: 'Pulse Lavage + Saline (3L)' });
-                items.push({ cat: 'Surgical Supplies', item: 'Drain (if surgeon preference)' });
-                items.push({ cat: 'Surgical Supplies', item: 'Wound Closure (staples + steri-strips)' });
-                items.push({ cat: 'Surgical Supplies', item: 'Sterile Dressing + ABD Pad' });
-                items.push({ cat: 'Surgical Supplies', item: 'Hip Abduction Pillow (post-op)' });
-            } else {
-                // ===== KNEE EQUIPMENT (existing) =====
+            // Always needed
             items.push({ cat: 'Implant System', item: 'Primary TKA System Tray' });
             items.push({ cat: 'Implant System', item: 'Femoral Component (sized intraop)' });
             items.push({ cat: 'Implant System', item: 'Tibial Baseplate (sized intraop)' });
@@ -1913,7 +856,6 @@
             items.push({ cat: 'Surgical Supplies', item: 'Drain (if surgeon preference)' });
             items.push({ cat: 'Surgical Supplies', item: 'Wound Closure (staples + steri-strips)' });
             items.push({ cat: 'Surgical Supplies', item: 'Sterile Dressing + ACE Wrap' });
-            } // end knee/hip branch
             
             const el = document.getElementById('equipmentList');
             const grouped = {};
@@ -1946,70 +888,34 @@
             document.getElementById('equipPrintBar').style.display = 'flex';
         }
 
-        
         // ============ PRECERTIFICATION ============
         function generatePrecert() {
             const patientName = currentPatient ? `${currentPatient.first_name} ${currentPatient.last_name}` : '[Patient Name]';
             const dob = currentPatient?.date_of_birth || '[DOB]';
             const mrn = currentPatient?.mrn || '[MRN]';
+            const surgeryType = currentPatient?.surgery_type || 'Total Knee Arthroplasty';
             const surgeonName = currentPatient?.surgeon_first_name ? `Dr. ${currentPatient.surgeon_first_name} ${currentPatient.surgeon_last_name}` : '[Surgeon]';
-            
-            const proc = document.getElementById('histProcedure').value;
-            const procName = proc && CPT_MAP[proc] ? CPT_MAP[proc].desc : (currentPatient?.surgery_type || 'Arthroplasty');
-            const cptCode = proc && CPT_MAP[proc] ? CPT_MAP[proc].code : '[CPT]';
-            const diagSelect = document.getElementById('histDiagnosis');
-            const icdCode = diagSelect.value || '[ICD-10]';
-            const icdDesc = diagSelect.value ? diagSelect.options[diagSelect.selectedIndex].textContent.split(' — ')[1] : '[Diagnosis]';
             
             const age = document.getElementById('calcAge').value || '[Age]';
             const bmi = document.getElementById('calcBMI').value || '[BMI]';
-            const joint = procName.includes('Hip') || procName.includes('hip') ? 'hip' : procName.includes('Shoulder') ? 'shoulder' : 'knee';
             
             // Conservative care
             const cons = [];
-            if (document.getElementById('consPT').checked) {
-                const weeks = document.getElementById('histPTWeeks')?.value;
-                cons.push('Physical therapy' + (weeks ? ' (' + weeks + ' weeks)' : ' (≥6 weeks)'));
-            }
+            if (document.getElementById('consPT').checked) cons.push('Physical therapy (≥6 weeks)');
             if (document.getElementById('consNSAIDs').checked) cons.push('NSAIDs / Anti-inflammatory medications');
             if (document.getElementById('consInjections').checked) cons.push('Corticosteroid / hyaluronic acid injections');
             if (document.getElementById('consBracing').checked) cons.push('Bracing / assistive device');
             if (document.getElementById('consActivity').checked) cons.push('Activity modification');
             if (document.getElementById('consWeight').checked) cons.push('Weight loss counseling');
             
-            // X-ray — build from Hist/PE data
-            const xd = getXrayData();
-            const alignText = { neutral:'neutral alignment', varus_mild:'mild varus deformity', varus_moderate:'moderate varus deformity', varus_severe:'severe varus deformity', valgus_mild:'mild valgus deformity', valgus_moderate:'moderate valgus deformity', valgus_severe:'severe valgus deformity' };
+            // X-ray
+            const narrowing = document.getElementById('xrayNarrowing').value;
+            const osteo = document.getElementById('xrayOsteophytes').value;
+            const alignment = document.getElementById('xrayAlignment').value;
             
-            let narrowParts = [];
-            ['medial','lateral','pf'].forEach(c => {
-                if (xd['narrow_' + c]) {
-                    const name = c === 'pf' ? 'patellofemoral' : c;
-                    let sev = xd['narrow_' + c + '_sev'] || '';
-                    if (sev === 'severe') sev = 'severe (bone-on-bone)';
-                    let mm = xd['narrow_' + c + '_mm'];
-                    narrowParts.push(sev + ' joint space narrowing in the ' + name + ' compartment' + (mm ? ' with ' + mm + 'mm remaining clear space' : ''));
-                }
-            });
-            let osteoParts = [];
-            ['medial','lateral','pf'].forEach(c => {
-                if (xd['osteo_' + c]) {
-                    const name = c === 'pf' ? 'patellofemoral' : c;
-                    osteoParts.push(xd['osteo_' + c + '_sev'] + ' osteophyte formation in the ' + name + ' compartment');
-                }
-            });
-            let sclerosisParts = [];
-            ['medial','lateral','pf'].forEach(c => {
-                if (xd['sclerosis_' + c]) sclerosisParts.push(c === 'pf' ? 'patellofemoral' : c);
-            });
-            
-            let xrayLine = 'Weight-bearing radiographs demonstrate ';
-            const xrayItems = [];
-            if (narrowParts.length) xrayItems.push(narrowParts.join(', '));
-            if (osteoParts.length) xrayItems.push(osteoParts.join(', '));
-            if (sclerosisParts.length) xrayItems.push('subchondral sclerosis in the ' + sclerosisParts.join(', ') + ' compartment(s)');
-            if (xd.alignment) xrayItems.push(alignText[xd.alignment] || xd.alignment);
-            xrayLine += xrayItems.length ? xrayItems.join(', ') + '.' : '[radiographic findings].';
+            const narrowingText = { mild: 'mild joint space narrowing', moderate: 'moderate joint space narrowing', severe: 'severe joint space narrowing with bone-on-bone contact' };
+            const osteoText = { none: 'no osteophytes', mild: 'mild osteophyte formation', moderate: 'moderate osteophyte formation', severe: 'severe osteophyte formation' };
+            const alignText = { neutral: 'neutral alignment', varus_mild: 'mild varus deformity (<10°)', varus_severe: 'severe varus deformity (≥10°)', valgus_mild: 'mild valgus deformity (<10°)', valgus_severe: 'severe valgus deformity (≥10°)' };
             
             // PROM scores
             let promText = '';
@@ -2018,6 +924,7 @@
                 promText = `Pre-operative ${scoreType} score: ${Math.round(currentPreop.joint_score_preop)}/100 (projected post-operative: ${Math.round(currentPreop.projected_postop_score || 0)}/100, expected improvement: +${Math.round(currentPreop.expected_improvement || 0)} points).`;
             }
             
+            // Prosthesis recommendation
             let prosthesisText = '';
             if (lastRecommendation) {
                 const r = lastRecommendation;
@@ -2025,10 +932,7 @@
                 prosthesisText = `Planned implant: ${r.fixation.toLowerCase()} ${bearingFull}${r.stem !== 'None' ? ' with tibial stem extension' : ''}${r.constraint === 'Max CCK Poly' ? ' with constrained condylar knee (CCK) polyethylene' : ''}.`;
             }
             
-            const output = `PRECERTIFICATION REQUEST — ${procName.toUpperCase()}
-
-CPT Code: ${cptCode} — ${procName}
-ICD-10 Diagnosis: ${icdCode} — ${icdDesc}
+            const output = `PRECERTIFICATION REQUEST — ${surgeryType.toUpperCase()}
 
 Patient: ${patientName}
 DOB: ${dob}
@@ -2037,7 +941,7 @@ Surgeon: ${surgeonName}
 Date: ${new Date().toLocaleDateString()}
 
 CLINICAL HISTORY:
-${age}-year-old patient with BMI ${bmi} presenting with ${icdDesc || 'end-stage degenerative joint disease'} of the ${joint} refractory to conservative management.
+${age}-year-old patient with BMI ${bmi} presenting with end-stage degenerative joint disease of the ${surgeryType.includes('Hip') || surgeryType.includes('THA') ? 'hip' : 'knee'} refractory to conservative management.
 
 CONSERVATIVE TREATMENTS COMPLETED:
 ${cons.length > 0 ? cons.map(c => '• ' + c).join('\n') : '• [No conservative treatments documented]'}
@@ -2045,7 +949,7 @@ ${cons.length > 0 ? cons.map(c => '• ' + c).join('\n') : '• [No conservative
 Patient has exhausted conservative treatment options over a period of at least 3 months without adequate relief of pain and functional limitation.
 
 RADIOGRAPHIC FINDINGS:
-${xrayLine}
+Weight-bearing radiographs demonstrate ${narrowingText[narrowing] || '[joint space narrowing severity]'}, ${osteoText[osteo] || '[osteophyte status]'}, and ${alignText[alignment] || '[alignment]'}.
 
 FUNCTIONAL ASSESSMENT:
 ${promText || 'Functional outcome scores documented in pre-operative assessment.'}
@@ -2053,7 +957,7 @@ ${promText || 'Functional outcome scores documented in pre-operative assessment.
 Patient reports significant limitations in activities of daily living including walking, stair climbing, and sleep disturbance due to pain.
 
 SURGICAL PLAN:
-${procName} (CPT ${cptCode}) is medically necessary to restore function and alleviate pain that has not responded to conservative treatment.
+${surgeryType} is medically necessary to restore function and alleviate pain that has not responded to conservative treatment.
 ${prosthesisText}
 
 MEDICAL JUSTIFICATION:
@@ -2063,16 +967,34 @@ This procedure meets medical necessity criteria based on:
 3. Significant functional impairment documented by validated patient-reported outcome measures
 4. Pain refractory to non-operative interventions
 
-Requesting authorization for ${procName} (CPT ${cptCode}) with ICD-10 diagnosis ${icdCode}.
+Requesting authorization for ${surgeryType} with appropriate implant system.
 
 ${surgeonName}
 [Signature]`;
-            
+
             document.getElementById('precertOutput').textContent = output;
             document.getElementById('precertPrintBar').style.display = 'flex';
         }
 
-// ============ SURGICAL PREP DATA PERSISTENCE ============
+        // ============ TAB SWITCHING ============
+        function switchPrepTab(tab) {
+            document.querySelectorAll('.prep-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.prep-panel').forEach(p => p.classList.remove('active'));
+            
+            const panels = { prosthesis: 'panelProsthesis', equipment: 'panelEquipment', precert: 'panelPrecert', contract: 'panelContract', consent: 'panelConsent', history: 'panelHistory', insurance: 'panelInsurance' };
+            document.getElementById(panels[tab]).classList.add('active');
+            
+            const tabOrder = ['prosthesis','equipment','precert','contract','consent','history','insurance'];
+            const tabs = document.querySelectorAll('.prep-tab');
+            tabs[tabOrder.indexOf(tab)].classList.add('active');
+            
+            // Populate dynamic content when switching
+            if (tab === 'contract') populateContract();
+            if (tab === 'consent') populateConsent();
+            if (tab === 'insurance') updateAuthBadge();
+        }
+
+        // ============ SURGICAL PREP DATA PERSISTENCE ============
         let surgPrepId = null;
 
         async function loadSurgPrepData(patientId) {
@@ -2086,7 +1008,6 @@ ${surgeonName}
                     if (data.consent_data) restoreConsent(JSON.parse(data.consent_data), data.consent_signed_at);
                     if (data.history_data) restoreHistory(JSON.parse(data.history_data));
                     if (data.insurance_data) restoreInsurance(JSON.parse(data.insurance_data));
-                    if (data.disposition_data) restoreDisposition(JSON.parse(data.disposition_data));
                 } else {
                     surgPrepId = null;
                 }
@@ -2111,8 +1032,6 @@ ${surgeonName}
                         body.consent_data = existing.consent_data;
                         body.history_data = existing.history_data;
                         body.insurance_data = existing.insurance_data;
-                        body.disposition_data = existing.disposition_data;
-                        body.prehab_data = existing.prehab_data;
                         body.contract_signed_at = existing.contract_signed_at;
                         body.consent_signed_at = existing.consent_signed_at;
                     }
@@ -2348,61 +1267,51 @@ ${additional ? '<p><strong>Additional risks discussed:</strong> ' + additional +
             if (entry) entry[field] = value;
         }
 
-        // ============ HISTORY / HIST-PE (updated) ============
         async function saveHistory() {
             const data = {
-                procedure: document.getElementById('histProcedure').value,
-                diagnosis: document.getElementById('histDiagnosis').value,
                 surgeries: historyEntries,
                 prior_injuries: document.getElementById('histPriorInjuries').value,
                 treatments: {
                     pt: document.getElementById('histPT').checked,
-                    pt_weeks: document.getElementById('histPTWeeks')?.value || '',
                     cortisone: document.getElementById('histInjCort').checked,
-                    steroid_date: document.getElementById('histSteroidDate')?.value || '',
                     ha: document.getElementById('histInjHA').checked,
                     prp: document.getElementById('histInjPRP').checked,
                     arthroscopy: document.getElementById('histArthroscopy').checked,
                     bracing: document.getElementById('histBracing').checked,
-                    nsaids: document.getElementById('histNSAIDs').checked,
-                    nsaid_allergy: document.getElementById('histNSAIDAllergy')?.value || ''
+                    nsaids: document.getElementById('histNSAIDs').checked
                 },
-                xray: getXrayData(),
                 allergies: document.getElementById('histAllergies').value,
                 medications: document.getElementById('histMedications').value,
                 surgeon_notes: document.getElementById('histSurgeonNotes').value
             };
             const result = await saveSurgPrepField('history_data', data);
-            if (result.success) alert('Hist/PE saved!');
+            if (result.success) alert('History saved!');
         }
 
         function restoreHistory(data) {
-            if (data.procedure) { document.getElementById('histProcedure').value = data.procedure; onProcedureChange(); }
-            if (data.diagnosis) document.getElementById('histDiagnosis').value = data.diagnosis;
             if (data.surgeries) { historyEntries = data.surgeries; renderHistoryEntries(); }
             if (data.prior_injuries) document.getElementById('histPriorInjuries').value = data.prior_injuries;
             if (data.treatments) {
-                if (data.treatments.pt) { document.getElementById('histPT').checked = true; togglePTWeeks(); }
-                if (data.treatments.pt_weeks) document.getElementById('histPTWeeks').value = data.treatments.pt_weeks;
-                if (data.treatments.cortisone) { document.getElementById('histInjCort').checked = true; toggleSteroidCheck(); }
-                if (data.treatments.steroid_date) { document.getElementById('histSteroidDate').value = data.treatments.steroid_date; checkSteroid3Months(); }
+                if (data.treatments.pt) document.getElementById('histPT').checked = true;
+                if (data.treatments.cortisone) document.getElementById('histInjCort').checked = true;
                 if (data.treatments.ha) document.getElementById('histInjHA').checked = true;
                 if (data.treatments.prp) document.getElementById('histInjPRP').checked = true;
                 if (data.treatments.arthroscopy) document.getElementById('histArthroscopy').checked = true;
                 if (data.treatments.bracing) document.getElementById('histBracing').checked = true;
-                if (data.treatments.nsaids) { document.getElementById('histNSAIDs').checked = true; toggleNSAIDAllergy(); }
-                if (data.treatments.nsaid_allergy) document.getElementById('histNSAIDAllergy').value = data.treatments.nsaid_allergy;
+                if (data.treatments.nsaids) document.getElementById('histNSAIDs').checked = true;
             }
-            if (data.xray) restoreXrayData(data.xray);
             if (data.allergies) document.getElementById('histAllergies').value = data.allergies;
             if (data.medications) document.getElementById('histMedications').value = data.medications;
             if (data.surgeon_notes) document.getElementById('histSurgeonNotes').value = data.surgeon_notes;
         }
 
-        // ============ INSURANCE (updated) ============
+        // ============ INSURANCE (B7) ============
         async function saveInsurance() {
             const data = {
+                carrier: document.getElementById('insCarrier').value,
                 plan_type: document.getElementById('insPlanType').value,
+                policy_num: document.getElementById('insPolicyNum').value,
+                group_num: document.getElementById('insGroupNum').value,
                 secondary: document.getElementById('insSecondary').value,
                 programs: {
                     team: document.getElementById('insTEAM').checked,
@@ -2414,29 +1323,17 @@ ${additional ? '<p><strong>Additional risks discussed:</strong> ' + additional +
                 program_notes: document.getElementById('insProgramNotes').value,
                 auth_status: document.getElementById('insAuthStatus').value,
                 auth_num: document.getElementById('insAuthNum').value,
-                auth_start: document.getElementById('insAuthStart').value,
-                auth_end: document.getElementById('insAuthEnd').value
+                auth_expiry: document.getElementById('insAuthExpiry').value
             };
             const result = await saveSurgPrepField('insurance_data', data);
-            if (result.success) {
-                alert('Insurance info saved!');
-                updateAuthBadge();
-                // Sync plan type to patients table
-                try {
-                    await fetch(`/api/patients/${currentPatient.id}`, {
-                        method: 'PUT',
-                        headers: {'Content-Type':'application/json'},
-                        body: JSON.stringify({ insurance_type: data.plan_type })
-                    });
-                } catch(e) {}
-            }
+            if (result.success) { alert('Insurance info saved!'); updateAuthBadge(); }
         }
 
         function restoreInsurance(data) {
-            if (data.plan_type) {
-                document.getElementById('insPlanType').value = data.plan_type;
-            }
-            // Legacy fields — ignore carrier/policy_num/group_num/mbi
+            if (data.carrier) document.getElementById('insCarrier').value = data.carrier;
+            if (data.plan_type) document.getElementById('insPlanType').value = data.plan_type;
+            if (data.policy_num) document.getElementById('insPolicyNum').value = data.policy_num;
+            if (data.group_num) document.getElementById('insGroupNum').value = data.group_num;
             if (data.secondary) document.getElementById('insSecondary').value = data.secondary;
             if (data.programs) {
                 if (data.programs.team) document.getElementById('insTEAM').checked = true;
@@ -2448,17 +1345,38 @@ ${additional ? '<p><strong>Additional risks discussed:</strong> ' + additional +
             if (data.program_notes) document.getElementById('insProgramNotes').value = data.program_notes;
             if (data.auth_status) document.getElementById('insAuthStatus').value = data.auth_status;
             if (data.auth_num) document.getElementById('insAuthNum').value = data.auth_num;
-            if (data.auth_start) document.getElementById('insAuthStart').value = data.auth_start;
-            if (data.auth_end) document.getElementById('insAuthEnd').value = data.auth_end;
-            else if (data.auth_expiry) document.getElementById('insAuthEnd').value = data.auth_expiry; // legacy
+            if (data.auth_expiry) document.getElementById('insAuthExpiry').value = data.auth_expiry;
             updateAuthBadge();
+        }
+
+        function updateAuthBadge() {
+            const status = document.getElementById('insAuthStatus').value;
+            const badge = document.getElementById('insAuthBadge');
+            const colors = { approved: { bg:'#dcfce7',border:'#86efac',color:'#166534',text:'✅ APPROVED' }, denied: { bg:'#fee2e2',border:'#fca5a5',color:'#991b1b',text:'❌ DENIED' }, submitted: { bg:'#fef3c7',border:'#fde68a',color:'#92400e',text:'⏳ PENDING' }, appeal: { bg:'#fef3c7',border:'#fde68a',color:'#92400e',text:'⏳ UNDER APPEAL' }, not_required: { bg:'#f0f9ff',border:'#bae6fd',color:'#1e40af',text:'ℹ️ NOT REQUIRED' } };
+            const c = colors[status];
+            if (c) {
+                badge.style.display = 'block';
+                badge.style.background = c.bg;
+                badge.style.borderColor = c.border;
+                badge.style.border = `1px solid ${c.border}`;
+                badge.style.color = c.color;
+                badge.textContent = c.text;
+                if (status === 'approved') {
+                    const num = document.getElementById('insAuthNum').value;
+                    const exp = document.getElementById('insAuthExpiry').value;
+                    if (num) badge.textContent += ` — #${num}`;
+                    if (exp) badge.textContent += ` (expires ${exp})`;
+                }
+            } else {
+                badge.style.display = 'none';
+            }
         }
 
         // ============ PRINT / COPY ============
         function printEquipment() {
             const el = document.getElementById('equipmentList');
             const win = window.open('', '_blank');
-            win.document.write('<html><head><title>Equipment List</title><style>body{font-family:Arial,sans-serif;padding:20px;} ul{list-style:none;padding:0;} li{padding:6px 0;border-bottom:1px solid #eee;}</style></head><body>' + el.innerHTML + '</body></html>');
+            win.document.write(`<html><head><title>Equipment List</title><style>body{font-family:Arial,sans-serif;padding:20px;} ul{list-style:none;padding:0;} li{padding:6px 0;border-bottom:1px solid #eee;}</style></head><body>${el.innerHTML}</body></html>`);
             win.document.close();
             win.print();
         }
@@ -2466,7 +1384,7 @@ ${additional ? '<p><strong>Additional risks discussed:</strong> ' + additional +
         function printPrecert() {
             const text = document.getElementById('precertOutput').textContent;
             const win = window.open('', '_blank');
-            win.document.write('<html><head><title>Precertification</title><style>body{font-family:Arial,sans-serif;padding:40px;white-space:pre-wrap;line-height:1.6;}</style></head><body>' + text + '</body></html>');
+            win.document.write(`<html><head><title>Precertification</title><style>body{font-family:Arial,sans-serif;padding:40px;white-space:pre-wrap;line-height:1.6;}</style></head><body>${text}</body></html>`);
             win.document.close();
             win.print();
         }
@@ -2476,569 +1394,9 @@ ${additional ? '<p><strong>Additional risks discussed:</strong> ' + additional +
             navigator.clipboard.writeText(text).then(() => alert('Precertification summary copied to clipboard!'));
         }
 
-        // ============ DISPOSITION ============
-        function autoPopulateDisposition() {
-            // Auto-fill from preop data if disposition fields are still empty
-            if(!currentPreop) return;
-            if(!document.getElementById('dispAge').value && currentPreop.age) {
-                var age = parseInt(currentPreop.age);
-                if(age < 65) document.getElementById('dispAge').value = '0';
-                else if(age <= 74) document.getElementById('dispAge').value = '1';
-                else if(age <= 80) document.getElementById('dispAge').value = '2';
-                else document.getElementById('dispAge').value = '3';
-            }
-            if(!document.getElementById('dispBMI').value && currentPreop.bmi) {
-                var bmi = parseFloat(currentPreop.bmi);
-                if(bmi < 35) document.getElementById('dispBMI').value = '0';
-                else if(bmi < 40) document.getElementById('dispBMI').value = '1';
-                else if(bmi < 45) document.getElementById('dispBMI').value = '2';
-                else document.getElementById('dispBMI').value = '3';
-            }
-            if(!document.getElementById('dispASA').value && currentPreop.asa_class) {
-                var asa = parseInt(currentPreop.asa_class);
-                if(asa <= 2) document.getElementById('dispASA').value = '0';
-                else document.getElementById('dispASA').value = '1';
-            }
-            runDisposition();
-        }
-        function runDisposition() {
-            var fields = ['dispAge','dispBMI','dispASA','dispTUG','dispHome','dispContra','dispCardPulm','dispFrailty'];
-            var score = 0; var filled = 0;
-            for(var i=0;i<fields.length;i++){
-                var v = document.getElementById(fields[i]).value;
-                if(v !== '') { score += parseInt(v); filled++; }
-            }
-            if(filled < 4) { document.getElementById('dispSettingResult').style.display='none'; return; }
-            document.getElementById('dispSettingResult').style.display='block';
-            var html = '';
-            var setting, color, icon, details;
-            if(score <= 4) {
-                setting = 'ASC (Ambulatory Surgery Center)'; color = '#059669'; icon = '🏥';
-                details = 'Patient is a good candidate for same-day outpatient surgery at an ASC. Low-risk profile supports safe discharge on day of surgery with appropriate home support.';
-            } else if(score <= 8) {
-                setting = 'HOPD (Hospital Outpatient Department)'; color = '#d97706'; icon = '🏨';
-                details = 'Intermediate risk profile. Hospital outpatient setting recommended — allows same-day discharge goal with inpatient backup if needed. Extended recovery area available.';
-            } else {
-                setting = 'Inpatient Admission'; color = '#dc2626'; icon = '🛏️';
-                details = 'Higher risk profile warrants inpatient admission for close monitoring. Plan for 1-2 night stay with post-op nursing observation.';
-            }
-            html += '<div style="text-align:center;padding:16px;background:'+color+'15;border:2px solid '+color+';border-radius:12px;">';
-            html += '<div style="font-size:2rem;">'+icon+'</div>';
-            html += '<div style="font-size:1.4rem;font-weight:800;color:'+color+';margin:8px 0;">'+setting+'</div>';
-            html += '<div style="font-size:0.9rem;color:#374151;max-width:600px;margin:0 auto;">'+details+'</div>';
-            html += '<div style="margin-top:12px;font-size:0.85rem;color:#6b7280;">Risk Score: '+score+'/24 &nbsp;|&nbsp; 0-4 ASC &nbsp;|&nbsp; 5-8 HOPD &nbsp;|&nbsp; 9+ Inpatient</div>';
-            html += '</div>';
-            // Score breakdown
-            var labels = ['Age','BMI','ASA','TUG','Home Support','Contralateral Leg','Cardiac/Pulmonary','Frailty'];
-            html += '<table style="width:100%;border-collapse:collapse;margin-top:16px;font-size:0.85rem;">';
-            for(var i=0;i<fields.length;i++){
-                var v = document.getElementById(fields[i]).value;
-                var pts = v !== '' ? parseInt(v) : '-';
-                var ptColor = pts === '-' ? '#9ca3af' : pts === 0 ? '#059669' : pts === 1 ? '#d97706' : '#dc2626';
-                var selText = v !== '' ? document.getElementById(fields[i]).options[document.getElementById(fields[i]).selectedIndex].text : 'Not assessed';
-                html += '<tr><td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;">'+labels[i]+'</td>';
-                html += '<td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;color:#6b7280;">'+selText+'</td>';
-                html += '<td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;font-weight:700;color:'+ptColor+';text-align:center;width:40px;">'+pts+'</td></tr>';
-            }
-            html += '</table>';
-            // TUG reference
-            html += '<div style="margin-top:12px;padding:10px;background:#f8fafc;border-radius:8px;font-size:0.78rem;color:#6b7280;">';
-            html += '<strong>TUG Reference:</strong> Patient stands from chair, walks 3m, turns, walks back, sits. &lt;10s normal | 10-14s mostly independent | 15-19s impaired | ≥20s high fall risk. Pre-THA: &lt;9.7s = 4× more likely to meet discharge criteria within 36 hrs (Oosting 2021).';
-            html += '</div>';
-            document.getElementById('dispSettingContent').innerHTML = html;
-        }
-
-        function updateDischargeDetail() {
-            var dest = document.getElementById('dispDestination').value;
-            var el = document.getElementById('dischargeDetail');
-            if(!dest) { el.style.display='none'; return; }
-            el.style.display='block';
-            var info = {
-                'home_outpt_pt': { label:'Home → Outpatient PT', schedule:'Check-ins daily × 2 weeks, then every other day × 4 weeks. PT 2-3×/week at outpatient clinic.', alerts:'Pain ≥7, missed PT >2 sessions, missed check-in >2 days.', color:'#059669' },
-                'home_home_pt': { label:'Home → Home PT', schedule:'Check-ins daily × 3 weeks, then every other day × 3 weeks. Home PT 2-3×/week for 2-4 weeks, then transition to outpatient.', alerts:'Pain ≥7, PT no-show, missed check-in >2 days, ROM plateau.', color:'#2563eb' },
-                'home_health': { label:'Home Health (Nursing + Therapy)', schedule:'Check-ins daily × 4 weeks. Home health nurse visits 2-3×/week. PT at home 2-3×/week.', alerts:'Pain ≥7, wound concerns, missed nurse visit, fever, missed check-in >1 day.', color:'#7c3aed' },
-                'snf': { label:'SNF / Inpatient Rehab', schedule:'Facility-based monitoring. SRO check-ins begin at discharge from facility. Typical SNF stay: 5-14 days.', alerts:'Readmission, ER visit, delayed discharge from facility, PROM overdue.', color:'#dc2626' }
-            };
-            var d = info[dest];
-            el.innerHTML = '<div style="border-left:3px solid '+d.color+';padding-left:12px;">' +
-                '<div style="font-weight:700;color:'+d.color+';margin-bottom:6px;">'+d.label+'</div>' +
-                '<div style="margin-bottom:4px;"><strong>Check-in Schedule:</strong> '+d.schedule+'</div>' +
-                '<div><strong>Alert Triggers:</strong> '+d.alerts+'</div></div>';
-        }
-
-        async function saveDisposition() {
-            if(!currentPatient) { alert('Select a patient first.'); return; }
-            var data = {
-                setting_score: 0, age: document.getElementById('dispAge').value,
-                bmi: document.getElementById('dispBMI').value, asa: document.getElementById('dispASA').value,
-                tug_category: document.getElementById('dispTUG').value, tug_seconds: document.getElementById('dispTUGsec').value,
-                home_support: document.getElementById('dispHome').value, contralateral: document.getElementById('dispContra').value,
-                cardiac_pulmonary: document.getElementById('dispCardPulm').value, frailty: document.getElementById('dispFrailty').value,
-                destination: document.getElementById('dispDestination').value
-            };
-            var fields = ['age','bmi','asa','tug_category','home_support','contralateral','cardiac_pulmonary','frailty'];
-            for(var i=0;i<fields.length;i++) if(data[fields[i]]) data.setting_score += parseInt(data[fields[i]]);
-            await saveSurgPrepField('disposition_data', data);
-        }
-
-        function restoreDisposition(data) {
-            if(!data) return;
-            var fieldMap = {dispAge:'age', dispBMI:'bmi', dispASA:'asa', dispTUG:'tug_category', dispHome:'home_support', dispContra:'contralateral', dispCardPulm:'cardiac_pulmonary', dispFrailty:'frailty'};
-            Object.keys(fieldMap).forEach(function(id){
-                var key = fieldMap[id];
-                if(data[key] !== undefined && data[key] !== '') document.getElementById(id).value = data[key];
-            });
-            if(data.tug_seconds) document.getElementById('dispTUGsec').value = data.tug_seconds;
-            if(data.destination) document.getElementById('dispDestination').value = data.destination;
-            runDisposition();
-            updateDischargeDetail();
-        }
-
-        // ============ PREHAB & PATIENT PREP ============
-        function generatePrehabPlan() {
-            if(!currentPatient || !currentPreop) {
-                alert('Load a patient with a PreOp assessment first.');
-                return;
-            }
-            var preop = currentPreop;
-            var comorbidities = {};
-            try { comorbidities = JSON.parse(preop.comorbidity_data || '{}'); } catch(e){}
-            var intakeData = {};
-            try { intakeData = JSON.parse(preop.intake_data || '{}'); } catch(e){}
-            var bmi = preop.bmi || 28;
-            var age = preop.age || 65;
-            var procedure = preop.procedure_type || 'TKA';
-            var joint = procedure.indexOf('H') >= 0 ? 'hip' : 'knee';
-
-            // === EXERCISE SECTION ===
-            var tugVal = document.getElementById('dispTUGsec').value || document.getElementById('dispTUG').value;
-            var tugSec = parseFloat(tugVal) || 15;
-            var exHtml = '';
-            exHtml += '<div style="margin-bottom:12px;padding:12px;background:#f0fdf4;border-radius:8px;border-left:3px solid #059669;">';
-            exHtml += '<strong style="color:#059669;">Recommended Duration:</strong> ';
-            exHtml += bmi >= 40 || tugSec >= 15 ? '6-8 weeks before surgery (extended prehab indicated)' : '4-6 weeks before surgery';
-            exHtml += '</div>';
-            var exercises = [];
-            if(joint === 'knee') {
-                exercises.push({name:'Quad Sets', desc:'Tighten thigh muscle, press knee flat into bed. Hold 5 sec. 3 sets × 10 reps.', priority:'Essential'});
-                exercises.push({name:'Straight Leg Raises', desc:'Lying flat, tighten quad, lift leg 12 inches. Hold 3 sec. 3 sets × 10.', priority:'Essential'});
-                exercises.push({name:'Heel Slides', desc:'Lying flat, slide heel toward buttock bending knee. Hold 5 sec. 3 sets × 10.', priority:'Essential'});
-                exercises.push({name:'Standing Mini Squats', desc:'Hold chair back, bend knees 30-45°. Hold 3 sec. 2 sets × 10.', priority:'Recommended'});
-                exercises.push({name:'Step-Ups', desc:'4-6 inch step. Step up with surgical leg, step down. 2 sets × 10 each leg.', priority:'Recommended'});
-            } else {
-                exercises.push({name:'Glute Bridges', desc:'Lying flat, bend knees, lift hips. Hold 5 sec. 3 sets × 10.', priority:'Essential'});
-                exercises.push({name:'Clamshells', desc:'Lie on side, knees bent. Open top knee keeping feet together. 3 sets × 15.', priority:'Essential'});
-                exercises.push({name:'Standing Hip Abduction', desc:'Hold chair, lift surgical leg to side. Hold 3 sec. 3 sets × 10.', priority:'Essential'});
-                exercises.push({name:'Seated Marching', desc:'Sit in chair, lift knee toward chest alternating. 2 sets × 20.', priority:'Recommended'});
-                exercises.push({name:'Standing Hip Flexion', desc:'Hold chair, lift knee toward chest. Hold 3 sec. 2 sets × 10.', priority:'Recommended'});
-            }
-            exercises.push({name:'Walking Program', desc: tugSec >= 15 ? 'Start with 5-10 min walks, increase by 2 min/week. Use assistive device as needed.' : 'Walk 15-30 min daily at comfortable pace. Increase distance weekly.', priority:'Essential'});
-            if(tugSec >= 15) exercises.push({name:'Balance Training', desc:'Stand on one leg holding chair. Hold 10-30 sec each side. 3× daily. Progress to no hands.', priority:'Recommended — TUG ≥ 15s'});
-
-            exHtml += '<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">';
-            exHtml += '<tr style="background:#f8fafc;"><th style="padding:8px;text-align:left;">Exercise</th><th style="padding:8px;text-align:left;">Instructions</th><th style="padding:8px;text-align:center;width:100px;">Priority</th></tr>';
-            for(var i=0;i<exercises.length;i++){
-                var pc = exercises[i].priority.indexOf('Essential') >= 0 ? '#059669' : '#d97706';
-                exHtml += '<tr><td style="padding:8px;border-bottom:1px solid #f3f4f6;font-weight:600;">'+exercises[i].name+'</td>';
-                exHtml += '<td style="padding:8px;border-bottom:1px solid #f3f4f6;">'+exercises[i].desc+'</td>';
-                exHtml += '<td style="padding:8px;border-bottom:1px solid #f3f4f6;text-align:center;color:'+pc+';font-weight:600;font-size:0.8rem;">'+exercises[i].priority+'</td></tr>';
-            }
-            exHtml += '</table>';
-            exHtml += '<div style="margin-top:10px;font-size:0.78rem;color:#6b7280;">Evidence: Prehab ≥8 weeks shows improved outcomes (Widmer 2015). Progressive resistance training improves sit-to-stand and walking speed at 3 and 12 months post-op (Jørgensen 2022).</div>';
-            document.getElementById('prehabExerciseContent').innerHTML = exHtml;
-            document.getElementById('prehabExerciseCard').style.display = 'block';
-
-            // === SUPPLEMENTS ===
-            var supps = [];
-            supps.push({name:'Vitamin D3', dose:'2,000 IU daily (50,000 IU weekly loading if deficient)', reason:'Deficiency associated with poorer outcomes, increased LOS, and higher revision/infection risk after TJA.', test:'Check 25-OH Vitamin D level. Target ≥ 30 ng/mL.', priority: true});
-            supps.push({name:'Protein Supplementation', dose:'1.2 – 1.5 g/kg/day total protein intake', reason:'Prevents sarcopenia, supports wound healing and muscle recovery. Essential amino acids attenuate post-op muscle atrophy.', test:'Consider albumin/prealbumin if malnourished.', priority: true});
-            supps.push({name:'Calcium', dose:'1,200 mg daily (with Vitamin D)', reason:'Supports bone health and implant integration. Especially important for osteoporotic patients.', test:null, priority: age > 65 || (intakeData.gender && intakeData.gender.answer === 'Female')});
-            if(comorbidities.anemia || bmi < 20) supps.push({name:'Iron Supplementation', dose:'325 mg ferrous sulfate daily (with vitamin C for absorption)', reason:'Correct anemia before surgery to reduce transfusion risk. Target Hgb ≥ 12 g/dL (women), ≥ 13 g/dL (men).', test:'Check CBC, iron studies, ferritin.', priority: true});
-            if(bmi >= 35) supps.push({name:'Protein Shake / Meal Replacement', dose:'1-2 servings daily (20-30g protein per serving)', reason:'BMI ≥ 35 — optimize nutrition while maintaining caloric awareness. High protein supports tissue healing.', test:null, priority: true});
-
-            var supHtml = '<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">';
-            for(var i=0;i<supps.length;i++){
-                if(!supps[i].priority) continue;
-                supHtml += '<tr><td style="padding:8px;border-bottom:1px solid #f3f4f6;font-weight:700;width:160px;vertical-align:top;color:#1e3a5f;">'+supps[i].name+'</td>';
-                supHtml += '<td style="padding:8px;border-bottom:1px solid #f3f4f6;"><strong>Dose:</strong> '+supps[i].dose+'<br><span style="color:#6b7280;">'+supps[i].reason+'</span>';
-                if(supps[i].test) supHtml += '<br><span style="color:#d97706;font-weight:600;font-size:0.8rem;">Lab: '+supps[i].test+'</span>';
-                supHtml += '</td></tr>';
-            }
-            supHtml += '</table>';
-            supHtml += '<div style="margin-top:10px;font-size:0.78rem;color:#6b7280;">Sources: Vivek et al. JBJS Rev 2024 (Vitamin D meta-analysis); Pegreffi et al. 2024 (sarcopenia/nutrition review); AAHKS preoperative optimization guidelines.</div>';
-            document.getElementById('prehabSupplementContent').innerHTML = supHtml;
-            document.getElementById('prehabSupplementCard').style.display = 'block';
-
-            // === COMORBIDITY-DRIVEN TESTS ===
-            var tests = [];
-            var checked = comorbidities.checked || {};
-            // Always required
-            tests.push({test:'CBC with Differential', reason:'Baseline hemoglobin, screen for anemia', category:'Standard'});
-            tests.push({test:'BMP (Basic Metabolic Panel)', reason:'Electrolytes, renal function (Cr, BUN, glucose)', category:'Standard'});
-            tests.push({test:'Urinalysis', reason:'Screen for UTI — perioperative infection risk', category:'Standard'});
-            tests.push({test:'25-OH Vitamin D Level', reason:'Deficiency prevalence 40-70% in arthroplasty patients', category:'Standard'});
-            tests.push({test:'EKG', reason:'Baseline cardiac rhythm (age >50 or cardiac history)', category:'Standard'});
-            if(age > 50 || (intakeData.gender && intakeData.gender.answer === 'Female' && age > 45)) tests.push({test:'DEXA Scan', reason:'Bone density assessment — osteoporosis/periprosthetic fracture risk', category:'Consider'});
-            // Comorbidity-driven
-            if(checked.diabetes_uncontrolled || checked.diabetes_controlled) {
-                tests.push({test:'HbA1c', reason:'Diabetes — target <8.0% for surgical clearance', category:'Required'});
-                tests.push({test:'Fasting Glucose', reason:'Perioperative glucose management', category:'Required'});
-            }
-            if(checked.chf_severe || checked.chf_reduced || checked.chf_preserved) {
-                tests.push({test:'Echocardiogram', reason:'CHF — assess EF, valvular function', category:'Required'});
-                tests.push({test:'BNP / NT-proBNP', reason:'CHF severity marker', category:'Required'});
-                tests.push({test:'Cardiology Clearance', reason:'CHF — anesthesia and surgical risk assessment', category:'Consult'});
-            }
-            if(checked.cad) {
-                tests.push({test:'Cardiology Clearance', reason:'CAD — perioperative cardiac risk', category:'Consult'});
-                if(checked.cad && !checked.chf_severe) tests.push({test:'Stress Test', reason:'CAD — functional cardiac assessment if no recent test', category:'Consider'});
-            }
-            if(checked.atrial_fibrillation || checked.anticoagulation) {
-                tests.push({test:'PT/INR', reason:'Anticoagulation — bridging protocol assessment', category:'Required'});
-                tests.push({test:'Hematology Consult', reason:'Anticoagulation management plan', category:'Consult'});
-            }
-            if(checked.ckd_stage_3) {
-                tests.push({test:'CMP (Comprehensive Metabolic Panel)', reason:'Renal function — GFR, electrolytes', category:'Required'});
-                tests.push({test:'Nephrology Clearance', reason:'CKD — contrast/medication dose adjustment', category:'Consult'});
-            }
-            if(checked.anemia) {
-                tests.push({test:'Iron Studies (Fe, TIBC, Ferritin)', reason:'Anemia workup — optimize before surgery', category:'Required'});
-                tests.push({test:'Reticulocyte Count', reason:'Anemia characterization', category:'Consider'});
-            }
-            if(checked.sleep_apnea) tests.push({test:'Sleep Medicine Clearance', reason:'OSA — CPAP compliance, anesthesia planning', category:'Consult'});
-            if(checked.obesity_class_3) tests.push({test:'Pulmonary Function Tests', reason:'Morbid obesity — respiratory reserve assessment', category:'Consider'});
-            if(checked.smoking_current) tests.push({test:'Chest X-Ray', reason:'Active smoker — baseline pulmonary assessment', category:'Consider'});
-            if(checked.rheumatoid_arthritis) {
-                tests.push({test:'Rheumatology Clearance', reason:'RA — medication hold schedule (MTX, biologics)', category:'Consult'});
-                tests.push({test:'CRP / ESR', reason:'Inflammatory markers — infection vs disease activity', category:'Required'});
-            }
-            if(checked.dental_problems) tests.push({test:'Dental Clearance', reason:'Dental infection risk — prosthetic joint infection prevention', category:'Consult'});
-            if(checked.depression || checked.opioid_chronic) tests.push({test:'Pain Management / Psych Consult', reason:'Optimize mental health and pain management pre-op', category:'Consider'});
-
-            var testHtml = '<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">';
-            testHtml += '<tr style="background:#f8fafc;"><th style="padding:8px;text-align:left;">Test / Consult</th><th style="padding:8px;text-align:left;">Reason</th><th style="padding:8px;text-align:center;width:80px;">Priority</th></tr>';
-            var catColors = {Standard:'#6b7280', Required:'#dc2626', Consult:'#7c3aed', Consider:'#d97706'};
-            // Deduplicate
-            var seen = {};
-            for(var i=0;i<tests.length;i++){
-                if(seen[tests[i].test]) continue;
-                seen[tests[i].test] = true;
-                var cc = catColors[tests[i].category] || '#6b7280';
-                testHtml += '<tr><td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;font-weight:600;">'+tests[i].test+'</td>';
-                testHtml += '<td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;color:#6b7280;">'+tests[i].reason+'</td>';
-                testHtml += '<td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;text-align:center;font-weight:700;color:'+cc+';font-size:0.78rem;">'+tests[i].category+'</td></tr>';
-            }
-            testHtml += '</table>';
-            document.getElementById('prehabTestsContent').innerHTML = testHtml;
-            document.getElementById('prehabTestsCard').style.display = 'block';
-
-            // === MEDICATION MANAGEMENT ===
-            var meds = [];
-            meds.push({med:'NSAIDs (Ibuprofen, Naproxen, Meloxicam)', action:'STOP 7 days before surgery', reason:'Increased bleeding risk', priority:'All Patients'});
-            meds.push({med:'Aspirin 81mg', action:'Continue unless surgeon instructs otherwise', reason:'Low-dose aspirin generally safe perioperatively', priority:'If Applicable'});
-            if(checked.anticoagulation || checked.atrial_fibrillation) {
-                meds.push({med:'Warfarin (Coumadin)', action:'STOP 5 days before surgery. Bridge with Lovenox if high-risk (discuss with hematology).', reason:'Target INR < 1.5 on day of surgery', priority:'Required'});
-                meds.push({med:'Eliquis / Xarelto / Pradaxa (DOACs)', action:'STOP 48-72 hours before surgery (drug-specific)', reason:'Renal-cleared — adjust hold time based on GFR', priority:'Required'});
-            }
-            if(checked.diabetes_controlled || checked.diabetes_uncontrolled) {
-                meds.push({med:'Metformin', action:'HOLD day of surgery and 48 hrs after', reason:'Lactic acidosis risk with anesthesia/contrast', priority:'Required'});
-                meds.push({med:'Insulin', action:'Take half dose morning of surgery. Bring insulin to hospital.', reason:'Perioperative glucose management', priority:'Required'});
-            }
-            if(checked.rheumatoid_arthritis) {
-                meds.push({med:'Methotrexate', action:'HOLD 1 week before surgery, resume 2 weeks after wound healed', reason:'Immunosuppression — infection risk', priority:'Required'});
-                meds.push({med:'Biologics (Humira, Enbrel, etc.)', action:'HOLD 1-2 dosing cycles before surgery per rheumatology', reason:'Immunosuppression — wound healing', priority:'Required'});
-            }
-            var glp1 = intakeData.diet_glp1;
-            if(glp1 && glp1.answer === 'Yes') {
-                meds.push({med:'GLP-1 Agonist (Ozempic, Wegovy, Mounjaro)', action:'HOLD 1 week before surgery (ASA recommendation)', reason:'Delayed gastric emptying — aspiration risk under anesthesia', priority:'Required'});
-            }
-            meds.push({med:'Herbal Supplements (Fish Oil, Ginkgo, Garlic, Ginseng)', action:'STOP 2 weeks before surgery', reason:'Increased bleeding risk', priority:'All Patients'});
-
-            var medHtml = '<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">';
-            medHtml += '<tr style="background:#fef2f2;"><th style="padding:8px;text-align:left;">Medication</th><th style="padding:8px;text-align:left;">Action</th><th style="padding:8px;text-align:left;">Reason</th></tr>';
-            for(var i=0;i<meds.length;i++){
-                var ac = meds[i].action.indexOf('STOP') >= 0 || meds[i].action.indexOf('HOLD') >= 0 ? '#dc2626' : '#059669';
-                medHtml += '<tr><td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;font-weight:600;">'+meds[i].med+'</td>';
-                medHtml += '<td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;font-weight:700;color:'+ac+';">'+meds[i].action+'</td>';
-                medHtml += '<td style="padding:6px 8px;border-bottom:1px solid #f3f4f6;color:#6b7280;">'+meds[i].reason+'</td></tr>';
-            }
-            medHtml += '</table>';
-            document.getElementById('prehabMedsContent').innerHTML = medHtml;
-            document.getElementById('prehabMedsCard').style.display = 'block';
-            document.getElementById('prehabPrintCard').style.display = 'block';
-        }
-
-        function printPrehab() {
-            var cards = ['prehabExerciseCard','prehabSupplementCard','prehabTestsCard','prehabMedsCard'];
-            var html = '<html><head><title>Patient Preparation Packet</title><style>body{font-family:Arial,sans-serif;padding:30px;font-size:12px;line-height:1.5;} h3{color:#1e3a5f;border-bottom:2px solid #2c5aa0;padding-bottom:4px;margin-top:24px;} table{width:100%;border-collapse:collapse;margin-bottom:16px;} td,th{padding:5px 6px;border-bottom:1px solid #ddd;text-align:left;} .page-break{page-break-before:always;}</style></head><body>';
-            html += '<h2 style="text-align:center;color:#1e3a5f;">Pre-Operative Preparation Packet</h2>';
-            html += '<p style="text-align:center;color:#6b7280;">Patient: ' + (currentPatient ? currentPatient.first_name + ' ' + currentPatient.last_name : 'N/A') + ' &nbsp;|&nbsp; Date: ' + new Date().toLocaleDateString() + '</p>';
-            for(var i=0;i<cards.length;i++){
-                var el = document.getElementById(cards[i]);
-                if(el && el.style.display !== 'none') html += el.innerHTML;
-            }
-            html += '</body></html>';
-            var win = window.open('', '_blank');
-            win.document.write(html);
-            win.document.close();
-            win.print();
-        }
-
-        async function savePrehab() {
-            if(!currentPatient) { alert('Select a patient first.'); return; }
-            var data = { generated: true, timestamp: new Date().toISOString() };
-            await saveSurgPrepField('prehab_data', data);
-        }
-
         function logout() {
             sessionStorage.clear();
             window.location.href = '/index.html';
-        }
-
-        // ============ X-RAY MODAL ============
-        function openXrayModal() {
-            if (!currentPatient) { alert('Select a patient first.'); return; }
-            // Toggle knee vs hip based on procedure
-            const proc = document.getElementById('histProcedure').value;
-            const isHip = ['THA','Partial_Hip','Hip_Fracture'].includes(proc);
-            document.getElementById('xrayKneeSection').style.display = isHip ? 'none' : 'block';
-            document.getElementById('xrayHipSection').style.display = isHip ? 'block' : 'none';
-            document.getElementById('xrayModal').style.display = 'block';
-        }
-
-        function closeXrayModal() {
-            document.getElementById('xrayModal').style.display = 'none';
-        }
-
-        function xrayModalChanged() {
-            // Show/hide severity selects when compartment checked
-            ['NarrowMedial','NarrowLateral','NarrowPF','OsteoMedial','OsteoLateral','OsteoPF'].forEach(id => {
-                const cb = document.getElementById('xm' + id);
-                const det = document.getElementById('xm' + id + 'D');
-                if (cb && det) det.style.display = cb.checked ? 'flex' : 'none';
-            });
-        }
-
-        function saveXrayFromModal() {
-            // Auto-populate deformity from alignment
-            const alignRadio = document.querySelector('input[name="xrayAlign"]:checked');
-            const align = alignRadio ? alignRadio.value : '';
-            const deformityInput = document.getElementById('calcDeformity');
-            const deformitySource = document.getElementById('deformitySource');
-            const deformityMap = { varus_mild: 5, varus_moderate: 15, varus_severe: 25, valgus_mild: 5, valgus_moderate: 15, valgus_severe: 25 };
-            if (deformityMap[align] !== undefined) {
-                deformityInput.value = deformityMap[align];
-                deformitySource.textContent = '(from X-Ray — ' + align.replace('_', ' ') + ')';
-                runCalculator();
-            } else if (align === 'neutral') {
-                deformityInput.value = 0;
-                deformitySource.textContent = '(from X-Ray — neutral)';
-                runCalculator();
-            }
-            // Update summary preview
-            updateXraySummaryPreview();
-            // Update precert x-ray summary
-            updatePrecertXraySummary();
-            // Auto-save via history save
-            saveHistory();
-            closeXrayModal();
-        }
-
-        function updateXraySummaryPreview() {
-            const data = getXrayData();
-            const preview = document.getElementById('xraySummaryPreview');
-            let parts = [];
-            if (data.alignment) parts.push('Alignment: ' + data.alignment.replace(/_/g, ' '));
-            // Knee findings
-            ['medial','lateral','pf'].forEach(c => {
-                if (data['narrow_' + c]) parts.push('Narrowing: ' + c + ' (' + (data['narrow_' + c + '_sev'] || 'mild') + ')');
-                if (data['osteo_' + c]) parts.push('Osteophytes: ' + c + ' (' + (data['osteo_' + c + '_sev'] || 'mild') + ')');
-                if (data['sclerosis_' + c]) parts.push('Sclerosis: ' + c);
-            });
-            // Hip findings
-            if (data.hip_narrowing) parts.push('Hip narrowing: ' + data.hip_narrowing.replace(/_/g, ' '));
-            if (data.hip_femoral_head) parts.push('Femoral head: ' + data.hip_femoral_head);
-            ['acet_sclerosis','acet_cysts','acet_osteo','protrusio','dysplasia','fem_osteo','fem_sclerosis','ho','lld','cam','pincer'].forEach(k => {
-                if (data['hip_' + k]) parts.push(k.replace(/_/g, ' '));
-            });
-            if (data.kl_grade) parts.push('KL Grade: ' + data.kl_grade);
-            if (data.additional) parts.push('Notes: ' + data.additional.substring(0, 60));
-            preview.innerHTML = parts.length > 0 ? '<strong style="color:#1e3a5f;">✅ X-Ray documented:</strong> ' + parts.join(' · ') : 'No x-ray data entered yet. Click "Open X-Ray Assessment" above.';
-            preview.style.color = parts.length > 0 ? '#1e293b' : '#6b7280';
-        }
-
-        // Updated getXrayData to read from modal elements
-        function getXrayData() {
-            const alignRadio = document.querySelector('input[name="xrayAlign"]:checked');
-            const data = {
-                alignment: alignRadio ? alignRadio.value : ''
-            };
-            // Knee compartments
-            ['Medial','Lateral','PF'].forEach(c => {
-                const lc = c.toLowerCase();
-                data['narrow_' + (lc === 'pf' ? 'pf' : lc)] = document.getElementById('xmNarrow' + c)?.checked || false;
-                if (data['narrow_' + (lc === 'pf' ? 'pf' : lc)]) {
-                    data['narrow_' + (lc === 'pf' ? 'pf' : lc) + '_sev'] = document.getElementById('xmNarrow' + c + 'Sev')?.value || '';
-                    data['narrow_' + (lc === 'pf' ? 'pf' : lc) + '_mm'] = document.getElementById('xmNarrow' + c + 'MM')?.value || '';
-                }
-                data['osteo_' + (lc === 'pf' ? 'pf' : lc)] = document.getElementById('xmOsteo' + c)?.checked || false;
-                if (data['osteo_' + (lc === 'pf' ? 'pf' : lc)]) {
-                    data['osteo_' + (lc === 'pf' ? 'pf' : lc) + '_sev'] = document.getElementById('xmOsteo' + c + 'Sev')?.value || '';
-                }
-                data['sclerosis_' + (lc === 'pf' ? 'pf' : lc)] = document.getElementById('xmSclerosis' + c)?.checked || false;
-            });
-            // Hip findings
-            const hipNarrow = document.querySelector('input[name="hipNarrow"]:checked');
-            data.hip_narrowing = hipNarrow ? hipNarrow.value : '';
-            const hipFem = document.querySelector('input[name="hipFemHead"]:checked');
-            data.hip_femoral_head = hipFem ? hipFem.value : '';
-            data.hip_acet_sclerosis = document.getElementById('hipAcetSclerosis')?.checked || false;
-            data.hip_acet_cysts = document.getElementById('hipAcetCysts')?.checked || false;
-            data.hip_acet_osteo = document.getElementById('hipAcetOsteo')?.checked || false;
-            data.hip_protrusio = document.getElementById('hipProtrusio')?.checked || false;
-            data.hip_dysplasia = document.getElementById('hipDysplasia')?.checked || false;
-            data.hip_fem_osteo = document.getElementById('hipFemOsteo')?.checked || false;
-            data.hip_fem_sclerosis = document.getElementById('hipFemSclerosis')?.checked || false;
-            data.hip_ho = document.getElementById('hipHO')?.checked || false;
-            data.hip_lld = document.getElementById('hipLLD')?.checked || false;
-            data.hip_cam = document.getElementById('hipCAM')?.checked || false;
-            data.hip_pincer = document.getElementById('hipPincer')?.checked || false;
-            data.hip_lld_mm = document.getElementById('hipLLDmm')?.value || '';
-            // Shared
-            const kl = document.querySelector('input[name="klGrade"]:checked');
-            data.kl_grade = kl ? kl.value : '';
-            data.additional = document.getElementById('xmAdditionalFindings')?.value || '';
-            return data;
-        }
-
-        function restoreXrayData(d) {
-            if (!d) return;
-            // Alignment
-            if (d.alignment) {
-                const r = document.querySelector('input[name="xrayAlign"][value="' + d.alignment + '"]');
-                if (r) r.checked = true;
-            }
-            // Knee compartments
-            ['Medial','Lateral','PF'].forEach(c => {
-                const lc = c.toLowerCase();
-                const key = lc === 'pf' ? 'pf' : lc;
-                if (d['narrow_' + key]) { const cb = document.getElementById('xmNarrow' + c); if (cb) cb.checked = true; }
-                if (d['narrow_' + key + '_sev']) { const el = document.getElementById('xmNarrow' + c + 'Sev'); if (el) el.value = d['narrow_' + key + '_sev']; }
-                if (d['narrow_' + key + '_mm']) { const el = document.getElementById('xmNarrow' + c + 'MM'); if (el) el.value = d['narrow_' + key + '_mm']; }
-                if (d['osteo_' + key]) { const cb = document.getElementById('xmOsteo' + c); if (cb) cb.checked = true; }
-                if (d['osteo_' + key + '_sev']) { const el = document.getElementById('xmOsteo' + c + 'Sev'); if (el) el.value = d['osteo_' + key + '_sev']; }
-                if (d['sclerosis_' + key]) { const cb = document.getElementById('xmSclerosis' + c); if (cb) cb.checked = true; }
-            });
-            // Hip findings
-            if (d.hip_narrowing) { const r = document.querySelector('input[name="hipNarrow"][value="' + d.hip_narrowing + '"]'); if (r) r.checked = true; }
-            if (d.hip_femoral_head) { const r = document.querySelector('input[name="hipFemHead"][value="' + d.hip_femoral_head + '"]'); if (r) r.checked = true; }
-            ['acet_sclerosis','acet_cysts','acet_osteo','protrusio','dysplasia','fem_osteo','fem_sclerosis','ho','lld','cam','pincer'].forEach(k => {
-                const elId = 'hip' + k.split('_').map((s,i) => i===0 ? s.charAt(0).toUpperCase()+s.slice(1) : s.charAt(0).toUpperCase()+s.slice(1)).join('');
-                // Map to actual IDs
-                const idMap = { acet_sclerosis:'hipAcetSclerosis', acet_cysts:'hipAcetCysts', acet_osteo:'hipAcetOsteo', protrusio:'hipProtrusio', dysplasia:'hipDysplasia', fem_osteo:'hipFemOsteo', fem_sclerosis:'hipFemSclerosis', ho:'hipHO', lld:'hipLLD', cam:'hipCAM', pincer:'hipPincer' };
-                if (d['hip_' + k]) { const cb = document.getElementById(idMap[k]); if (cb) cb.checked = true; }
-            });
-            if (d.hip_lld_mm) { const el = document.getElementById('hipLLDmm'); if (el) el.value = d.hip_lld_mm; }
-            // KL Grade
-            if (d.kl_grade) { const r = document.querySelector('input[name="klGrade"][value="' + d.kl_grade + '"]'); if (r) r.checked = true; }
-            if (d.additional) { const el = document.getElementById('xmAdditionalFindings'); if (el) el.value = d.additional; }
-            xrayModalChanged();
-            updateXraySummaryPreview();
-        }
-
-        // ============ PRINT EDUCATION ============
-        function printEducation() {
-            const proc = currentPatient?.surgery_type || document.getElementById('histProcedure').value || 'Joint Replacement';
-            const isHip = proc.toLowerCase().includes('hip');
-            const name = currentPatient ? currentPatient.first_name + ' ' + currentPatient.last_name : 'Patient';
-            const surgDate = currentPatient?.surgery_date ? new Date(currentPatient.surgery_date).toLocaleDateString() : 'TBD';
-            const classLink = document.getElementById('eduClassLink')?.value || '';
-            
-            let html = `<!DOCTYPE html><html><head><title>Pre-Op Education — ${name}</title>
-            <style>
-                body { font-family: Arial, sans-serif; padding: 24px; font-size: 11px; color: #1e293b; line-height: 1.5; }
-                h1 { font-size: 16px; color: #1e3a5f; margin: 0 0 4px; }
-                h2 { font-size: 12px; color: #1e3a5f; border-bottom: 2px solid #2c5aa0; padding-bottom: 3px; margin: 14px 0 6px; }
-                .alert-box { background: #fef2f2; border: 2px solid #fca5a5; padding: 10px; border-radius: 6px; margin: 8px 0; }
-                .alert-title { font-weight: 700; color: #991b1b; margin-bottom: 4px; }
-                .green-box { background: #f0fdf4; border: 1px solid #86efac; padding: 10px; border-radius: 6px; margin: 8px 0; }
-                .med-stop { background: #fef2f2; padding: 4px 8px; border-radius: 4px; margin: 2px 0; }
-                .med-keep { background: #f0fdf4; padding: 4px 8px; border-radius: 4px; margin: 2px 0; }
-                .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-                .footer { margin-top: 16px; padding-top: 6px; border-top: 1px solid #e5e7eb; font-size: 9px; color: #9ca3af; text-align: center; }
-                @media print { body { padding: 12px; } }
-            </style></head><body>`;
-            
-            html += `<h1>Pre-Operative Patient Education</h1>`;
-            html += `<div style="font-size:10px;color:#6b7280;margin-bottom:12px;">${name} · ${proc} · Surgery: ${surgDate} · SRO Intelligence</div>`;
-            
-            // Skin care
-            html += `<h2>⚠️ SKIN CARE — YOUR SURGERY WILL BE CANCELLED IF:</h2>`;
-            html += `<div class="alert-box"><div class="alert-title">Do NOT come to surgery with ANY of these:</div>`;
-            html += `❌ Open wounds, cuts, or scratches on the operative leg/hip<br>`;
-            html += `❌ Pimples, boils, rashes, or skin irritation on the operative limb<br>`;
-            html += `❌ Any skin infection on the operative leg/hip<br>`;
-            html += `❌ Any severe infection anywhere on the body (UTI, dental, cellulitis)<br>`;
-            html += `❌ Infected insect bites on the operative area</div>`;
-            html += `<div class="green-box">`;
-            html += `✅ Keep operative leg clean and moisturized (unscented lotion)<br>`;
-            html += `✅ Do NOT shave the operative leg for 2 weeks before surgery<br>`;
-            html += `✅ Shower with Hibiclens (Chlorhexidine) night before AND morning of surgery<br>`;
-            html += `✅ Use fresh bed linens the night before · Wear clean, loose clothes<br>`;
-            html += `✅ Remove nail polish, jewelry, piercings · Report ANY new skin issues immediately</div>`;
-
-            // Nutrition
-            html += `<h2>🥗 Nutrition</h2>`;
-            html += `<div class="two-col"><div><strong>Before Surgery:</strong><br>High protein diet (1.2-1.5 g/kg/day) · Protein shakes 1-2x daily · Fruits/veggies for Vitamin C · 8+ glasses water · Limit processed food/sugar/alcohol</div>`;
-            html += `<div><strong>After Surgery:</strong><br>Continue high protein · Shakes if low appetite · High-fiber foods (prevent constipation) · Extra hydration · Iron-rich foods if anemic</div></div>`;
-
-            // Supplements
-            html += `<h2>💊 Supplements</h2>`;
-            html += `Vitamin D3: 2,000 IU daily · Protein: 20-30g supplement 1-2x daily · Calcium: 1,200 mg (if age >65 or female) · Iron: only if anemic (with Vitamin C)`;
-
-            // Exercise
-            html += `<h2>🚶 Walking & Exercise</h2>`;
-            html += `<strong>Walking:</strong> Start 10-15 min daily → Goal 30 min by surgery. Steps: 5,000-7,000/day.<br>`;
-            html += `<strong>Exercises (2-3x daily):</strong> `;
-            if (isHip) {
-                html += `Glute bridges (10 reps) · Clamshells (10 each side) · Hip abduction (10 reps) · Ankle pumps (20 reps) · Seated marching (10 each)`;
-            } else {
-                html += `Quad sets (10 reps, hold 5 sec) · Straight leg raises (10 each) · Heel slides (10 reps) · Ankle pumps (20 reps) · Mini squats (10 reps)`;
-            }
-
-            // Medications
-            html += `<h2>💉 Medications</h2>`;
-            html += `<div class="two-col"><div><strong style="color:#dc2626;">🛑 STOP:</strong><br>`;
-            html += `<div class="med-stop">NSAIDs — 7 days before</div>`;
-            html += `<div class="med-stop">Warfarin — 5 days before</div>`;
-            html += `<div class="med-stop">Eliquis/Xarelto — 48-72 hrs before</div>`;
-            html += `<div class="med-stop">Methotrexate — 1 week before</div>`;
-            html += `<div class="med-stop">Biologics — 1-2 dosing cycles</div>`;
-            html += `<div class="med-stop">GLP-1 (Ozempic/Wegovy) — 1 week</div>`;
-            html += `<div class="med-stop">Herbals/fish oil — 2 weeks</div>`;
-            html += `</div><div><strong style="color:#059669;">✅ CONTINUE:</strong><br>`;
-            html += `<div class="med-keep">BP meds — take morning of with sip of water</div>`;
-            html += `<div class="med-keep">Heart meds — take as usual</div>`;
-            html += `<div class="med-keep">Aspirin 81mg — continue unless told to stop</div>`;
-            html += `<div class="med-keep">Metformin — HOLD day of + 48 hrs</div>`;
-            html += `<div class="med-keep">Insulin — HALF dose morning of; bring to hospital</div>`;
-            html += `<div class="med-keep">Anxiety/depression/thyroid meds — take as usual</div>`;
-            html += `</div></div>`;
-            html += `<div style="background:#fef3c7;padding:8px;border-radius:4px;margin-top:6px;"><strong>⚠️ Bring ALL medication bottles to the hospital.</strong> If unsure about any medication, call our office.</div>`;
-
-            // Home prep + class
-            html += `<h2>🏠 Home Preparation</h2>`;
-            html += `☐ Raised toilet seat &nbsp; ☐ Grab bars &nbsp; ☐ Remove trip hazards &nbsp; ☐ Stock easy meals &nbsp; ☐ Arrange ride + help 1-2 weeks &nbsp; ☐ Ice machine/packs &nbsp; ☐ Walker ready`;
-            if (classLink) html += `<br><br><strong>Joint Class:</strong> ${classLink}`;
-            html += `<br><br><strong>Nothing to eat or drink after midnight</strong> the night before surgery.`;
-
-            html += `<div class="footer">SRO Intelligence · ${new Date().toLocaleDateString()} · CONFIDENTIAL</div>`;
-            html += `</body></html>`;
-
-            const win = window.open('', '_blank');
-            win.document.write(html);
-            win.document.close();
-            setTimeout(() => win.print(), 500);
         }
     </script>
 </body>

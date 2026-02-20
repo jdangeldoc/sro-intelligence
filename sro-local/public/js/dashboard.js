@@ -11,6 +11,7 @@ let currentPatient = null;
 let currentEpisode = null;
 let preopAssessments = {}; // Cache for preop assessments
 let adverseEventsCache = {}; // Cache for adverse events per patient
+let nurseAcksCache = []; // Cache for nurse alert acknowledgments
 let promScheduleCache = {}; // Cache for PROM overdue per patient
 
 // RPM Timer State
@@ -22,6 +23,18 @@ let rpmTimer = {
     interval: null,
     durationSeconds: 0
 };
+
+// ============ TOAST NOTIFICATIONS ============
+function showToast(message, type) {
+    type = type || 'success';
+    var container = document.getElementById('toastContainer');
+    if (!container) return;
+    var toast = document.createElement('div');
+    toast.className = 'sro-toast ' + type;
+    toast.innerHTML = (type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ') + ' ' + message;
+    container.appendChild(toast);
+    setTimeout(function() { toast.remove(); }, 3100);
+}
 
 // ============ INITIALIZATION ============
 document.addEventListener('DOMContentLoaded', async () => {
@@ -53,13 +66,51 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Render nurse panel if nurse role
     if (USER_ROLE === 'nurse') {
         document.getElementById('nursePanel').style.display = 'block';
+        // Set welcome text
+        document.getElementById('nurseWelcomeText').textContent = 'Welcome back, ' + USER_NAME;
+        var activeCount = patients.filter(function(p) { return p.episode_id; }).length;
+        document.getElementById('nurseWelcomeSub').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) + '  •  ' + activeCount + ' active patients';
+        // Hide the 6-card stat grid (replaced by KPI strip)
+        document.querySelector('.stats-grid').style.display = 'none';
+        // Hide the flat patient table by default
+        var ntableEl = document.querySelector('#panelPatients .table-container');
+        var ntoolbarEl = document.querySelector('#panelPatients .toolbar');
+        if (ntableEl) ntableEl.style.display = 'none';
+        if (ntoolbarEl) ntoolbarEl.style.display = 'none';
         await renderNursePanel();
     }
     
     // Render admin panel if admin role
     if (USER_ROLE === 'admin') {
         document.getElementById('adminPanel').style.display = 'block';
+        document.getElementById('adminWelcomeText').textContent = 'Welcome back, ' + USER_NAME;
+        document.getElementById('adminWelcomeSub').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+        // Hide the 6-card stat grid (replaced by executive sections)
+        document.querySelector('.stats-grid').style.display = 'none';
+        // Hide the flat patient table by default
+        var atableEl = document.querySelector('#panelPatients .table-container');
+        var atoolbarEl = document.querySelector('#panelPatients .toolbar');
+        if (atableEl) atableEl.style.display = 'none';
+        if (atoolbarEl) atoolbarEl.style.display = 'none';
         await renderAdminPanel();
+    }
+    
+    // Render surgeon tiered view
+    if (USER_ROLE === 'surgeon') {
+        document.getElementById('surgeonWelcome').style.display = 'flex';
+        document.getElementById('surgeonKpiStrip').style.display = 'flex';
+        document.getElementById('surgeonTieredPanel').style.display = 'block';
+        // Set welcome text
+        document.getElementById('welcomeText').textContent = 'Welcome back, ' + USER_NAME;
+        document.getElementById('welcomeSub').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+        // Hide the 6-card stat grid (replaced by KPI strip)
+        document.querySelector('.stats-grid').style.display = 'none';
+        // Hide the flat patient table by default (tiered view replaces it)
+        const tableEl = document.querySelector('#panelPatients .table-container');
+        const toolbarEl = document.querySelector('#panelPatients .toolbar');
+        if (tableEl) tableEl.style.display = 'none';
+        if (toolbarEl) toolbarEl.style.display = 'none';
+        renderSurgeonTieredView();
     }
     
     // For surgeons, auto-select their own name in filter
@@ -84,9 +135,9 @@ function applyRoleBasedView() {
     document.querySelectorAll('.nav-link').forEach(link => {
         const href = link.getAttribute('href');
         if (USER_ROLE === 'nurse') {
-            // Nurses: hide Analytics (surgeon tool), Surg Prep (surgeon tool), Settings (admin tool)
-            // Nurses KEEP: Dashboard, Pre-Op (data entry), RPM Billing (they log monitoring time)
-            if (href === '/analytics.html' || href === '/settings.html' || href === '/surgical-prep.html') link.style.display = 'none';
+            // Nurses: hide Analytics (surgeon tool), Settings (admin tool)
+            // Nurses KEEP: Dashboard, Pre-Op, Surg Prep (nurse does insurance, precert, consent, education), Non-Op Plan, RPM Billing
+            if (href === '/analytics.html' || href === '/settings.html') link.style.display = 'none';
         } else if (USER_ROLE === 'surgeon') {
             // Surgeons: hide RPM Billing (nurse does this), Settings (admin tool)
             // Surgeons KEEP: Dashboard, Pre-Op (decision tool), Analytics (outcomes)
@@ -111,12 +162,245 @@ function applyRoleBasedView() {
     // RPM timer in patient modal - visible for all roles (nurses log call time, surgeons log review time)
 }
 
+// ============ SURGEON TIERED DASHBOARD ============
+let fullTableVisible = false;
+
+function renderSurgeonTieredView() {
+    const surgeonId = USER_ID;
+    const myPatients = surgeonId ? patients.filter(p => p.surgeon_id === surgeonId) : patients;
+    
+    const decisionItems = [];
+    const reviewItems = [];
+    const doneItems = [];
+    
+    myPatients.forEach(p => {
+        const preop = preopAssessments[p.id];
+        const aeList = adverseEventsCache[p.id] || [];
+        const overdueProms = promScheduleCache[p.id] || [];
+        const erEvents = aeList.filter(e => e.event_type === 'er_visit' && !e.resolved);
+        const readmitEvents = aeList.filter(e => e.event_type === 'readmission' && !e.resolved);
+        const erCount = erEvents.length;
+        const readmitCount = readmitEvents.length;
+        
+        const daysPostOp = p.surgery_date ? Math.floor((Date.now() - new Date(p.surgery_date)) / (1000*60*60*24)) : null;
+        const daysToSurgery = p.surgery_date ? Math.floor((new Date(p.surgery_date) - Date.now()) / (1000*60*60*24)) : null;
+        const daysSinceCheckin = p.last_checkin_date ? Math.floor((Date.now() - new Date(p.last_checkin_date)) / (1000*60*60*24)) : null;
+        
+        const label = p.last_name + ', ' + p.first_name;
+        const mrn = p.mrn || '';
+        const procedure = p.surgery_type || '-';
+        const riskTier = preop ? preop.risk_tier : null;
+        
+        let dayLabel = '';
+        if (daysPostOp !== null && daysPostOp >= 0) dayLabel = 'Day ' + daysPostOp + ' post-op';
+        else if (daysToSurgery !== null && daysToSurgery >= 0) dayLabel = daysToSurgery + 'd to surgery';
+        
+        const base = { patientId: p.id, name: label, mrn: mrn, procedure: procedure, dayLabel: dayLabel, riskTier: riskTier, token: p.token };
+        let placedDecision = false;
+        let placedReview = false;
+        
+        function isAcked(alertType) {
+            return nurseAcksCache.some(a => a.patient_id === p.id && a.alert_type === alertType);
+        }
+        
+        // === TIER 1: DECISION (must act) ===
+        if (readmitCount > 0) {
+            decisionItems.push(Object.assign({}, base, { icon: '🏥', issue: 'Readmission reported', issueClass: 'critical', priority: 1, cta: 'View Details', alertType: 'readmission', aeId: readmitEvents[0].id }));
+            placedDecision = true;
+        }
+        if (erCount > 0) {
+            decisionItems.push(Object.assign({}, base, { icon: '🚨', issue: 'ER visit reported', issueClass: 'critical', priority: 2, cta: 'View Details', alertType: 'er_visit', aeId: erEvents[0].id }));
+            placedDecision = true;
+        }
+        if (p.last_pain_level >= 7 && !isAcked('high_pain')) {
+            decisionItems.push(Object.assign({}, base, { icon: '🔥', issue: 'Pain level: ' + p.last_pain_level + '/10', issueClass: 'critical', priority: 3, cta: 'Review', alertType: 'high_pain' }));
+            placedDecision = true;
+        }
+        if (daysToSurgery !== null && daysToSurgery >= 0 && daysToSurgery <= 7 && !preop) {
+            decisionItems.push(Object.assign({}, base, { icon: '⚠️', issue: 'Surgery in ' + daysToSurgery + 'd — no preop', issueClass: 'critical', priority: 2, cta: 'Open PreOp', alertType: 'no_preop' }));
+            placedDecision = true;
+        }
+        if (daysToSurgery !== null && daysToSurgery >= 0 && daysToSurgery <= 7 && riskTier && (riskTier.toUpperCase() === 'HIGH' || riskTier.toUpperCase() === 'VERY HIGH')) {
+            decisionItems.push(Object.assign({}, base, { icon: '🔴', issue: 'Surgery in ' + daysToSurgery + 'd — ' + riskTier + ' risk', issueClass: 'critical', priority: 2, cta: 'Decision Tool', alertType: 'workup_urgent' }));
+            placedDecision = true;
+        }
+        
+        // === TIER 2: REVIEW (flagged, not urgent) ===
+        if (p.last_pain_level >= 4 && p.last_pain_level < 7 && !placedDecision) {
+            reviewItems.push(Object.assign({}, base, { icon: '📈', issue: 'Pain at ' + p.last_pain_level + '/10 — monitor', issueClass: 'warning', priority: 4, alertType: 'moderate_pain' }));
+            placedReview = true;
+        }
+        if (daysSinceCheckin !== null && daysSinceCheckin > 3) {
+            reviewItems.push(Object.assign({}, base, { icon: '📵', issue: 'No check-in for ' + daysSinceCheckin + ' days', issueClass: 'warning', priority: 5, alertType: 'missed_checkin' }));
+            placedReview = true;
+        } else if (!p.last_checkin_date && daysPostOp !== null && daysPostOp >= 0) {
+            reviewItems.push(Object.assign({}, base, { icon: '📵', issue: 'Never checked in (Day ' + daysPostOp + ')', issueClass: 'warning', priority: 5, alertType: 'missed_checkin' }));
+            placedReview = true;
+        }
+        if (overdueProms.length > 0) {
+            var windows = overdueProms.map(function(o) { return (o.window_name || '').replace('_', ' '); }).join(', ');
+            reviewItems.push(Object.assign({}, base, { icon: '📋', issue: 'PROM overdue: ' + windows, issueClass: 'info', priority: 6, alertType: 'prom_overdue' }));
+            placedReview = true;
+        }
+        // PT skipped removed — nurse handles this, not surgeon
+        
+        // === TIER 3: DONE (on track patients only) ===
+        if (p.last_checkin_date && daysSinceCheckin !== null && daysSinceCheckin <= 3 && !placedDecision && !placedReview) {
+            doneItems.push(Object.assign({}, base, { icon: '✅', text: 'Checked in ' + (daysSinceCheckin === 0 ? 'today' : daysSinceCheckin + 'd ago') + ' — pain ' + (p.last_pain_level != null ? p.last_pain_level : '?') + '/10', priority: 11 }));
+        }
+        if (p.last_pain_level !== null && p.last_pain_level !== undefined && p.last_pain_level <= 3 && daysSinceCheckin !== null && daysSinceCheckin <= 3 && !placedDecision && !placedReview) {
+            doneItems.push(Object.assign({}, base, { icon: '🟢', text: 'On track — low pain, recent check-in', priority: 12 }));
+        }
+    });
+    
+    // Sort
+    decisionItems.sort(function(a,b){ return a.priority - b.priority; });
+    reviewItems.sort(function(a,b){ return a.priority - b.priority; });
+    doneItems.sort(function(a,b){ return a.priority - b.priority; });
+    
+    // Dedup: one entry per patient+issue in decision/review, one per patient in done
+    function dedupByKey(arr) {
+        var seen = {};
+        return arr.filter(function(item) {
+            var key = item.patientId + '|' + item.issue;
+            if (seen[key]) return false;
+            seen[key] = true;
+            return true;
+        });
+    }
+    function dedupByPatient(arr) {
+        var seen = {};
+        return arr.filter(function(item) {
+            if (seen[item.patientId]) return false;
+            seen[item.patientId] = true;
+            return true;
+        });
+    }
+    
+    var finalDecision = dedupByKey(decisionItems);
+    var finalReview = dedupByKey(reviewItems);
+    var finalDone = dedupByPatient(doneItems);
+    
+    // KPI strip
+    var alertCount = finalDecision.length;
+    var overduePromCount = 0;
+    myPatients.forEach(function(p) { overduePromCount += (promScheduleCache[p.id] || []).length; });
+    var totalReadmit = 0;
+    myPatients.forEach(function(p) { totalReadmit += (adverseEventsCache[p.id] || []).filter(function(e){ return e.event_type === 'readmission'; }).length; });
+    
+    document.getElementById('kpiActive').textContent = myPatients.length;
+    document.getElementById('kpiAlerts').textContent = alertCount;
+    document.getElementById('kpiOverdue').textContent = overduePromCount;
+    document.getElementById('kpiReadmissions').textContent = totalReadmit;
+    
+    // Tier counts
+    document.getElementById('tierDecisionCount').textContent = finalDecision.length;
+    document.getElementById('tierReviewCount').textContent = finalReview.length;
+    document.getElementById('tierDoneCount').textContent = finalDone.length;
+    
+    // Render Decision
+    var decBody = document.getElementById('tierDecisionBody');
+    if (finalDecision.length === 0) {
+        decBody.innerHTML = '<div class="tier-empty">✅ All clear — no urgent decisions</div>';
+    } else {
+        decBody.innerHTML = finalDecision.map(renderTierDecisionCard).join('');
+    }
+    
+    // Render Review
+    var revBody = document.getElementById('tierReviewBody');
+    if (finalReview.length === 0) {
+        revBody.innerHTML = '<div class="tier-empty">👍 Nothing flagged — looking good</div>';
+    } else {
+        revBody.innerHTML = finalReview.map(renderTierReviewCard).join('');
+    }
+    
+    // Render Done
+    var doneBody = document.getElementById('tierDoneBody');
+    if (finalDone.length === 0) {
+        doneBody.innerHTML = '<div class="tier-empty">No completed items</div>';
+    } else {
+        var maxShow = 5;
+        var shown = finalDone.slice(0, maxShow);
+        var hidden = finalDone.slice(maxShow);
+        var html = shown.map(renderTierDoneCard).join('');
+        if (hidden.length > 0) {
+            html += '<div class="tier-show-more" onclick="this.style.display=\'none\';document.getElementById(\'tierDoneMore\').style.display=\'block\';">+ ' + hidden.length + ' more</div>';
+            html += '<div id="tierDoneMore" style="display:none;">' + hidden.map(renderTierDoneCard).join('') + '</div>';
+        }
+        doneBody.innerHTML = html;
+    }
+}
+
+function renderTierDecisionCard(item) {
+    var riskHtml = item.riskTier ? '<span class="risk-badge risk-' + item.riskTier.toLowerCase() + '">' + item.riskTier + '</span>' : '';
+    var resolveBtn = '';
+    if (item.aeId) {
+        resolveBtn = '<button class="tier-btn resolve" onclick="event.stopPropagation();resolveAdverseEvent(\'' + item.aeId + '\',\'' + item.patientId + '\')" title="Mark resolved">✓ Resolve</button>';
+    } else if (item.alertType) {
+        resolveBtn = '<button class="tier-btn ack" onclick="event.stopPropagation();acknowledgeAlert(\'' + item.patientId + '\',\'' + item.alertType + '\')" title="Suppress 24h">✓ Ack</button>';
+    }
+    return '<div class="tier-item" onclick="openPatientModal(\'' + item.patientId + '\')">' +
+        '<div class="tier-item-top"><div>' +
+        '<span class="tier-item-name">' + item.name + '</span>' +
+        '<span class="tier-item-mrn">' + (item.mrn ? '[' + item.mrn + ']' : '') + '</span>' +
+        '</div>' + riskHtml + '</div>' +
+        '<div class="tier-item-meta">' +
+        '<span class="meta-chip">' + item.procedure + '</span>' +
+        '<span class="meta-chip">' + item.dayLabel + '</span>' +
+        '</div>' +
+        '<div class="tier-item-issue critical">' + item.icon + ' ' + item.issue + '</div>' +
+        '<div class="tier-item-actions">' +
+        '<button class="tier-btn primary" onclick="event.stopPropagation();openPatientModal(\'' + item.patientId + '\')">' + (item.cta || 'View') + '</button>' +
+        '<button class="tier-btn" onclick="event.stopPropagation();window.location.href=\'/preop.html?patient=' + item.patientId + '\'">PreOp</button>' +
+        '<button class="tier-btn" onclick="event.stopPropagation();window.location.href=\'/surgical-prep.html?patient=' + item.patientId + '\'">Surg Prep</button>' +
+        resolveBtn +
+        '</div></div>';
+}
+
+function renderTierReviewCard(item) {
+    var riskHtml = item.riskTier ? '<span class="risk-badge risk-' + item.riskTier.toLowerCase() + '">' + item.riskTier + '</span>' : '';
+    var ackBtn = '';
+    if (item.alertType) {
+        ackBtn = '<button class="tier-btn ack" onclick="event.stopPropagation();acknowledgeAlert(\'' + item.patientId + '\',\'' + item.alertType + '\')" title="Suppress 24h" style="margin-top:6px;">✓ Ack</button>';
+    }
+    return '<div class="tier-item" onclick="openPatientModal(\'' + item.patientId + '\')">' +
+        '<div class="tier-item-top"><div>' +
+        '<span class="tier-item-name">' + item.name + '</span>' +
+        '<span class="tier-item-mrn">' + (item.mrn ? '[' + item.mrn + ']' : '') + '</span>' +
+        '</div>' + riskHtml + '</div>' +
+        '<div class="tier-item-meta">' +
+        '<span class="meta-chip">' + item.procedure + '</span>' +
+        '<span class="meta-chip">' + item.dayLabel + '</span>' +
+        '</div>' +
+        '<div class="tier-item-issue ' + item.issueClass + '">' + item.icon + ' ' + item.issue + '</div>' +
+        '<div class="tier-item-actions" style="margin-top:4px;">' +
+        '<button class="tier-btn" onclick="event.stopPropagation();openPatientModal(\'' + item.patientId + '\')">View</button>' +
+        ackBtn +
+        '</div></div>';
+}
+
+function renderTierDoneCard(item) {
+    return '<div class="tier-item" onclick="openPatientModal(\'' + item.patientId + '\')">' +
+        '<div class="done-check">' + item.icon + ' ' + item.text + '</div>' +
+        '<div style="font-size:0.75rem;color:#6b7280;margin-top:2px;">' + item.name + ' ' + (item.mrn ? '[' + item.mrn + ']' : '') + ' &bull; ' + item.procedure + '</div>' +
+        '</div>';
+}
+
+function toggleFullPatientTable() {
+    var tableEl = document.querySelector('#panelPatients .table-container');
+    var toolbarEl = document.querySelector('#panelPatients .toolbar');
+    fullTableVisible = !fullTableVisible;
+    if (fullTableVisible) {
+        if (tableEl) tableEl.style.display = 'block';
+        if (toolbarEl) toolbarEl.style.display = 'flex';
+    } else {
+        if (tableEl) tableEl.style.display = 'none';
+        if (toolbarEl) toolbarEl.style.display = 'none';
+    }
+}
+
 // ============ NURSE ACTION PANEL ============
 async function renderNursePanel() {
-    const queue = document.getElementById('nurseActionQueue');
-    const countEl = document.getElementById('nursePanelCount');
-    if (!queue) return;
-    
     // Load due-soon PROMs (pending, due within 14 days)
     let dueSoonProms = [];
     try {
@@ -127,167 +411,269 @@ async function renderNursePanel() {
         dueSoonProms = pending.filter(p => new Date(p.due_date) <= in14);
     } catch(e) {}
     
-    // Build priority items
-    let items = [];
+    const criticalItems = [];
+    const complianceItems = [];
+    const infoItems = [];
     
     patients.forEach(p => {
         const daysPostOp = p.surgery_date ? Math.floor((Date.now() - new Date(p.surgery_date)) / (1000*60*60*24)) : null;
+        const daysToSurgery = p.surgery_date ? Math.floor((new Date(p.surgery_date) - Date.now()) / (1000*60*60*24)) : null;
+        const daysSinceCheckin = p.last_checkin_date ? Math.floor((Date.now() - new Date(p.last_checkin_date)) / (1000*60*60*24)) : null;
         const surgeonName = p.surgeon_first_name ? 'Dr. ' + p.surgeon_last_name : '';
         const patientLabel = p.last_name + ', ' + p.first_name + (p.mrn ? ' [' + p.mrn + ']' : '');
+        const detailStr = surgeonName + (daysPostOp !== null && daysPostOp >= 0 ? ' • Day ' + daysPostOp : (daysToSurgery !== null && daysToSurgery >= 0 ? ' • ' + daysToSurgery + 'd to surgery' : ''));
         
-        // ER visits
         const aeList = adverseEventsCache[p.id] || [];
-        const erEvents = aeList.filter(e => e.event_type === 'er_visit');
-        const readmitEvents = aeList.filter(e => e.event_type === 'readmission');
+        const erEvents = aeList.filter(e => e.event_type === 'er_visit' && !e.resolved);
+        const readmitEvents = aeList.filter(e => e.event_type === 'readmission' && !e.resolved);
+        const resolvedER = aeList.filter(e => e.event_type === 'er_visit' && e.resolved);
+        const resolvedReadmit = aeList.filter(e => e.event_type === 'readmission' && e.resolved);
+        const overdueProms = promScheduleCache[p.id] || [];
+        const preop = preopAssessments[p.id];
         
-        if (readmitEvents.length > 0) {
-            items.push({
-                priority: 1,
-                icon: '🏥',
-                color: '#7c3aed',
-                patient: patientLabel,
-                patientId: p.id,
+        // Check if this patient+alert_type is acknowledged
+        function isAcked(alertType) {
+            return nurseAcksCache.some(a => a.patient_id === p.id && a.alert_type === alertType);
+        }
+        
+        // === TIER 1: CRITICAL ===
+        if (readmitEvents.length > 0 && !isAcked('readmission')) {
+            criticalItems.push({ icon: '🏥', patient: patientLabel, patientId: p.id, issueClass: 'crit',
                 issue: 'Readmission reported' + (readmitEvents[0].facility ? ' — ' + readmitEvents[0].facility : ''),
-                detail: surgeonName + (daysPostOp !== null ? ' • Day ' + daysPostOp : ''),
-                token: p.token
-            });
+                detail: detailStr, token: p.token, priority: 1, alertType: 'readmission', aeId: readmitEvents[0].id });
         }
-        
-        if (erEvents.length > 0) {
-            items.push({
-                priority: 2,
-                icon: '🚨',
-                color: '#dc2626',
-                patient: patientLabel,
-                patientId: p.id,
+        if (erEvents.length > 0 && !isAcked('er_visit')) {
+            criticalItems.push({ icon: '🚨', patient: patientLabel, patientId: p.id, issueClass: 'crit',
                 issue: 'ER visit reported' + (erEvents[0].facility ? ' — ' + erEvents[0].facility : ''),
-                detail: surgeonName + (daysPostOp !== null ? ' • Day ' + daysPostOp : ''),
-                token: p.token
-            });
+                detail: detailStr, token: p.token, priority: 2, alertType: 'er_visit', aeId: erEvents[0].id });
+        }
+        if (p.last_pain_level >= 8 && !isAcked('high_pain')) {
+            criticalItems.push({ icon: '🔥', patient: patientLabel, patientId: p.id, issueClass: 'crit',
+                issue: 'Severe pain: ' + p.last_pain_level + '/10',
+                detail: detailStr + ' • Last check-in: ' + (p.last_checkin_date || 'Never'), token: p.token, priority: 3, alertType: 'high_pain' });
+        }
+        // Surgery within 5 days — workup incomplete
+        if (daysToSurgery !== null && daysToSurgery >= 0 && daysToSurgery <= 5 && preop && preop.risk_tier && preop.risk_tier.toUpperCase() !== 'LOW') {
+            criticalItems.push({ icon: '⚠️', patient: patientLabel, patientId: p.id, issueClass: 'crit',
+                issue: 'Surgery in ' + daysToSurgery + 'd — ' + preop.risk_tier + ' risk, review workup',
+                detail: detailStr, token: p.token, priority: 2, alertType: 'workup_urgent' });
+        }
+        if (daysToSurgery !== null && daysToSurgery >= 0 && daysToSurgery <= 5 && !preop) {
+            criticalItems.push({ icon: '⚠️', patient: patientLabel, patientId: p.id, issueClass: 'crit',
+                issue: 'Surgery in ' + daysToSurgery + 'd — no preop on file',
+                detail: detailStr, token: p.token, priority: 2, alertType: 'no_preop' });
+        }
+        // High pain 7 (not severe 8+, which is critical above)
+        if (p.last_pain_level === 7 && !isAcked('high_pain')) {
+            criticalItems.push({ icon: '🔥', patient: patientLabel, patientId: p.id, issueClass: 'crit',
+                issue: 'High pain: 7/10',
+                detail: detailStr, token: p.token, priority: 4, alertType: 'high_pain' });
         }
         
-        // High pain
-        if (p.last_pain_level >= 7) {
-            items.push({
-                priority: 3,
-                icon: '🔥',
-                color: '#ef4444',
-                patient: patientLabel,
-                patientId: p.id,
-                issue: 'High pain: ' + p.last_pain_level + '/10',
-                detail: surgeonName + (daysPostOp !== null ? ' • Day ' + daysPostOp : '') + ' • Last check-in: ' + (p.last_checkin_date || 'Never'),
-                token: p.token
-            });
-        }
-        
-        // Missed check-ins >3 days
-        if (p.last_checkin_date) {
-            const daysSince = Math.floor((Date.now() - new Date(p.last_checkin_date)) / (1000*60*60*24));
-            if (daysSince > 3) {
-                items.push({
-                    priority: 4,
-                    icon: '📵',
-                    color: '#f59e0b',
-                    patient: patientLabel,
-                    patientId: p.id,
-                    issue: 'No check-in for ' + daysSince + ' days',
-                    detail: surgeonName + (daysPostOp !== null ? ' • Day ' + daysPostOp : ''),
-                    token: p.token
-                });
-            }
-        } else if (p.surgery_date && daysPostOp >= 0) {
-            items.push({
-                priority: 4,
-                icon: '📵',
-                color: '#f59e0b',
-                patient: patientLabel,
-                patientId: p.id,
-                issue: 'Never checked in (Day ' + daysPostOp + ' post-op)',
-                detail: surgeonName,
-                token: p.token
-            });
-        }
-        
-        // PT non-compliance
-        if (p.last_pt_exercises === 0) {
-            items.push({
-                priority: 6,
-                icon: '🏋️',
-                color: '#f97316',
-                patient: patientLabel,
-                patientId: p.id,
-                issue: 'Skipped PT exercises',
-                detail: surgeonName + ' • Last check-in: ' + (p.last_checkin_date || 'Never'),
-                token: p.token
-            });
-        }
-        
-        // PROM overdue
-        const overdue = promScheduleCache[p.id] || [];
-        if (overdue.length > 0) {
-            const windowNames = overdue.map(o => o.window_name).join(', ');
-            items.push({
-                priority: 5,
-                icon: '📋',
-                color: '#2563eb',
-                patient: patientLabel,
-                patientId: p.id,
+        // === TIER 2: COMPLIANCE ===
+        if (overdueProms.length > 0) {
+            const windowNames = overdueProms.map(o => (o.window_name || '').replace('_', ' ')).join(', ');
+            complianceItems.push({ icon: '📋', patient: patientLabel, patientId: p.id, issueClass: 'warn',
                 issue: 'PROM overdue: ' + windowNames,
-                detail: surgeonName + (daysPostOp !== null ? ' • Day ' + daysPostOp : ''),
-                token: p.token
-            });
+                detail: detailStr, token: p.token, priority: 5, alertType: 'prom_overdue' });
+        }
+        if (daysSinceCheckin !== null && daysSinceCheckin > 3 && !isAcked('missed_checkin')) {
+            complianceItems.push({ icon: '📵', patient: patientLabel, patientId: p.id, issueClass: 'warn',
+                issue: 'No check-in for ' + daysSinceCheckin + ' days',
+                detail: detailStr, token: p.token, priority: 6, alertType: 'missed_checkin' });
+        } else if (!p.last_checkin_date && daysPostOp !== null && daysPostOp >= 0 && !isAcked('missed_checkin')) {
+            complianceItems.push({ icon: '📵', patient: patientLabel, patientId: p.id, issueClass: 'warn',
+                issue: 'Never checked in (Day ' + daysPostOp + ' post-op)',
+                detail: detailStr, token: p.token, priority: 6, alertType: 'missed_checkin' });
+        }
+        if (p.last_pt_exercises === 0 && !isAcked('skipped_pt')) {
+            complianceItems.push({ icon: '🏋️', patient: patientLabel, patientId: p.id, issueClass: 'warn',
+                issue: 'Skipped PT exercises',
+                detail: detailStr + ' • Last check-in: ' + (p.last_checkin_date || 'Never'), token: p.token, priority: 7, alertType: 'skipped_pt' });
+        }
+        // Preop incomplete but surgery not imminent (>5 days)
+        if (daysToSurgery !== null && daysToSurgery > 5 && daysToSurgery <= 30 && !preop) {
+            complianceItems.push({ icon: '📝', patient: patientLabel, patientId: p.id, issueClass: 'info-text',
+                issue: 'Preop not started — surgery in ' + daysToSurgery + ' days',
+                detail: detailStr, token: p.token, priority: 8, alertType: 'preop_needed' });
+        }
+        
+        // === TIER 3: INFORMATIONAL ===
+        // Moderate pain 4-6 (not high)
+        if (p.last_pain_level >= 4 && p.last_pain_level <= 6) {
+            infoItems.push({ icon: '📈', patient: patientLabel, patientId: p.id, issueClass: 'info-text',
+                issue: 'Pain at ' + p.last_pain_level + '/10 — monitoring',
+                detail: detailStr, token: p.token, priority: 9 });
+        }
+        // On track patients
+        if (p.last_pain_level !== null && p.last_pain_level !== undefined && p.last_pain_level <= 3 && daysSinceCheckin !== null && daysSinceCheckin <= 3) {
+            infoItems.push({ icon: '🟢', patient: patientLabel, patientId: p.id, issueClass: 'good-text',
+                issue: 'On track — pain ' + p.last_pain_level + '/10, checked in ' + (daysSinceCheckin === 0 ? 'today' : daysSinceCheckin + 'd ago'),
+                detail: detailStr, token: p.token, priority: 12 });
         }
     });
     
-    // Add due-soon PROMs
+    // Add due-soon PROMs to informational
     dueSoonProms.forEach(ps => {
         const daysUntil = Math.floor((new Date(ps.due_date) - Date.now()) / (1000*60*60*24));
-        const alreadyHasOverdue = items.some(i => i.patientId === ps.patient_id && i.icon === '📋');
+        const alreadyHasOverdue = complianceItems.some(i => i.patientId === ps.patient_id && i.icon === '📋');
         if (!alreadyHasOverdue) {
-            items.push({
-                priority: 7,
-                icon: '🕐',
-                color: '#d97706',
+            infoItems.push({
+                icon: '🕐', issueClass: 'info-text',
                 patient: (ps.last_name || '') + ', ' + (ps.first_name || '') + (ps.mrn ? ' [' + ps.mrn + ']' : ''),
                 patientId: ps.patient_id,
-                issue: ps.window_name + ' PROM due in ' + Math.max(0, daysUntil) + ' days (' + ps.assessment_type + ')',
+                issue: (ps.window_name || '').replace('_', ' ') + ' PROM due in ' + Math.max(0, daysUntil) + ' days',
                 detail: (ps.surgeon_first ? 'Dr. ' + ps.surgeon_last : ''),
-                token: null
+                token: null, priority: 10
             });
         }
     });
     
-    // Sort by priority
-    items.sort((a, b) => a.priority - b.priority);
+    // Sort each tier
+    criticalItems.sort((a,b) => a.priority - b.priority);
+    complianceItems.sort((a,b) => a.priority - b.priority);
+    infoItems.sort((a,b) => a.priority - b.priority);
     
-    countEl.textContent = items.length + ' item' + (items.length !== 1 ? 's' : '');
+    // KPI calculations
+    const activePatients = patients.filter(p => p.episode_id);
+    const recentCheckins = activePatients.filter(p => {
+        if (!p.last_checkin_date) return false;
+        return Math.floor((Date.now() - new Date(p.last_checkin_date)) / (1000*60*60*24)) <= 3;
+    });
+    const checkinRate = activePatients.length > 0 ? Math.round((recentCheckins.length / activePatients.length) * 100) : 0;
     
-    if (items.length === 0) {
-        queue.innerHTML = '<div style="text-align:center;padding:30px;color:#a7f3d0;">✅ All clear — no action items today!</div>';
-        return;
+    // PROM compliance
+    let promRate = '--';
+    try {
+        const promResp = await fetch(`/api/prom-compliance?clinic_id=${CLINIC_ID}`);
+        const promData = await promResp.json();
+        promRate = promData.compliance_rate;
+    } catch(e) {}
+    
+    // RPM eligible
+    let rpmEligible = 0;
+    try {
+        const billingMonth = new Date().toISOString().slice(0, 7);
+        const rpmResp = await fetch(`/api/rpm-summary?clinic_id=${CLINIC_ID}&billing_month=${billingMonth}`);
+        const rpmData = await rpmResp.json();
+        rpmEligible = rpmData.filter(r => r.total_seconds >= 1200).length;
+    } catch(e) {}
+    
+    // Set KPI values with dynamic pill coloring
+    var promEl = document.getElementById('nkpiPromRate');
+    promEl.textContent = promRate + '%';
+    promEl.style.color = '';  // Let CSS class handle it
+    var promPill = promEl.closest('.nurse-kpi-pill');
+    promPill.className = 'nurse-kpi-pill ' + (promRate >= 80 ? 'nkpi-green' : promRate >= 50 ? 'nkpi-amber' : 'nkpi-red');
+    
+    var ciEl = document.getElementById('nkpiCheckinRate');
+    ciEl.textContent = checkinRate + '%';
+    ciEl.style.color = '';
+    var ciPill = ciEl.closest('.nurse-kpi-pill');
+    ciPill.className = 'nurse-kpi-pill ' + (checkinRate >= 80 ? 'nkpi-green' : checkinRate >= 50 ? 'nkpi-amber' : 'nkpi-red');
+    
+    document.getElementById('nkpiRpmEligible').textContent = rpmEligible;
+    var rpmPill = document.getElementById('nkpiRpmEligible').closest('.nurse-kpi-pill');
+    rpmPill.className = 'nurse-kpi-pill ' + (rpmEligible >= 5 ? 'nkpi-green' : rpmEligible >= 1 ? 'nkpi-amber' : '');
+    rpmPill.style.borderLeftColor = rpmEligible >= 1 ? '' : 'var(--sro-gray-300)';
+    
+    document.getElementById('nkpiCriticalCount').textContent = criticalItems.length;
+    var critPill = document.getElementById('nkpiCriticalCount').closest('.nurse-kpi-pill');
+    critPill.className = 'nurse-kpi-pill ' + (criticalItems.length === 0 ? 'nkpi-green' : 'nkpi-red');
+    document.getElementById('nkpiCriticalCount').style.color = '';
+    
+    // Render tiers
+    document.getElementById('nurseCritCount').textContent = criticalItems.length;
+    document.getElementById('nurseCompCount').textContent = complianceItems.length;
+    document.getElementById('nurseInfoCount').textContent = infoItems.length;
+    
+    var critBody = document.getElementById('nurseCritBody');
+    critBody.innerHTML = criticalItems.length === 0 ?
+        '<div class="nt-empty">✅ No critical items — all stable</div>' :
+        criticalItems.map(renderNurseTierItem).join('');
+    
+    var compBody = document.getElementById('nurseCompBody');
+    compBody.innerHTML = complianceItems.length === 0 ?
+        '<div class="nt-empty">👍 All caught up</div>' :
+        complianceItems.map(renderNurseTierItem).join('');
+    
+    var infoBody = document.getElementById('nurseInfoBody');
+    if (infoItems.length === 0) {
+        infoBody.innerHTML = '<div class="nt-empty">Nothing upcoming</div>';
+    } else {
+        var maxShow = 8;
+        var shown = infoItems.slice(0, maxShow);
+        var hidden = infoItems.slice(maxShow);
+        var html = shown.map(renderNurseTierItem).join('');
+        if (hidden.length > 0) {
+            html += '<div class="tier-show-more" onclick="this.style.display=\'none\';document.getElementById(\'nurseInfoMore\').style.display=\'block\';">+ ' + hidden.length + ' more</div>';
+            html += '<div id="nurseInfoMore" style="display:none;">' + hidden.map(renderNurseTierItem).join('') + '</div>';
+        }
+        infoBody.innerHTML = html;
     }
     
-    queue.innerHTML = items.map(item => `
-        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(255,255,255,0.08);border-radius:8px;margin-bottom:6px;border-left:4px solid ${item.color};">
-            <div style="font-size:1.3rem;flex-shrink:0;">${item.icon}</div>
-            <div style="flex:1;min-width:0;">
-                <div style="font-weight:600;font-size:0.9rem;">${item.patient}</div>
-                <div style="font-size:0.85rem;color:#d1fae5;">${item.issue}</div>
-                <div style="font-size:0.75rem;color:#6ee7b7;margin-top:2px;">${item.detail}</div>
-            </div>
-            <div style="display:flex;gap:6px;flex-shrink:0;">
-                <button class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);padding:6px 10px;font-size:0.75rem;border-radius:6px;" onclick="event.stopPropagation();openPatientModal('${item.patientId}')">View</button>
-                ${item.token ? `<button class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);padding:6px 10px;font-size:0.75rem;border-radius:6px;" onclick="event.stopPropagation();nurseQuickCopyLink('${item.token}')">📋 Link</button>` : ''}
-                <button class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);padding:6px 10px;font-size:0.75rem;border-radius:6px;" onclick="event.stopPropagation();nurseQuickNote('${item.patientId}')">📝 Note</button>
-            </div>
-        </div>
-    `).join('');
+    // Auto-collapse informational if items exist in critical or compliance
+    if ((criticalItems.length > 0 || complianceItems.length > 0) && infoItems.length > 3) {
+        infoBody.classList.add('collapsed');
+        document.getElementById('nurseInfoToggle').textContent = '▶';
+    }
+}
+
+function renderNurseTierItem(item) {
+    var linkBtn = item.token ? '<button class="nt-btn" onclick="event.stopPropagation();nurseQuickCopyLink(\'' + item.token + '\')">📋 Link</button>' : '';
+    // Resolve button for adverse events (ER/readmission)
+    var resolveBtn = '';
+    if (item.aeId) {
+        resolveBtn = '<button class="nt-btn nt-resolve" onclick="event.stopPropagation();resolveAdverseEvent(\'' + item.aeId + '\',\'' + item.patientId + '\')" title="Mark resolved">✓ Resolve</button>';
+    }
+    // Ack button for all other dismissable alerts
+    var ackBtn = '';
+    if (item.alertType && !item.aeId) {
+        ackBtn = '<button class="nt-btn nt-ack" onclick="event.stopPropagation();acknowledgeAlert(\'' + item.patientId + '\',\'' + item.alertType + '\')" title="Suppress for 24h">✓ Ack</button>';
+    }
+    return '<div class="nt-item" onclick="openPatientModal(\'' + item.patientId + '\')">' +
+        '<div class="nt-item-icon">' + item.icon + '</div>' +
+        '<div class="nt-item-body">' +
+        '<div class="nt-item-patient">' + item.patient + '</div>' +
+        '<div class="nt-item-issue ' + item.issueClass + '">' + item.issue + '</div>' +
+        '<div class="nt-item-detail">' + item.detail + '</div>' +
+        '</div>' +
+        '<div class="nt-item-actions">' +
+        '<button class="nt-btn nt-primary" onclick="event.stopPropagation();openPatientModal(\'' + item.patientId + '\')">View</button>' +
+        linkBtn +
+        '<button class="nt-btn" onclick="event.stopPropagation();nurseQuickNote(\'' + item.patientId + '\')">📝 Note</button>' +
+        resolveBtn + ackBtn +
+        '</div></div>';
+}
+
+function toggleNurseTier(bodyId) {
+    var body = document.getElementById(bodyId);
+    if (!body) return;
+    body.classList.toggle('collapsed');
+    // Update toggle arrow
+    var toggleId = bodyId.replace('Body', 'Toggle');
+    var toggle = document.getElementById(toggleId);
+    if (toggle) toggle.textContent = body.classList.contains('collapsed') ? '▶' : '▼';
+}
+
+let nurseFullTableVisible = false;
+function toggleNurseFullTable() {
+    var tableEl = document.querySelector('#panelPatients .table-container');
+    var toolbarEl = document.querySelector('#panelPatients .toolbar');
+    nurseFullTableVisible = !nurseFullTableVisible;
+    if (nurseFullTableVisible) {
+        if (tableEl) tableEl.style.display = 'block';
+        if (toolbarEl) toolbarEl.style.display = 'flex';
+    } else {
+        if (tableEl) tableEl.style.display = 'none';
+        if (toolbarEl) toolbarEl.style.display = 'none';
+    }
 }
 
 function nurseQuickCopyLink(token) {
     const url = 'https://sro-cloud-relay.onrender.com/checkin.html?t=' + token;
     navigator.clipboard.writeText(url).then(() => {
-        alert('Check-in link copied! Paste into text or email.');
+        showToast('Check-in link copied!');
     });
 }
 
@@ -302,118 +688,347 @@ function nurseQuickNote(patientId) {
     });
 }
 
-// ============ ADMIN METRICS PANEL ============
+async function resolveAdverseEvent(aeId, patientId) {
+    if (!confirm('Mark this event as resolved?')) return;
+    try {
+        await fetch('/api/adverse-events/' + aeId, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ resolved: true, resolved_by: USER_NAME || 'staff' })
+        });
+        showToast('Event resolved');
+        await loadAlertCaches();
+        if (USER_ROLE === 'nurse') await renderNursePanel();
+        if (USER_ROLE === 'surgeon') renderSurgeonTieredView();
+    } catch(e) {
+        showToast('Error resolving event', 'error');
+    }
+}
+
+async function acknowledgeAlert(patientId, alertType) {
+    try {
+        await fetch('/api/nurse-ack', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                patient_id: patientId,
+                clinic_id: CLINIC_ID,
+                alert_type: alertType,
+                acknowledged_by: USER_NAME || 'staff',
+                hours: 24
+            })
+        });
+        showToast('Alert acknowledged (24h)');
+        await loadAlertCaches();
+        if (USER_ROLE === 'nurse') await renderNursePanel();
+        if (USER_ROLE === 'surgeon') renderSurgeonTieredView();
+    } catch(e) {
+        showToast('Error acknowledging alert', 'error');
+    }
+}
+
+// ============ ADMIN EXECUTIVE DASHBOARD ============
+
+let adminFullTableVisible = false;
+function toggleAdminFullTable() {
+    var tableEl = document.querySelector('#panelPatients .table-container');
+    var toolbarEl = document.querySelector('#panelPatients .toolbar');
+    adminFullTableVisible = !adminFullTableVisible;
+    if (adminFullTableVisible) {
+        if (tableEl) tableEl.style.display = 'block';
+        if (toolbarEl) toolbarEl.style.display = 'flex';
+    } else {
+        if (tableEl) tableEl.style.display = 'none';
+        if (toolbarEl) toolbarEl.style.display = 'none';
+    }
+}
+
+// ============ ADMIN EXECUTIVE DASHBOARD ============
+// TODO: Pull from a `baselines` or `snapshots` table once we have historical data.
+// These represent the practice's metrics BEFORE SRO was implemented.
+const ADMIN_BASELINES = {
+    promCompliance: 22,    // % — industry average for paper-based PROM collection
+    matchedRate: 18,       // % — pre/post matched pair rate before SRO
+    readmissionRate: 4.2,  // % — national TKA/THA 90-day readmission average
+    rpmRevenue: 0          // $ — no RPM billing before system existed
+};
+
+// --- Medicare reimbursement constants ---
+// TODO: Update these annually when CMS publishes new rates
+const RPM_RATE_99457 = 51;   // First 20 minutes of RPM per patient per month
+const RPM_RATE_99458 = 41;   // Each additional 20 minutes
+// TEAM APU (Applicable Percentage Update): Penalty range is 0% to -5% of episode spending
+// Placeholder: average TKA/THA episode = $25,000. Adjust for actual Medicare volume.
+const AVG_EPISODE_COST = 25000;
+// Default annual Medicare joint volume for the practice — PLACEHOLDER
+// TODO: Replace with actual volume from clinic settings or a config table
+const ANNUAL_MEDICARE_JOINTS = 100;
+
+function switchAdminView(view) {
+    document.getElementById('adminExecView').style.display = view === 'exec' ? 'block' : 'none';
+    document.getElementById('adminDetailView').style.display = view === 'detail' ? 'block' : 'none';
+    document.getElementById('adminTabExec').classList.toggle('active', view === 'exec');
+    document.getElementById('adminTabDetail').classList.toggle('active', view === 'detail');
+}
+
 async function renderAdminPanel() {
     const today = new Date();
-    const dateEl = document.getElementById('adminPanelDate');
-    if (dateEl) dateEl.textContent = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-    
-    // PROM compliance rate
-    try {
-        const promResp = await fetch(`/api/prom-compliance?clinic_id=${CLINIC_ID}`);
-        const promData = await promResp.json();
-        
-        const rateEl = document.getElementById('adminPromRate');
-        rateEl.textContent = promData.compliance_rate + '%';
-        rateEl.style.color = promData.compliance_rate >= 80 ? '#86efac' : promData.compliance_rate >= 50 ? '#fde68a' : '#fca5a5';
-        
-        // Surgeon PROM bars
-        const surgeonDiv = document.getElementById('adminPromBySurgeon');
-        if (promData.by_surgeon && promData.by_surgeon.length > 0) {
-            surgeonDiv.innerHTML = promData.by_surgeon.map(s => {
-                const pct = s.total > 0 ? Math.round((s.completed / s.total) * 100) : 0;
-                const barColor = pct >= 80 ? '#86efac' : pct >= 50 ? '#fde68a' : '#fca5a5';
-                return `
-                    <div style="margin-bottom: 8px;">
-                        <div style="display:flex;justify-content:space-between;margin-bottom:2px;color:#e0e7ff;">
-                            <span>Dr. ${s.surgeon_name}</span>
-                            <span>${s.completed}/${s.total} (${pct}%)${s.overdue > 0 ? ' · <span style="color:#fca5a5;">' + s.overdue + ' overdue</span>' : ''}</span>
-                        </div>
-                        <div style="background:rgba(255,255,255,0.15);border-radius:4px;height:6px;">
-                            <div style="background:${barColor};height:100%;border-radius:4px;width:${pct}%;"></div>
-                        </div>
-                    </div>`;
-            }).join('');
-        } else {
-            surgeonDiv.innerHTML = '<div style="color:#a5b4fc;">No PROM data yet</div>';
-        }
-    } catch(e) { console.error('Admin PROM load error:', e); }
-    
-    // Filter patients by selected surgeon for stat cards
-    const filterSurgeon = document.getElementById('filterSurgeon')?.value || 'all';
-    const filteredPatients = filterSurgeon === 'all' ? patients : patients.filter(p => p.surgeon_id === filterSurgeon);
-    
-    // Check-in rate (patients who checked in within last 3 days / total active)
-    const activePatients = filteredPatients.filter(p => p.episode_id);
-    const recentCheckins = activePatients.filter(p => {
-        if (!p.last_checkin_date) return false;
-        const days = Math.floor((Date.now() - new Date(p.last_checkin_date)) / (1000*60*60*24));
-        return days <= 3;
-    });
-    const checkinRate = activePatients.length > 0 ? Math.round((recentCheckins.length / activePatients.length) * 100) : 0;
-    const checkinEl = document.getElementById('adminCheckinRate');
-    checkinEl.textContent = checkinRate + '%';
-    checkinEl.style.color = checkinRate >= 80 ? '#86efac' : checkinRate >= 50 ? '#fde68a' : '#fca5a5';
-    
-    // Average pain
-    const painPatients = activePatients.filter(p => p.last_pain_level !== null && p.last_pain_level !== undefined);
-    const avgPain = painPatients.length > 0 ? (painPatients.reduce((s, p) => s + p.last_pain_level, 0) / painPatients.length).toFixed(1) : '-';
-    const avgPainEl = document.getElementById('adminAvgPain');
-    avgPainEl.textContent = avgPain;
-    if (avgPain !== '-') avgPainEl.style.color = parseFloat(avgPain) <= 4 ? '#86efac' : parseFloat(avgPain) <= 6 ? '#fde68a' : '#fca5a5';
-    
-    // Alert count
-    let alertCount = 0;
-    activePatients.forEach(p => {
-        if (p.last_pain_level >= 7) alertCount++;
-        if (!p.last_checkin_date || Math.floor((Date.now() - new Date(p.last_checkin_date)) / (1000*60*60*24)) > 3) alertCount++;
-        const ae = adverseEventsCache[p.id] || [];
-        if (ae.length > 0) alertCount++;
-        const od = promScheduleCache[p.id] || [];
-        if (od.length > 0) alertCount++;
-    });
-    const alertEl = document.getElementById('adminAlertCount');
-    alertEl.textContent = alertCount;
-    alertEl.style.color = alertCount === 0 ? '#86efac' : alertCount <= 5 ? '#fde68a' : '#fca5a5';
-    
-    // RPM eligible (patients with ≥20 min logged this month = 99457 billable)
     const billingMonth = today.toISOString().slice(0, 7);
+
+    // =========================================================
+    // GATHER DATA — all API calls up front
+    // =========================================================
+
+    // 1) PROM compliance
+    let promData = { compliance_rate: 0, total: 0, completed: 0, overdue: 0, by_surgeon: [], by_window: [] };
     try {
-        const rpmResp = await fetch(`/api/rpm-summary?clinic_id=${CLINIC_ID}&billing_month=${billingMonth}`);
-        const rpmData = await rpmResp.json();
-        
-        const eligible99457 = rpmData.filter(r => r.total_seconds >= 1200).length; // ≥20 min
-        const eligible99458 = rpmData.filter(r => r.total_seconds >= 2400).length; // ≥40 min
-        const rpmEl = document.getElementById('adminRpmEligible');
-        rpmEl.textContent = eligible99457;
-        rpmEl.style.color = '#86efac';
-        
-        // RPM summary
-        const rpmDiv = document.getElementById('adminRpmSummary');
-        const totalMin = rpmData.reduce((s, r) => s + (r.total_seconds || 0), 0) / 60;
-        const patientsWithTime = rpmData.filter(r => r.total_seconds > 0).length;
-        
-        rpmDiv.innerHTML = `
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-                <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:10px;text-align:center;">
-                    <div style="font-size:1.4rem;font-weight:700;color:#86efac;">${eligible99457}</div>
-                    <div style="font-size:0.65rem;color:#c7d2fe;">99457 Eligible (≥20m)</div>
-                </div>
-                <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:10px;text-align:center;">
-                    <div style="font-size:1.4rem;font-weight:700;color:#86efac;">${eligible99458}</div>
-                    <div style="font-size:0.65rem;color:#c7d2fe;">99458 Eligible (≥40m)</div>
-                </div>
-            </div>
-            <div style="color:#e0e7ff;font-size:0.8rem;">
-                ${Math.round(totalMin)} total minutes logged · ${patientsWithTime} patients tracked
-            </div>
-            <div style="color:#a5b4fc;font-size:0.75rem;margin-top:4px;">
-                Est. revenue: $${(eligible99457 * 51 + eligible99458 * 41).toLocaleString()} (99457 @$51 + 99458 @$41)
-            </div>
-        `;
-    } catch(e) {
-        document.getElementById('adminRpmEligible').textContent = '-';
-        document.getElementById('adminRpmSummary').innerHTML = '<div style="color:#a5b4fc;">No RPM data available</div>';
+        const resp = await fetch(`/api/prom-compliance?clinic_id=${CLINIC_ID}`);
+        promData = await resp.json();
+    } catch(e) { console.error('Admin: PROM load error', e); }
+
+    // 2) RPM summary for this month
+    let rpmData = [];
+    try {
+        const resp = await fetch(`/api/rpm-summary?clinic_id=${CLINIC_ID}&billing_month=${billingMonth}`);
+        rpmData = await resp.json();
+    } catch(e) { console.error('Admin: RPM load error', e); }
+
+    // 3) CMS outcomes (SCB rates)
+    let cmsData = { overall_scb_rate: null, tka_scb_rate: null, tha_scb_rate: null };
+    try {
+        const resp = await fetch(`/api/analytics/cms-outcomes?clinic_id=${CLINIC_ID}`);
+        cmsData = await resp.json();
+    } catch(e) { console.error('Admin: CMS outcomes load error', e); }
+
+    // =========================================================
+    // COMPUTE METRICS
+    // =========================================================
+
+    // --- RPM Revenue ---
+    const eligible99457 = rpmData.filter(r => (r.total_seconds || 0) >= 1200).length;  // ≥20 min
+    const eligible99458 = rpmData.filter(r => (r.total_seconds || 0) >= 2400).length;  // ≥40 min
+    const rpmEarned = (eligible99457 * RPM_RATE_99457) + (eligible99458 * RPM_RATE_99458);
+
+    // RPM at risk: patients with 10–19 minutes logged (close to 20-min threshold, recoverable)
+    const atRiskPatients = rpmData.filter(r => {
+        const sec = r.total_seconds || 0;
+        return sec >= 600 && sec < 1200;  // 10–19 min
+    });
+    const rpmAtRisk = atRiskPatients.length * RPM_RATE_99457; // potential revenue if they hit 20 min
+
+    // --- PROM Matched Rate ---
+    // "Matched" = patients with BOTH pre-op and at least one post-op PROM
+    // We approximate from CMS data: patients with postop scores / total patients with preop
+    const cmsResults = cmsData.results || [];
+    const withPreop = cmsResults.filter(r => r.preop_score !== null);
+    const withBoth = cmsResults.filter(r => r.has_postop);
+    const matchedRate = withPreop.length > 0 ? Math.round((withBoth.length / withPreop.length) * 100) : 0;
+
+    // --- TEAM APU Penalty Exposure ---
+    // If PROM matched rate < 50%, practice faces up to -5% APU on TEAM episode spending
+    // Formula: (ANNUAL_MEDICARE_JOINTS * AVG_EPISODE_COST) * penalty_percent
+    // penalty_percent scales: 0% at ≥50% matched, up to -5% at 0% matched
+    // Simplified: linear interpolation between 0% matched → 5% penalty, 50% matched → 0% penalty
+    let penaltyPercent = 0;
+    if (matchedRate < 50) {
+        penaltyPercent = ((50 - matchedRate) / 50) * 5; // linear scale 0-5%
+    }
+    const annualEpisodeSpend = ANNUAL_MEDICARE_JOINTS * AVG_EPISODE_COST;
+    const quarterlySpend = annualEpisodeSpend / 4;
+    const apuExposure = Math.round((annualEpisodeSpend * penaltyPercent) / 100);
+
+    // --- Revenue Protected ---
+    // What we'd lose without SRO minus what we lose with SRO
+    // Baseline penalty (using baseline matched rate):
+    let baselinePenaltyPct = 0;
+    if (ADMIN_BASELINES.matchedRate < 50) {
+        baselinePenaltyPct = ((50 - ADMIN_BASELINES.matchedRate) / 50) * 5;
+    }
+    const baselinePenalty = Math.round((annualEpisodeSpend * baselinePenaltyPct) / 100);
+    const penaltyAvoided = Math.max(0, baselinePenalty - apuExposure);
+    const revenueProtected = penaltyAvoided + rpmEarned;
+
+    // --- Readmission & ER rates ---
+    const activePatients = patients.filter(p => p.episode_id);
+    const postOpPatients = activePatients.filter(p => {
+        if (!p.surgery_date) return false;
+        return new Date(p.surgery_date) < Date.now();
+    });
+    let readmitCount = 0;
+    let erCount = 0;
+    postOpPatients.forEach(p => {
+        const ae = adverseEventsCache[p.id] || [];
+        if (ae.some(e => e.event_type === 'readmission')) readmitCount++;
+        if (ae.some(e => e.event_type === 'er_visit')) erCount++;
+    });
+    const readmitRate = postOpPatients.length > 0 ? ((readmitCount / postOpPatients.length) * 100) : 0;
+    const erRate = postOpPatients.length > 0 ? ((erCount / postOpPatients.length) * 100) : 0;
+
+    // --- Alert counts for detailed view ---
+    let alertHighPain = 0, alertNoCheckin = 0, alertOverdueProm = 0, alertAE = 0;
+    activePatients.forEach(p => {
+        if (p.last_pain_level >= 7) alertHighPain++;
+        const days = p.last_checkin_date ? Math.floor((Date.now() - new Date(p.last_checkin_date)) / (1000*60*60*24)) : 999;
+        if (days > 3) alertNoCheckin++;
+        if ((promScheduleCache[p.id] || []).length > 0) alertOverdueProm++;
+        if ((adverseEventsCache[p.id] || []).length > 0) alertAE++;
+    });
+
+    // --- Quality Composite Score ---
+    // Simple weighted composite: 40% SCB rate, 30% (1 - readmission rate), 30% PROM compliance
+    // Normalized to 0-100 scale
+    const scbRate = cmsData.overall_scb_rate !== null ? cmsData.overall_scb_rate : 0;
+    const qualityScore = Math.round(
+        (scbRate * 0.4) +
+        ((100 - readmitRate) * 0.3) +
+        (promData.compliance_rate * 0.3)
+    );
+    // Baseline quality score for comparison
+    const baselineQuality = Math.round(
+        (0 * 0.4) +  // No SCB data at baseline
+        ((100 - ADMIN_BASELINES.readmissionRate) * 0.3) +
+        (ADMIN_BASELINES.promCompliance * 0.3)
+    );
+
+    // =========================================================
+    // RENDER SECTION 1: Revenue Protection
+    // =========================================================
+    document.getElementById('admRevEarned').textContent = '$' + rpmEarned.toLocaleString();
+    document.getElementById('admRevEarnedNote').textContent = eligible99457 + ' × 99457 + ' + eligible99458 + ' × 99458 this month';
+    
+    document.getElementById('admRevAtRisk').textContent = '$' + rpmAtRisk.toLocaleString();
+    document.getElementById('admRevAtRiskNote').textContent = atRiskPatients.length + ' patient' + (atRiskPatients.length !== 1 ? 's' : '') + ' at 10–19 min (need 20)';
+    
+    document.getElementById('admApuExposure').textContent = apuExposure > 0 ? '-$' + apuExposure.toLocaleString() : '$0';
+    document.getElementById('admApuNote').textContent = matchedRate >= 50 ? 'Matched rate ≥50% — no penalty' : 'Matched rate ' + matchedRate + '% (<50%) — ' + penaltyPercent.toFixed(1) + '% APU risk';
+    var apuEl = document.getElementById('admApuExposure');
+    apuEl.style.color = apuExposure > 0 ? '#dc2626' : '#059669';
+    
+    document.getElementById('admRevProtected').textContent = '$' + revenueProtected.toLocaleString();
+    document.getElementById('admRevProtectedNote').textContent = '$' + penaltyAvoided.toLocaleString() + ' penalty avoided + $' + rpmEarned.toLocaleString() + ' RPM earned';
+
+    // =========================================================
+    // RENDER SECTION 2: Baseline vs Current
+    // =========================================================
+    function setCompareCard(arrowId, currentId, currentVal, baselineVal, suffix, invertBetter) {
+        var el = document.getElementById(currentId);
+        if (el) el.textContent = currentVal + suffix;
+        var arrowEl = document.getElementById(arrowId);
+        if (!arrowEl) return;
+        var better = invertBetter ? currentVal < baselineVal : currentVal > baselineVal;
+        var worse = invertBetter ? currentVal > baselineVal : currentVal < baselineVal;
+        if (better) {
+            arrowEl.textContent = '▲';
+            arrowEl.className = 'admin-compare-arrow up';
+        } else if (worse) {
+            arrowEl.textContent = '▼';
+            arrowEl.className = 'admin-compare-arrow down';
+        } else {
+            arrowEl.textContent = '→';
+            arrowEl.className = 'admin-compare-arrow flat';
+        }
+        // Color the current value
+        if (el) el.style.color = better ? '#059669' : worse ? '#dc2626' : '#1a1a2e';
+    }
+    setCompareCard('admArrowProm', 'admCurrentProm', promData.compliance_rate, ADMIN_BASELINES.promCompliance, '%', false);
+    setCompareCard('admArrowMatched', 'admCurrentMatched', matchedRate, ADMIN_BASELINES.matchedRate, '%', false);
+    setCompareCard('admArrowReadmit', 'admCurrentReadmit', readmitRate.toFixed(1), ADMIN_BASELINES.readmissionRate, '%', true);
+    setCompareCard('admArrowRpm', 'admCurrentRpm', rpmEarned, ADMIN_BASELINES.rpmRevenue, '', false);
+    // Format RPM as dollar
+    document.getElementById('admCurrentRpm').textContent = '$' + rpmEarned.toLocaleString();
+    document.getElementById('admBaselineRpm').textContent = '$' + ADMIN_BASELINES.rpmRevenue.toLocaleString();
+
+    // =========================================================
+    // RENDER SECTION 3: TEAM Quality Composite
+    // =========================================================
+    function setTeamMetric(valId, deltaId, current, baseline, suffix, invertBetter) {
+        var el = document.getElementById(valId);
+        if (el) el.textContent = (current !== null && current !== undefined ? current + suffix : '--');
+        var dEl = document.getElementById(deltaId);
+        if (!dEl || baseline === null || baseline === undefined || current === null) { if (dEl) dEl.textContent = ''; return; }
+        var diff = current - baseline;
+        var better = invertBetter ? diff < 0 : diff > 0;
+        var worse = invertBetter ? diff > 0 : diff < 0;
+        if (better) {
+            dEl.innerHTML = '<span style="color:#059669;">▲ ' + Math.abs(diff).toFixed(1) + suffix + ' improvement</span>';
+        } else if (worse) {
+            dEl.innerHTML = '<span style="color:#dc2626;">▼ ' + Math.abs(diff).toFixed(1) + suffix + ' decline</span>';
+        } else {
+            dEl.innerHTML = '<span style="color:#9ca3af;">→ No change</span>';
+        }
+    }
+    setTeamMetric('admScbRate', 'admScbDelta', scbRate, 0, '%', false); // baseline SCB = 0 (no data before)
+    setTeamMetric('admTeamReadmit', 'admReadmitDelta', parseFloat(readmitRate.toFixed(1)), ADMIN_BASELINES.readmissionRate, '%', true);
+    setTeamMetric('admTeamEr', 'admErDelta', parseFloat(erRate.toFixed(1)), null, '%', true); // no baseline for ER
+    setTeamMetric('admQualityScore', 'admQualityDelta', qualityScore, baselineQuality, '', false);
+
+    // =========================================================
+    // RENDER SECTION 4: Forecasting
+    // =========================================================
+    // Quarterly projections: current month × 3
+    document.getElementById('admForecastRpm').textContent = '$' + (rpmEarned * 3).toLocaleString();
+    document.getElementById('admForecastProm').textContent = promData.compliance_rate + '%';
+    
+    var readmitTrend = readmitRate < ADMIN_BASELINES.readmissionRate ? '↓ Improving' : readmitRate > ADMIN_BASELINES.readmissionRate ? '↑ Worsening' : '→ Stable';
+    var readmitColor = readmitRate < ADMIN_BASELINES.readmissionRate ? '#059669' : readmitRate > ADMIN_BASELINES.readmissionRate ? '#dc2626' : '#6b7280';
+    var trendEl = document.getElementById('admForecastReadmit');
+    trendEl.textContent = readmitTrend;
+    trendEl.style.color = readmitColor;
+    
+    document.getElementById('admForecastPenalty').textContent = '$' + (revenueProtected * 3).toLocaleString();
+
+    // =========================================================
+    // RENDER DETAILED METRICS (surgeon bars, RPM detail, alerts)
+    // =========================================================
+
+    // Surgeon PROM bars
+    var surgeonDiv = document.getElementById('adminPromBySurgeon');
+    if (promData.by_surgeon && promData.by_surgeon.length > 0) {
+        surgeonDiv.innerHTML = promData.by_surgeon.map(function(s) {
+            var pct = s.total > 0 ? Math.round((s.completed / s.total) * 100) : 0;
+            var barColor = pct >= 80 ? '#059669' : pct >= 50 ? '#d97706' : '#dc2626';
+            return '<div class="admin-surgeon-bar">' +
+                '<div class="admin-surgeon-bar-header">' +
+                '<span>Dr. ' + s.surgeon_name + '</span>' +
+                '<span>' + s.completed + '/' + s.total + ' (' + pct + '%)' + (s.overdue > 0 ? ' · <span style="color:#dc2626;">' + s.overdue + ' overdue</span>' : '') + '</span>' +
+                '</div>' +
+                '<div class="admin-surgeon-bar-track"><div class="admin-surgeon-bar-fill" style="background:' + barColor + ';width:' + pct + '%;"></div></div>' +
+                '</div>';
+        }).join('');
+    } else {
+        surgeonDiv.innerHTML = '<div style="color:#9ca3af;text-align:center;padding:16px;">No PROM data yet</div>';
+    }
+
+    // RPM billing detail
+    var rpmDiv = document.getElementById('adminRpmSummary');
+    document.getElementById('adminRpmMonth').textContent = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    var totalMin = rpmData.reduce(function(s, r) { return s + (r.total_seconds || 0); }, 0) / 60;
+    var patientsWithTime = rpmData.filter(function(r) { return (r.total_seconds || 0) > 0; }).length;
+    rpmDiv.innerHTML =
+        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px;">' +
+        '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px;text-align:center;">' +
+        '<div style="font-size:1.5rem;font-weight:800;color:#059669;">' + eligible99457 + '</div>' +
+        '<div style="font-size:0.72rem;color:#6b7280;">99457 Eligible (≥20m)</div></div>' +
+        '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px;text-align:center;">' +
+        '<div style="font-size:1.5rem;font-weight:800;color:#059669;">' + eligible99458 + '</div>' +
+        '<div style="font-size:0.72rem;color:#6b7280;">99458 Eligible (≥40m)</div></div>' +
+        '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px;text-align:center;">' +
+        '<div style="font-size:1.5rem;font-weight:800;color:#d97706;">' + atRiskPatients.length + '</div>' +
+        '<div style="font-size:0.72rem;color:#6b7280;">At Risk (10–19m)</div></div>' +
+        '</div>' +
+        '<div style="font-size:0.85rem;color:#374151;">' + Math.round(totalMin) + ' total minutes · ' + patientsWithTime + ' patients tracked · Est. revenue: <strong style="color:#059669;">$' + rpmEarned.toLocaleString() + '</strong></div>';
+
+    // Alert breakdown
+    var alertDiv = document.getElementById('adminAlertBreakdown');
+    var totalAlerts = alertHighPain + alertNoCheckin + alertOverdueProm + alertAE;
+    if (totalAlerts === 0) {
+        alertDiv.innerHTML = '<div style="color:#059669;text-align:center;padding:16px;">✅ No active alerts — all patients stable</div>';
+    } else {
+        alertDiv.innerHTML =
+            '<div class="admin-alert-row"><div class="admin-alert-badge" style="background:#dc2626;">' + alertHighPain + '</div><div>High pain (≥7/10)</div></div>' +
+            '<div class="admin-alert-row"><div class="admin-alert-badge" style="background:#d97706;">' + alertNoCheckin + '</div><div>Check-in overdue (>3 days)</div></div>' +
+            '<div class="admin-alert-row"><div class="admin-alert-badge" style="background:#7c3aed;">' + alertOverdueProm + '</div><div>PROM overdue</div></div>' +
+            '<div class="admin-alert-row"><div class="admin-alert-badge" style="background:#0891b2;">' + alertAE + '</div><div>Adverse events (ER/readmission)</div></div>';
     }
 }
 
@@ -462,6 +1077,12 @@ async function loadAlertCaches() {
             if (!promScheduleCache[ps.patient_id]) promScheduleCache[ps.patient_id] = [];
             promScheduleCache[ps.patient_id].push(ps);
         });
+        
+        // Load nurse alert acknowledgments
+        try {
+            const ackResp = await fetch(`/api/nurse-acks?clinic_id=${CLINIC_ID}`);
+            nurseAcksCache = await ackResp.json();
+        } catch(e) { nurseAcksCache = []; }
     } catch (error) {
         console.error('Error loading alert caches:', error);
     }
@@ -499,17 +1120,13 @@ function switchTab(tab) {
     if (tab === 'patients') {
         patientsPanel.style.display = 'block';
         promPanel.style.display = 'none';
-        tabPatients.style.borderBottomColor = '#2c5aa0';
-        tabPatients.style.color = '#2c5aa0';
-        tabProm.style.borderBottomColor = 'transparent';
-        tabProm.style.color = '#6b7280';
+        tabPatients.classList.add('active');
+        tabProm.classList.remove('active');
     } else {
         patientsPanel.style.display = 'none';
         promPanel.style.display = 'block';
-        tabProm.style.borderBottomColor = '#2c5aa0';
-        tabProm.style.color = '#2c5aa0';
-        tabPatients.style.borderBottomColor = 'transparent';
-        tabPatients.style.color = '#6b7280';
+        tabProm.classList.add('active');
+        tabPatients.classList.remove('active');
         loadPromCompliance();
     }
 }
@@ -525,7 +1142,7 @@ function filterByStat(filterType) {
         // Highlight active card
         document.querySelectorAll('.stat-card').forEach(c => c.style.outline = 'none');
         const card = document.querySelector(`[data-stat-filter="${filterType}"]`);
-        if (card) card.style.outline = '3px solid #2c5aa0';
+        if (card) card.style.outline = '3px solid var(--sro-blue, #2c5aa0)';
     }
     renderPatientTable();
 }
@@ -708,12 +1325,22 @@ async function openPatientModal(patientId) {
     document.getElementById('startReviewBtn').style.display = 'block';
     document.getElementById('rpmTimer').style.display = 'none';
     
-    // Show surgeon summary card if surgeon role
+    // Show summary card for surgeon AND nurse roles
     const summaryCard = document.getElementById('surgeonSummaryCard');
     if (summaryCard) {
-        if (USER_ROLE === 'surgeon') {
+        if (USER_ROLE === 'surgeon' || USER_ROLE === 'nurse') {
             summaryCard.style.display = 'block';
-            try { renderSurgeonSummary(patientId); } catch(e) { console.error('Surgeon summary error:', e); }
+            try { renderSurgeonSummary(patientId); } catch(e) { console.error('Summary card error:', e); }
+            // For nurses: hide surgeon-only action buttons, show nurse-relevant ones
+            if (USER_ROLE === 'nurse') {
+                var projEl = document.getElementById('sumProjected');
+                if (projEl) projEl.parentElement.style.display = 'none'; // hide projected score
+                var prepLink = document.getElementById('sumSurgPrepLink');
+                if (prepLink) prepLink.textContent = '📋 Surg Prep';
+            } else {
+                var projEl2 = document.getElementById('sumProjected');
+                if (projEl2) projEl2.parentElement.style.display = '';
+            }
         } else {
             summaryCard.style.display = 'none';
         }
@@ -1165,7 +1792,7 @@ function copyCheckinLink() {
     const input = document.getElementById('checkinLink');
     input.select();
     document.execCommand('copy');
-    alert('Check-in link copied to clipboard!');
+    showToast('Check-in link copied!');
 }
 
 async function loadPatientCheckins(patientId) {
@@ -1422,10 +2049,10 @@ async function handleAddPatient(event) {
         await loadPatients();
         await loadStats();
         
-        alert('Patient added successfully!');
+        showToast('Patient added successfully!');
     } catch (error) {
         console.error('Error adding patient:', error);
-        alert('Error adding patient. Please try again.');
+        showToast('Error adding patient.', 'error');
     }
 }
 
@@ -1489,10 +2116,10 @@ async function handleSaveRpmLog(event) {
         });
         
         closeRpmLogModal();
-        alert('Review time logged successfully!');
+        showToast('Review time logged!');
     } catch (error) {
         console.error('Error saving RPM log:', error);
-        alert('Error saving review time. Please try again.');
+        showToast('Error saving review time.', 'error');
     }
 }
 
@@ -1594,10 +2221,10 @@ async function handleManualCheckin(event) {
         await loadPatients();
         await loadStats();
         
-        alert('Manual check-in saved!');
+        showToast('Manual check-in saved!');
     } catch (error) {
         console.error('Error saving manual check-in:', error);
-        alert('Error saving check-in. Please try again.');
+        showToast('Error saving check-in.', 'error');
     }
 }
 
@@ -1645,10 +2272,10 @@ async function handleQuickRpmLog(event) {
         });
         
         closeQuickRpmModal();
-        alert(`Logged ${minutes} minutes of RPM time!`);
+        showToast(`Logged ${minutes} min of RPM time!`);
     } catch (error) {
         console.error('Error saving RPM log:', error);
-        alert('Error saving time. Please try again.');
+        showToast('Error saving RPM time.', 'error');
     }
 }
 
@@ -1717,9 +2344,12 @@ async function loadPromCompliance() {
             overdueDiv.innerHTML = '<p style="color: #999;">None — great job!</p>';
         } else {
             overdueDiv.innerHTML = data.overdue_patients.map(p => `
-                <div style="padding: 6px 0; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; cursor:pointer;" onclick="switchTab('patients');openPatientModal('${p.patient_id}')">
-                    <span><strong style="color:#2c5aa0;text-decoration:underline;">${p.last_name}, ${p.first_name}</strong>${p.mrn ? ' <span style="color:#6b7280;font-weight:400;">[' + p.mrn + ']</span>' : ''} — ${p.assessment_type === 'koos_jr' ? 'KOOS Jr' : p.assessment_type === 'hoos_jr' ? 'HOOS Jr' : 'PROMIS-10'} (${(p.window_name || '').replace('_', ' ')})</span>
-                    <span style="color: #dc2626;">Due ${p.due_date}</span>
+                <div style="padding: 6px 0; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="cursor:pointer;" onclick="switchTab('patients');openPatientModal('${p.patient_id}')"><strong style="color:#2c5aa0;text-decoration:underline;">${p.last_name}, ${p.first_name}</strong>${p.mrn ? ' <span style="color:#6b7280;font-weight:400;">[' + p.mrn + ']</span>' : ''} — ${p.assessment_type === 'koos_jr' ? 'KOOS Jr' : p.assessment_type === 'hoos_jr' ? 'HOOS Jr' : 'PROMIS-10'} (${(p.window_name || '').replace('_', ' ')})</span>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <span style="color: #dc2626;font-size:0.8rem;">Due ${p.due_date}</span>
+                        ${p.token ? '<button class="btn btn-sm" style="font-size:0.7rem;padding:3px 8px;background:#eff6ff;border:1px solid #bfdbfe;color:#2563eb;border-radius:5px;cursor:pointer;" onclick="event.stopPropagation();navigator.clipboard.writeText(\'https://sro-cloud-relay.onrender.com/checkin.html?t=' + p.token + '\').then(function(){showToast(\'PROM link copied!\')})">📋 Link</button>' : ''}
+                    </div>
                 </div>
             `).join('');
         }
@@ -1730,9 +2360,12 @@ async function loadPromCompliance() {
             dueSoonDiv.innerHTML = '<p style="color: #999;">No PROMs due in the next 14 days.</p>';
         } else {
             dueSoonDiv.innerHTML = data.due_soon_patients.map(p => `
-                <div style="padding: 6px 0; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center; cursor:pointer;" onclick="switchTab('patients');openPatientModal('${p.patient_id}')">
-                    <span><strong style="color:#2c5aa0;text-decoration:underline;">${p.last_name}, ${p.first_name}</strong>${p.mrn ? ' <span style="color:#6b7280;font-weight:400;">[' + p.mrn + ']</span>' : ''} — ${p.assessment_type === 'koos_jr' ? 'KOOS Jr' : p.assessment_type === 'hoos_jr' ? 'HOOS Jr' : 'PROMIS-10'}</span>
-                    <span style="color: #d97706;">Due ${p.due_date}</span>
+                <div style="padding: 6px 0; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="cursor:pointer;" onclick="switchTab('patients');openPatientModal('${p.patient_id}')"><strong style="color:#2c5aa0;text-decoration:underline;">${p.last_name}, ${p.first_name}</strong>${p.mrn ? ' <span style="color:#6b7280;font-weight:400;">[' + p.mrn + ']</span>' : ''} — ${p.assessment_type === 'koos_jr' ? 'KOOS Jr' : p.assessment_type === 'hoos_jr' ? 'HOOS Jr' : 'PROMIS-10'}</span>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <span style="color: #d97706;font-size:0.8rem;">Due ${p.due_date}</span>
+                        ${p.token ? '<button class="btn btn-sm" style="font-size:0.7rem;padding:3px 8px;background:#eff6ff;border:1px solid #bfdbfe;color:#2563eb;border-radius:5px;cursor:pointer;" onclick="event.stopPropagation();navigator.clipboard.writeText(\'https://sro-cloud-relay.onrender.com/checkin.html?t=' + p.token + '\').then(function(){showToast(\'PROM link copied!\')})">📋 Link</button>' : ''}
+                    </div>
                 </div>
             `).join('');
         }
@@ -1834,11 +2467,22 @@ async function loadPatientAdverseEvents(patientId) {
                 'other': '📋 Other'
             }[evt.event_type] || evt.event_type;
             
+            const resolvedBadge = evt.resolved ? '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:4px;font-size:0.72rem;font-weight:600;">✓ Resolved' + (evt.resolved_by ? ' by ' + evt.resolved_by : '') + '</span>' : '';
+            const resolveBtn = evt.resolved
+                ? '<button onclick="unresolveAdverseEvent(\'' + evt.id + '\')" style="font-size:0.72rem;padding:3px 8px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:5px;cursor:pointer;color:#6b7280;">Undo Resolve</button>'
+                : '<button onclick="resolveAdverseEventModal(\'' + evt.id + '\')" style="font-size:0.72rem;padding:3px 8px;background:#dbeafe;border:1px solid #93c5fd;border-radius:5px;cursor:pointer;color:#1d4ed8;font-weight:600;">✓ Resolve</button>';
+            
             return `
-                <div style="padding: 12px; border-bottom: 1px solid #eee; ${evt.resolved ? 'opacity: 0.6;' : ''}">
+                <div style="padding: 12px; border-bottom: 1px solid #eee; ${evt.resolved ? 'background:#f9fafb;' : ''}">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <strong style="color: ${evt.event_type === 'readmission' ? '#7c3aed' : '#dc3545'};">${typeLabel}</strong>
-                        <span class="text-muted" style="font-size: 13px;">${evt.event_date}</span>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <strong style="color: ${evt.resolved ? '#6b7280' : evt.event_type === 'readmission' ? '#7c3aed' : '#dc3545'};">${typeLabel}</strong>
+                            ${resolvedBadge}
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <span class="text-muted" style="font-size: 13px;">${evt.event_date}</span>
+                            ${resolveBtn}
+                        </div>
                     </div>
                     ${evt.facility ? `<div style="font-size: 13px; margin-top: 4px;">📍 ${evt.facility}</div>` : ''}
                     ${evt.reason ? `<div style="font-size: 13px; color: #666; margin-top: 4px;">${evt.reason}</div>` : ''}
@@ -1863,6 +2507,34 @@ function closeAdverseEventModal() {
     document.getElementById('adverseEventModal').style.display = 'none';
 }
 
+async function resolveAdverseEventModal(aeId) {
+    try {
+        await fetch('/api/adverse-events/' + aeId, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ resolved: true, resolved_by: USER_NAME || 'staff' })
+        });
+        showToast('Event resolved');
+        if (currentPatient) loadPatientAdverseEvents(currentPatient.id);
+        await loadAlertCaches();
+        if (USER_ROLE === 'nurse') await renderNursePanel();
+    } catch(e) { showToast('Error resolving event', 'error'); }
+}
+
+async function unresolveAdverseEvent(aeId) {
+    try {
+        await fetch('/api/adverse-events/' + aeId, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ resolved: false })
+        });
+        showToast('Resolution undone');
+        if (currentPatient) loadPatientAdverseEvents(currentPatient.id);
+        await loadAlertCaches();
+        if (USER_ROLE === 'nurse') await renderNursePanel();
+    } catch(e) { showToast('Error', 'error'); }
+}
+
 async function handleLogAdverseEvent(event) {
     event.preventDefault();
     
@@ -1885,10 +2557,10 @@ async function handleLogAdverseEvent(event) {
         closeAdverseEventModal();
         await loadPatientAdverseEvents(currentPatient.id);
         await loadStats();
-        alert('Adverse event logged.');
+        showToast('Adverse event logged.');
     } catch (error) {
         console.error('Error logging adverse event:', error);
-        alert('Error logging event. Please try again.');
+        showToast('Error logging event.', 'error');
     }
 }
 
@@ -1961,7 +2633,7 @@ async function handleSaveNote(event) {
         await loadPatientNotes(currentPatient.id);
     } catch (error) {
         console.error('Error saving note:', error);
-        alert('Error saving note.');
+        showToast('Error saving note.', 'error');
     }
 }
 
@@ -1984,17 +2656,17 @@ async function seedDemoData() {
         const data = await response.json();
         
         if (data.success) {
-            alert(data.message);
+            showToast(data.message);
             await loadPreopAssessments();
             await loadStats();
             await loadPatients();
             await loadPromCompliance();
         } else {
-            alert('Error: ' + (data.error || 'Unknown error'));
+            showToast('Error: ' + (data.error || 'Unknown error'), 'error');
         }
     } catch (error) {
         console.error('Error seeding demo data:', error);
-        alert('Error seeding demo data.');
+        showToast('Error seeding demo data.', 'error');
     }
 }
 
@@ -2006,13 +2678,13 @@ async function clearDemoData() {
         const data = await response.json();
         
         if (data.success) {
-            alert(data.message);
+            showToast(data.message);
             await loadPreopAssessments();
             await loadStats();
             await loadPatients();
             await loadPromCompliance();
         } else {
-            alert('Error: ' + (data.error || 'Unknown error'));
+            showToast('Error: ' + (data.error || 'Unknown error'), 'error');
         }
     } catch (error) {
         console.error('Error clearing demo data:', error);
@@ -2078,7 +2750,7 @@ function closeTaskModal() {
 async function saveTask() {
     if (!currentPatient) return;
     const desc = document.getElementById('taskDescription').value.trim();
-    if (!desc) { alert('Enter a task description.'); return; }
+    if (!desc) { showToast('Enter a task description.', 'error'); return; }
 
     const body = {
         patient_id: currentPatient.id,

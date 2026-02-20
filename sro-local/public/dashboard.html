@@ -8,16 +8,16 @@
     <style>
         .risk-badge {
             display: inline-block;
-            padding: 2px 8px;
+            padding: 3px 9px;
             border-radius: 10px;
             font-size: 0.7rem;
             font-weight: 600;
             text-transform: uppercase;
         }
-        .risk-low { background: #065f46; color: #34d399; }
-        .risk-moderate { background: #78350f; color: #fbbf24; }
-        .risk-high { background: #7f1d1d; color: #f87171; }
-        .risk-none { background: #374151; color: #9ca3af; font-size: 0.65rem; }
+        .risk-low { background: var(--sro-green-bg); color: var(--sro-green-text); }
+        .risk-moderate { background: var(--sro-amber-bg); color: var(--sro-amber-text); }
+        .risk-high { background: var(--sro-red-bg); color: var(--sro-red-text); }
+        .risk-none { background: var(--sro-gray-100); color: var(--sro-gray-500); font-size: 0.65rem; }
         .btn-preop {
             background: #8b5cf6 !important;
             color: white !important;
@@ -26,9 +26,9 @@
             background: #7c3aed !important;
         }
         .preop-section {
-            background: #1a1f2e;
-            border-radius: 8px;
-            padding: 15px;
+            background: var(--sro-gray-50);
+            border-radius: var(--sro-radius-sm);
+            padding: 16px;
             margin-top: 20px;
         }
         .preop-grid {
@@ -43,11 +43,11 @@
         .preop-stat-value {
             font-size: 1.3rem;
             font-weight: 600;
-            color: #3b82f6;
+            color: var(--sro-blue);
         }
         .preop-stat-label {
             font-size: 0.75rem;
-            color: #9ca3af;
+            color: var(--sro-gray-500);
         }
         /* Sticky table headers */
         .table-container {
@@ -58,12 +58,370 @@
             position: sticky;
             top: 0;
             z-index: 2;
-            background: #f8f9fa;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            background: var(--sro-gray-50);
         }
+
+        /* ===== DASHBOARD TABS ===== */
+        .dashboard-tabs {
+            display: flex; gap: 0; margin-bottom: 0; margin-top: 4px;
+            border-bottom: 1px solid var(--sro-gray-200);
+        }
+        .dashboard-tab {
+            padding: 12px 24px; font-size: 0.92rem; font-weight: 600;
+            border: none; background: none; cursor: pointer;
+            border-bottom: 3px solid transparent; color: var(--sro-gray-500);
+            margin-bottom: -1px; transition: color var(--sro-transition);
+            min-height: 44px;
+        }
+        .dashboard-tab:hover { color: var(--sro-gray-700); }
+        .dashboard-tab.active { border-bottom-color: var(--sro-blue); color: var(--sro-blue); }
+
+        /* ===== SURGEON TIERED DASHBOARD ===== */
+        .welcome-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 28px; padding: 0 2px;
+        }
+        .welcome-bar h1 { font-size: 1.55rem; font-weight: 600; color: var(--sro-gray-900); margin: 0; }
+        .welcome-bar .welcome-sub { font-size: 0.85rem; color: var(--sro-gray-500); margin-top: 4px; }
+        .welcome-bar .welcome-clinic { font-size: 0.75rem; color: var(--sro-gray-300); margin-top: 2px; letter-spacing: 0.3px; text-transform: uppercase; }
+
+        .surgeon-kpi-strip { display: flex; gap: 16px; margin-bottom: 30px; flex-wrap: wrap; }
+        .kpi-pill {
+            display: flex; align-items: center; gap: 10px;
+            background: var(--sro-card-bg); padding: 14px 22px; border-radius: var(--sro-radius);
+            box-shadow: var(--sro-shadow); border: none; border-left: 4px solid var(--sro-blue);
+            font-size: 0.88rem; font-weight: 500; color: var(--sro-gray-700);
+            min-width: 140px; transition: box-shadow var(--sro-transition), transform var(--sro-transition);
+        }
+        .kpi-pill:hover { box-shadow: var(--sro-shadow-md); transform: translateY(-1px); }
+        .kpi-pill .kpi-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .kpi-pill .kpi-num { font-weight: 700; font-size: 1.2rem; color: var(--sro-gray-900); }
+        .kpi-pill.kpi-alert { border-left-color: var(--sro-red); }
+        .kpi-pill.kpi-warn { border-left-color: var(--sro-amber); }
+        .kpi-pill.kpi-info { border-left-color: #7c3aed; }
+
+        .tier-grid {
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; margin-bottom: 30px;
+        }
+        @media (max-width: 1100px) { .tier-grid { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 700px)  { .tier-grid { grid-template-columns: 1fr; } }
+
+        .tier-column {
+            background: var(--sro-card-bg); border-radius: var(--sro-radius);
+            box-shadow: var(--sro-shadow); border: none; overflow: hidden;
+        }
+        .tier-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 15px 20px; font-weight: 600; font-size: 0.9rem;
+        }
+        .tier-header .tier-count {
+            background: rgba(255,255,255,0.3); padding: 2px 10px;
+            border-radius: 10px; font-size: 0.75rem; font-weight: 700;
+        }
+        .tier-decision .tier-header { background: linear-gradient(135deg,#fef3c7,#fde68a); color: #92400e; }
+        .tier-decision .tier-header .tier-count { background: rgba(146,64,14,0.15); }
+        .tier-review .tier-header { background: linear-gradient(135deg,#e0e7ff,#c7d2fe); color: #3730a3; }
+        .tier-review .tier-header .tier-count { background: rgba(55,48,163,0.12); }
+        .tier-done .tier-header { background: linear-gradient(135deg,#d1fae5,#a7f3d0); color: #065f46; }
+        .tier-done .tier-header .tier-count { background: rgba(6,95,70,0.12); }
+
+        .tier-body { padding: 14px; max-height: 560px; overflow-y: auto; }
+        .tier-body::-webkit-scrollbar { width: 4px; }
+        .tier-body::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+
+        .tier-item {
+            background: white; border: none; border-radius: var(--sro-radius-sm);
+            border-left: 3px solid var(--sro-gray-200);
+            padding: 16px 18px; margin-bottom: 12px; cursor: pointer;
+            box-shadow: var(--sro-shadow-sm);
+            transition: box-shadow var(--sro-transition), transform var(--sro-transition);
+        }
+        .tier-item:hover { box-shadow: var(--sro-shadow); transform: translateY(-1px); }
+        .tier-item:last-child { margin-bottom: 0; }
+
+        .tier-decision .tier-item { border-left-color: var(--sro-amber); }
+        .tier-review .tier-item { border-left-color: #6366f1; }
+
+        .tier-item-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+        .tier-item-name { font-weight: 600; font-size: 0.9rem; color: var(--sro-gray-900); }
+        .tier-item-mrn { font-weight: 400; color: var(--sro-gray-500); font-size: 0.78rem; margin-left: 4px; }
+        .tier-item-meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 6px; font-size: 0.76rem; color: var(--sro-gray-500); }
+        .tier-item-meta .meta-chip { background: var(--sro-gray-100); padding: 3px 9px; border-radius: 6px; }
+        .tier-item-issue { font-size: 0.84rem; font-weight: 500; padding: 3px 0; }
+        .tier-item-issue.critical { color: var(--sro-red); }
+        .tier-item-issue.warning  { color: var(--sro-amber); }
+        .tier-item-issue.info     { color: #2563eb; }
+        .tier-item-issue.good     { color: var(--sro-green); }
+
+        .tier-item-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .tier-btn {
+            padding: 8px 14px; border: 1px solid var(--sro-gray-200); border-radius: 8px;
+            font-size: 0.78rem; font-weight: 500; cursor: pointer;
+            background: white; color: var(--sro-gray-700); transition: all var(--sro-transition);
+            min-height: 36px;
+        }
+        .tier-btn:hover { background: var(--sro-gray-100); border-color: var(--sro-gray-300); }
+        .tier-btn.primary { background: var(--sro-blue); color: white; border-color: var(--sro-blue); }
+        .tier-btn.primary:hover { background: #1e4080; }
+        .tier-btn.resolve { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; font-weight: 600; }
+        .tier-btn.resolve:hover { background: #bfdbfe; }
+        .tier-btn.ack { background: #fef3c7; color: #92400e; border-color: #fcd34d; font-weight: 600; }
+        .tier-btn.ack:hover { background: #fde68a; }
+
+        .tier-done .tier-item {
+            padding: 14px 16px; background: var(--sro-green-bg);
+            border-left-color: var(--sro-green);
+        }
+        .done-check { color: var(--sro-green); font-weight: 600; font-size: 0.84rem; }
+
+        .tier-show-more {
+            text-align: center; padding: 12px; font-size: 0.8rem;
+            color: var(--sro-gray-500); cursor: pointer; font-weight: 500;
+        }
+        .tier-show-more:hover { color: var(--sro-blue); }
+        .tier-empty { text-align: center; padding: 28px 16px; color: var(--sro-gray-300); font-size: 0.85rem; }
+
+        .view-all-toggle { text-align: center; margin-bottom: 24px; }
+        .view-all-toggle button {
+            background: var(--sro-card-bg); border: 1px solid var(--sro-gray-200); padding: 12px 28px;
+            border-radius: var(--sro-radius-sm); font-size: 0.85rem; font-weight: 500;
+            color: var(--sro-gray-700); cursor: pointer; transition: all var(--sro-transition);
+            min-height: 44px;
+        }
+        .view-all-toggle button:hover { background: var(--sro-gray-50); border-color: var(--sro-blue); color: var(--sro-blue); }
+
+        /* ===== NURSE TIERED DASHBOARD ===== */
+        .nurse-kpi-strip { display: flex; gap: 16px; margin-bottom: 30px; flex-wrap: wrap; }
+        .nurse-kpi-pill {
+            display: flex; align-items: center; gap: 12px;
+            background: var(--sro-card-bg); padding: 16px 22px; border-radius: var(--sro-radius);
+            box-shadow: var(--sro-shadow); border: none; border-left: 4px solid var(--sro-gray-300);
+            min-width: 160px; transition: box-shadow var(--sro-transition), transform var(--sro-transition);
+        }
+        .nurse-kpi-pill:hover { box-shadow: var(--sro-shadow-md); transform: translateY(-1px); }
+        .nurse-kpi-pill .nkpi-val { font-size: 1.4rem; font-weight: 700; color: var(--sro-gray-900); }
+        .nurse-kpi-pill .nkpi-label { font-size: 0.78rem; color: var(--sro-gray-500); }
+        .nurse-kpi-pill.nkpi-green { border-left-color: var(--sro-green); background: var(--sro-green-bg); }
+        .nurse-kpi-pill.nkpi-green .nkpi-val { color: var(--sro-green); }
+        .nurse-kpi-pill.nkpi-amber { border-left-color: var(--sro-amber); background: var(--sro-amber-bg); }
+        .nurse-kpi-pill.nkpi-amber .nkpi-val { color: var(--sro-amber); }
+        .nurse-kpi-pill.nkpi-red { border-left-color: var(--sro-red); background: var(--sro-red-bg); }
+        .nurse-kpi-pill.nkpi-red .nkpi-val { color: var(--sro-red); }
+
+        .nurse-tier {
+            background: var(--sro-card-bg); border-radius: var(--sro-radius);
+            box-shadow: var(--sro-shadow); border: none;
+            margin-bottom: 20px; overflow: hidden;
+        }
+        .nurse-tier-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 22px; font-weight: 600; font-size: 0.92rem;
+            cursor: pointer; user-select: none;
+        }
+        .nurse-tier-header:hover { filter: brightness(0.97); }
+        .nurse-tier-header .nt-toggle { font-size: 0.8rem; opacity: 0.7; transition: transform 0.2s; }
+        .nurse-tier-header .nt-count {
+            padding: 2px 10px; border-radius: 10px; font-size: 0.75rem; font-weight: 700;
+        }
+        .nt-critical .nurse-tier-header {
+            background: linear-gradient(135deg, #fef2f2, #fee2e2); color: #991b1b;
+        }
+        .nt-critical .nt-count { background: rgba(153,27,27,0.12); }
+        .nt-compliance .nurse-tier-header {
+            background: linear-gradient(135deg, #fffbeb, #fef3c7); color: #92400e;
+        }
+        .nt-compliance .nt-count { background: rgba(146,64,14,0.12); }
+        .nt-info .nurse-tier-header {
+            background: linear-gradient(135deg, #ecfdf5, #d1fae5); color: #065f46;
+        }
+        .nt-info .nt-count { background: rgba(6,95,70,0.12); }
+
+        .nurse-tier-body { padding: 14px 16px; }
+        .nurse-tier-body.collapsed { display: none; }
+
+        .nt-item {
+            display: flex; align-items: center; gap: 14px;
+            padding: 14px 16px; border-radius: var(--sro-radius-sm); margin-bottom: 10px;
+            border: none; border-left: 3px solid var(--sro-gray-200);
+            background: white; box-shadow: var(--sro-shadow-sm);
+            cursor: pointer; transition: box-shadow var(--sro-transition), transform var(--sro-transition);
+        }
+        .nt-item:hover { box-shadow: var(--sro-shadow); transform: translateY(-1px); }
+        .nt-item:last-child { margin-bottom: 0; }
+        .nt-critical .nt-item { border-left-color: var(--sro-red); }
+        .nt-compliance .nt-item { border-left-color: var(--sro-amber); }
+        .nt-info .nt-item { border-left-color: var(--sro-green); }
+        .nt-item-icon { font-size: 1.3rem; flex-shrink: 0; }
+        .nt-item-body { flex: 1; min-width: 0; }
+        .nt-item-patient { font-weight: 600; font-size: 0.9rem; color: var(--sro-gray-900); }
+        .nt-item-issue { font-size: 0.84rem; margin-top: 2px; }
+        .nt-item-issue.crit { color: var(--sro-red); }
+        .nt-item-issue.warn { color: var(--sro-amber); }
+        .nt-item-issue.info-text { color: #2563eb; }
+        .nt-item-issue.good-text { color: var(--sro-green); }
+        .nt-item-detail { font-size: 0.75rem; color: var(--sro-gray-300); margin-top: 3px; }
+        .nt-item-actions { display: flex; gap: 8px; flex-shrink: 0; }
+        .nt-btn {
+            padding: 8px 14px; border: 1px solid var(--sro-gray-200); border-radius: 8px;
+            font-size: 0.76rem; font-weight: 500; cursor: pointer;
+            background: white; color: var(--sro-gray-700); transition: all var(--sro-transition);
+            min-height: 36px;
+        }
+        .nt-btn:hover { background: var(--sro-gray-100); border-color: var(--sro-gray-300); }
+        .nt-btn.nt-primary { background: var(--sro-green); color: white; border-color: var(--sro-green); }
+        .nt-btn.nt-primary:hover { background: #047857; }
+        .nt-btn.nt-resolve { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; font-weight: 600; }
+        .nt-btn.nt-resolve:hover { background: #bfdbfe; }
+        .nt-btn.nt-ack { background: #fef3c7; color: #92400e; border-color: #fcd34d; font-weight: 600; }
+        .nt-btn.nt-ack:hover { background: #fde68a; }
+
+        .nt-empty {
+            text-align: center; padding: 28px 16px; color: var(--sro-gray-300); font-size: 0.88rem;
+        }
+
+        /* ===== ADMIN EXECUTIVE DASHBOARD ===== */
+        .admin-view-tab {
+            padding: 11px 22px; font-size: 0.9rem; font-weight: 600;
+            border: none; background: none; cursor: pointer;
+            border-bottom: 3px solid transparent; color: var(--sro-gray-500); margin-bottom: -2px;
+            transition: color var(--sro-transition); min-height: 44px;
+        }
+        .admin-view-tab:hover { color: var(--sro-gray-700); }
+        .admin-view-tab.active { border-bottom-color: #4338ca; color: #4338ca; }
+
+        .admin-section {
+            background: var(--sro-card-bg); border-radius: var(--sro-radius); padding: 26px 28px;
+            box-shadow: var(--sro-shadow); border: none; margin-bottom: 24px;
+        }
+        .admin-section-header {
+            display: flex; align-items: center; gap: 14px; margin-bottom: 20px;
+        }
+        .admin-section-icon {
+            width: 38px; height: 38px; border-radius: var(--sro-radius-sm); display: flex;
+            align-items: center; justify-content: center; font-size: 1rem;
+            font-weight: 700; color: white; flex-shrink: 0;
+        }
+        .admin-section-title { font-size: 1rem; font-weight: 700; color: var(--sro-gray-900); }
+        .admin-section-sub { font-size: 0.78rem; color: var(--sro-gray-500); margin-top: 1px; }
+
+        /* Revenue Protection cards */
+        .admin-rev-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        .admin-rev-card {
+            background: var(--sro-gray-50); border: none; border-radius: var(--sro-radius-sm);
+            padding: 18px; text-align: center;
+        }
+        .admin-rev-label { font-size: 0.75rem; font-weight: 600; color: var(--sro-gray-500); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 8px; }
+        .admin-rev-value { font-size: 1.6rem; font-weight: 800; }
+        .admin-rev-note { font-size: 0.7rem; color: var(--sro-gray-300); margin-top: 6px; }
+
+        /* Baseline vs Current cards */
+        .admin-compare-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        .admin-compare-card {
+            background: var(--sro-gray-50); border: none; border-radius: var(--sro-radius-sm);
+            padding: 18px; text-align: center;
+        }
+        .admin-compare-label { font-size: 0.75rem; font-weight: 600; color: var(--sro-gray-500); margin-bottom: 12px; }
+        .admin-compare-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .admin-compare-col { text-align: center; }
+        .admin-compare-val { font-size: 1.5rem; font-weight: 800; color: var(--sro-gray-900); }
+        .admin-compare-val-small { font-size: 1.1rem; font-weight: 600; color: var(--sro-gray-300); }
+        .admin-compare-tag { font-size: 0.6rem; color: var(--sro-gray-300); text-transform: uppercase; letter-spacing: 0.5px; }
+        .admin-compare-arrow { font-size: 1.2rem; font-weight: 700; }
+        .admin-compare-arrow.up { color: var(--sro-green); }
+        .admin-compare-arrow.down { color: var(--sro-red); }
+        .admin-compare-arrow.flat { color: var(--sro-gray-300); }
+
+        /* TEAM Quality cards */
+        .admin-team-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        .admin-team-card {
+            background: var(--sro-gray-50); border: none; border-radius: var(--sro-radius-sm);
+            padding: 18px; text-align: center;
+        }
+        .admin-team-label { font-size: 0.75rem; font-weight: 600; color: var(--sro-gray-500); margin-bottom: 8px; }
+        .admin-team-value { font-size: 1.6rem; font-weight: 800; color: var(--sro-gray-900); }
+        .admin-team-delta { font-size: 0.78rem; font-weight: 600; margin-top: 4px; min-height: 18px; }
+        .admin-team-note { font-size: 0.68rem; color: var(--sro-gray-300); margin-top: 4px; }
+
+        /* Forecasting cards */
+        .admin-forecast-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        .admin-forecast-card {
+            background: linear-gradient(135deg, #f0f9ff, #e8f4fb); border: none;
+            border-radius: var(--sro-radius-sm); padding: 18px; text-align: center;
+        }
+        .admin-forecast-label { font-size: 0.75rem; font-weight: 600; color: #0369a1; margin-bottom: 8px; }
+        .admin-forecast-value { font-size: 1.5rem; font-weight: 800; color: #0c4a6e; }
+        .admin-forecast-note { font-size: 0.68rem; color: #7dd3fc; margin-top: 6px; }
+        .admin-forecast-disclaimer {
+            margin-top: 14px; padding: 12px 16px; background: var(--sro-amber-bg); border: none;
+            border-radius: var(--sro-radius-sm); font-size: 0.75rem; color: var(--sro-amber-text);
+        }
+
+        /* Detailed Metrics view — surgeon bars */
+        .admin-surgeon-bar {
+            margin-bottom: 12px;
+        }
+        .admin-surgeon-bar-header {
+            display: flex; justify-content: space-between; margin-bottom: 4px;
+            font-size: 0.82rem; color: var(--sro-gray-700);
+        }
+        .admin-surgeon-bar-track {
+            background: var(--sro-gray-100); border-radius: 4px; height: 8px; overflow: hidden;
+        }
+        .admin-surgeon-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
+        .admin-alert-row {
+            display: flex; align-items: center; gap: 12px; padding: 10px 0;
+            border-bottom: 1px solid var(--sro-gray-100); font-size: 0.85rem;
+        }
+        .admin-alert-row:last-child { border-bottom: none; }
+        .admin-alert-badge {
+            min-width: 30px; height: 30px; border-radius: var(--sro-radius-sm); display: flex;
+            align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; color: white;
+        }
+
+        /* Responsive: 4-col → 2-col on smaller screens */
+        @media (max-width: 900px) {
+            .admin-rev-grid, .admin-compare-grid, .admin-team-grid, .admin-forecast-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (max-width: 550px) {
+            .admin-rev-grid, .admin-compare-grid, .admin-team-grid, .admin-forecast-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        /* ===== TOAST NOTIFICATIONS ===== */
+        .sro-toast-container {
+            position: fixed; top: 20px; right: 20px; z-index: 10000;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .sro-toast {
+            padding: 12px 20px; border-radius: 10px; font-size: 0.88rem; font-weight: 500;
+            color: white; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+            max-width: 360px; display: flex; align-items: center; gap: 8px;
+        }
+        .sro-toast.success { background: #059669; }
+        .sro-toast.error { background: #dc2626; }
+        .sro-toast.info { background: #2563eb; }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(-10px); } }
+
+        /* ===== PATIENT MODAL JUMP NAV (Nurse) ===== */
+        .modal-jump-nav {
+            display: flex; gap: 4px; flex-wrap: wrap; padding: 10px 0 14px 0;
+            border-bottom: 1px solid var(--sro-gray-100); margin-bottom: 16px;
+        }
+        .modal-jump-btn {
+            padding: 6px 12px; border-radius: 8px; border: 1px solid var(--sro-gray-200);
+            background: white; font-size: 0.74rem; font-weight: 500; color: var(--sro-gray-600, #4b5563);
+            cursor: pointer; transition: all 0.15s ease; white-space: nowrap;
+        }
+        .modal-jump-btn:hover { background: var(--sro-blue-light, #eef4fb); border-color: var(--sro-blue); color: var(--sro-blue); }
+
     </style>
 </head>
 <body>
+    <div class="sro-toast-container" id="toastContainer"></div>
     <!-- Navigation -->
     <nav class="navbar">
         <div class="nav-brand">
@@ -87,8 +445,8 @@
 
     <!-- Main Content -->
     <main class="main-content">
-        <!-- Stats Cards -->
-        <div class="stats-grid">
+        <!-- Stats Cards (hidden by default — all roles use tiered panels; shown as fallback) -->
+        <div class="stats-grid" style="display:none;">
             <div class="stat-card" style="cursor:pointer;" onclick="filterByStat(null)" data-stat-filter="all">
                 <div class="stat-value" id="statActive">-</div>
                 <div class="stat-label">Active Patients</div>
@@ -105,79 +463,404 @@
                 <div class="stat-value" id="statOverdue">-</div>
                 <div class="stat-label">Overdue</div>
             </div>
-            <div class="stat-card" style="border-left: 4px solid #7c3aed; cursor:pointer;" onclick="filterByStat('er_visits')" data-stat-filter="er_visits">
+            <div class="stat-card stat-danger" style="cursor:pointer;" onclick="filterByStat('er_visits')" data-stat-filter="er_visits">
                 <div class="stat-value" id="statERVisits">-</div>
                 <div class="stat-label">ER Visits</div>
             </div>
-            <div class="stat-card" style="border-left: 4px solid #6366f1; cursor:pointer;" onclick="filterByStat('readmissions')" data-stat-filter="readmissions">
+            <div class="stat-card stat-danger" style="cursor:pointer;" onclick="filterByStat('readmissions')" data-stat-filter="readmissions">
                 <div class="stat-value" id="statReadmissions">-</div>
                 <div class="stat-label">Readmissions</div>
             </div>
         </div>
 
-        <!-- Nurse Action Panel (only visible for nurse role) -->
+        <!-- Welcome Bar (surgeon tiered view) -->
+        <div id="surgeonWelcome" class="welcome-bar" style="display:none;">
+            <div>
+                <h1 id="welcomeText">Welcome back</h1>
+                <div class="welcome-sub" id="welcomeSub"></div>
+                <div class="welcome-clinic" id="welcomeClinic">White River Orthopaedic & Sports Medicine</div>
+            </div>
+        </div>
+
+        <!-- Surgeon KPI Strip -->
+        <div id="surgeonKpiStrip" class="surgeon-kpi-strip" style="display:none;">
+            <div class="kpi-pill">
+                <span class="kpi-dot" style="background:#2c5aa0;"></span>
+                <span><span class="kpi-num" id="kpiActive">0</span> Active</span>
+            </div>
+            <div class="kpi-pill kpi-alert" style="cursor:pointer;" onclick="filterByStat(null)">
+                <span class="kpi-dot" style="background:#ef4444;"></span>
+                <span><span class="kpi-num" id="kpiAlerts">0</span> Alerts</span>
+            </div>
+            <div class="kpi-pill kpi-warn" style="cursor:pointer;" onclick="switchTab('prom')">
+                <span class="kpi-dot" style="background:#d97706;"></span>
+                <span><span class="kpi-num" id="kpiOverdue">0</span> PROMs Due</span>
+            </div>
+            <div class="kpi-pill kpi-info">
+                <span class="kpi-dot" style="background:#7c3aed;"></span>
+                <span><span class="kpi-num" id="kpiReadmissions">0</span> Readmit</span>
+            </div>
+        </div>
+
+        <!-- Surgeon Tiered View -->
+        <div id="surgeonTieredPanel" style="display:none;">
+            <div class="tier-grid">
+                <div class="tier-column tier-decision">
+                    <div class="tier-header">
+                        <span>⚡ Decision Required</span>
+                        <span class="tier-count" id="tierDecisionCount">0</span>
+                    </div>
+                    <div class="tier-body" id="tierDecisionBody">
+                        <div class="tier-empty">All clear — no urgent decisions</div>
+                    </div>
+                </div>
+                <div class="tier-column tier-review">
+                    <div class="tier-header">
+                        <span>👀 Review</span>
+                        <span class="tier-count" id="tierReviewCount">0</span>
+                    </div>
+                    <div class="tier-body" id="tierReviewBody">
+                        <div class="tier-empty">Nothing flagged</div>
+                    </div>
+                </div>
+                <div class="tier-column tier-done">
+                    <div class="tier-header">
+                        <span>✅ Done for You</span>
+                        <span class="tier-count" id="tierDoneCount">0</span>
+                    </div>
+                    <div class="tier-body" id="tierDoneBody">
+                        <div class="tier-empty">No completed items</div>
+                    </div>
+                </div>
+            </div>
+            <div class="view-all-toggle">
+                <button onclick="toggleFullPatientTable()">📋 View All Patients</button>
+            </div>
+        </div>
+
+        <!-- Nurse Welcome + KPI + Tiered Panel (only visible for nurse role) -->
         <div id="nursePanel" style="display:none; margin-bottom: 20px;">
-            <div style="background: linear-gradient(135deg, #064e3b, #065f46); border-radius: 12px; padding: 20px; color: white;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                    <h2 style="margin: 0; font-size: 1.2rem;">🩺 Today's Priorities</h2>
-                    <span id="nursePanelCount" style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 12px; font-size: 0.85rem;">0 items</span>
+            <!-- Welcome -->
+            <div class="welcome-bar" style="margin-bottom: 16px;">
+                <div>
+                    <h1 id="nurseWelcomeText">Welcome back</h1>
+                    <div class="welcome-sub" id="nurseWelcomeSub"></div>
+                    <div class="welcome-clinic" id="nurseWelcomeClinic">White River Orthopaedic & Sports Medicine</div>
                 </div>
-                <div id="nurseActionQueue" style="max-height: 400px; overflow-y: auto;">
-                    <div style="text-align: center; padding: 20px; color: #a7f3d0;">Loading priorities...</div>
+            </div>
+            <!-- KPI Strip -->
+            <div class="nurse-kpi-strip" id="nurseKpiStrip">
+                <div class="nurse-kpi-pill">
+                    <div>
+                        <div class="nkpi-val" id="nkpiPromRate">--%</div>
+                        <div class="nkpi-label">PROM Compliance</div>
+                    </div>
                 </div>
+                <div class="nurse-kpi-pill">
+                    <div>
+                        <div class="nkpi-val" id="nkpiCheckinRate">--%</div>
+                        <div class="nkpi-label">Check-in Rate</div>
+                    </div>
+                </div>
+                <div class="nurse-kpi-pill">
+                    <div>
+                        <div class="nkpi-val" id="nkpiRpmEligible">-</div>
+                        <div class="nkpi-label">RPM Eligible</div>
+                    </div>
+                </div>
+                <div class="nurse-kpi-pill">
+                    <div>
+                        <div class="nkpi-val" id="nkpiCriticalCount">-</div>
+                        <div class="nkpi-label">Critical Alerts</div>
+                    </div>
+                </div>
+            </div>
+            <!-- Tier 1: Critical -->
+            <div class="nurse-tier nt-critical">
+                <div class="nurse-tier-header" onclick="toggleNurseTier('nurseCritBody')">
+                    <span>🚨 Critical — Act Now</span>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span class="nt-count" id="nurseCritCount">0</span>
+                        <span class="nt-toggle" id="nurseCritToggle">▼</span>
+                    </div>
+                </div>
+                <div class="nurse-tier-body" id="nurseCritBody">
+                    <div class="nt-empty">✅ No critical items</div>
+                </div>
+            </div>
+            <!-- Tier 2: Compliance -->
+            <div class="nurse-tier nt-compliance">
+                <div class="nurse-tier-header" onclick="toggleNurseTier('nurseCompBody')">
+                    <span>📋 Compliance — Chase Today</span>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span class="nt-count" id="nurseCompCount">0</span>
+                        <span class="nt-toggle" id="nurseCompToggle">▼</span>
+                    </div>
+                </div>
+                <div class="nurse-tier-body" id="nurseCompBody">
+                    <div class="nt-empty">All caught up</div>
+                </div>
+            </div>
+            <!-- Tier 3: Informational -->
+            <div class="nurse-tier nt-info">
+                <div class="nurse-tier-header" onclick="toggleNurseTier('nurseInfoBody')">
+                    <span>💚 Informational — FYI</span>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span class="nt-count" id="nurseInfoCount">0</span>
+                        <span class="nt-toggle" id="nurseInfoToggle">▼</span>
+                    </div>
+                </div>
+                <div class="nurse-tier-body" id="nurseInfoBody">
+                    <div class="nt-empty">Nothing upcoming</div>
+                </div>
+            </div>
+            <!-- View All toggle -->
+            <div class="view-all-toggle" style="margin-top: 8px;">
+                <button onclick="toggleNurseFullTable()">📋 View All Patients</button>
             </div>
         </div>
 
-        <!-- Admin Metrics Panel (only visible for admin role) -->
+        <!-- Admin Executive Dashboard (only visible for admin role) -->
         <div id="adminPanel" style="display:none; margin-bottom: 20px;">
-            <div style="background: linear-gradient(135deg, #312e81, #4338ca); border-radius: 12px; padding: 20px; color: white;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                    <h2 style="margin: 0; font-size: 1.2rem;">📊 Practice Overview</h2>
-                    <span id="adminPanelDate" style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 12px; font-size: 0.85rem;"></span>
+            <!-- Welcome Bar -->
+            <div class="welcome-bar" style="margin-bottom: 16px;">
+                <div>
+                    <h1 id="adminWelcomeText">Welcome back</h1>
+                    <div class="welcome-sub" id="adminWelcomeSub"></div>
+                    <div class="welcome-clinic" id="adminWelcomeClinic">White River Orthopaedic & Sports Medicine</div>
                 </div>
-                <!-- Row 1: Big Metrics -->
-                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; text-align: center; margin-bottom: 16px;">
-                    <div style="background: rgba(255,255,255,0.1); border-radius: 10px; padding: 14px 8px;">
-                        <div id="adminPromRate" style="font-size: 2rem; font-weight: 700;">--%</div>
-                        <div style="font-size: 0.7rem; color: #c7d2fe;">PROM Compliance</div>
+            </div>
+
+            <!-- Executive View / Detailed Metrics toggle -->
+            <div style="display:flex;gap:0;margin-bottom:22px;border-bottom:1px solid var(--sro-gray-200);">
+                <button id="adminTabExec" class="admin-view-tab active" onclick="switchAdminView('exec')">📊 Executive Summary</button>
+                <button id="adminTabDetail" class="admin-view-tab" onclick="switchAdminView('detail')">📋 Detailed Metrics</button>
+            </div>
+
+            <!-- ========== EXECUTIVE VIEW ========== -->
+            <div id="adminExecView">
+                <!-- Section 1: Revenue Protection Panel -->
+                <div class="admin-section">
+                    <div class="admin-section-header">
+                        <span class="admin-section-icon" style="background:#059669;">$</span>
+                        <div>
+                            <div class="admin-section-title">Revenue Protection</div>
+                            <div class="admin-section-sub">RPM billing & TEAM quality adjustment exposure</div>
+                        </div>
                     </div>
-                    <div style="background: rgba(255,255,255,0.1); border-radius: 10px; padding: 14px 8px;">
-                        <div id="adminCheckinRate" style="font-size: 2rem; font-weight: 700;">--%</div>
-                        <div style="font-size: 0.7rem; color: #c7d2fe;">Check-in Rate</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.1); border-radius: 10px; padding: 14px 8px;">
-                        <div id="adminRpmEligible" style="font-size: 2rem; font-weight: 700;">-</div>
-                        <div style="font-size: 0.7rem; color: #c7d2fe;">RPM Eligible</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.1); border-radius: 10px; padding: 14px 8px;">
-                        <div id="adminAlertCount" style="font-size: 2rem; font-weight: 700;">-</div>
-                        <div style="font-size: 0.7rem; color: #c7d2fe;">Open Alerts</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.1); border-radius: 10px; padding: 14px 8px;">
-                        <div id="adminAvgPain" style="font-size: 2rem; font-weight: 700;">-</div>
-                        <div style="font-size: 0.7rem; color: #c7d2fe;">Avg Pain</div>
+                    <div class="admin-rev-grid">
+                        <div class="admin-rev-card">
+                            <div class="admin-rev-label">RPM Revenue Earned</div>
+                            <div class="admin-rev-value" id="admRevEarned" style="color:#059669;">$0</div>
+                            <div class="admin-rev-note" id="admRevEarnedNote">99457 + 99458 this month</div>
+                        </div>
+                        <div class="admin-rev-card">
+                            <div class="admin-rev-label">RPM Revenue At Risk</div>
+                            <div class="admin-rev-value" id="admRevAtRisk" style="color:#d97706;">$0</div>
+                            <div class="admin-rev-note" id="admRevAtRiskNote">Patients close to 20-min threshold</div>
+                        </div>
+                        <div class="admin-rev-card">
+                            <div class="admin-rev-label">TEAM APU Penalty Exposure</div>
+                            <div class="admin-rev-value" id="admApuExposure" style="color:#dc2626;">$0</div>
+                            <div class="admin-rev-note" id="admApuNote">If PROM matched rate &lt;50%</div>
+                        </div>
+                        <div class="admin-rev-card" style="background:var(--sro-green-bg);">
+                            <div class="admin-rev-label">Estimated Revenue Protected</div>
+                            <div class="admin-rev-value" id="admRevProtected" style="color:#059669;">$0</div>
+                            <div class="admin-rev-note" id="admRevProtectedNote">Penalty avoided + RPM earned</div>
+                        </div>
                     </div>
                 </div>
-                <!-- Row 2: Surgeon Compliance Bars -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                    <div>
-                        <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; color: #e0e7ff;">PROM Compliance by Surgeon</div>
-                        <div id="adminPromBySurgeon" style="font-size: 0.8rem;"></div>
+
+                <!-- Section 2: Baseline vs Current Comparison -->
+                <div class="admin-section">
+                    <div class="admin-section-header">
+                        <span class="admin-section-icon" style="background:#2563eb;">⚖</span>
+                        <div>
+                            <div class="admin-section-title">Baseline vs Current</div>
+                            <div class="admin-section-sub">Performance improvement since system go-live</div>
+                        </div>
                     </div>
-                    <div>
-                        <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; color: #e0e7ff;">RPM Billing This Month</div>
-                        <div id="adminRpmSummary" style="font-size: 0.8rem;"></div>
+                    <div class="admin-compare-grid">
+                        <div class="admin-compare-card">
+                            <div class="admin-compare-label">PROM Compliance</div>
+                            <div class="admin-compare-row">
+                                <div class="admin-compare-col">
+                                    <div class="admin-compare-val-small" id="admBaselineProm">22%</div>
+                                    <div class="admin-compare-tag">Baseline</div>
+                                </div>
+                                <div class="admin-compare-arrow" id="admArrowProm">→</div>
+                                <div class="admin-compare-col">
+                                    <div class="admin-compare-val" id="admCurrentProm">--%</div>
+                                    <div class="admin-compare-tag">Current</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="admin-compare-card">
+                            <div class="admin-compare-label">PROM Matched Rate</div>
+                            <div class="admin-compare-row">
+                                <div class="admin-compare-col">
+                                    <div class="admin-compare-val-small" id="admBaselineMatched">18%</div>
+                                    <div class="admin-compare-tag">Baseline</div>
+                                </div>
+                                <div class="admin-compare-arrow" id="admArrowMatched">→</div>
+                                <div class="admin-compare-col">
+                                    <div class="admin-compare-val" id="admCurrentMatched">--%</div>
+                                    <div class="admin-compare-tag">Current</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="admin-compare-card">
+                            <div class="admin-compare-label">Readmission Rate</div>
+                            <div class="admin-compare-row">
+                                <div class="admin-compare-col">
+                                    <div class="admin-compare-val-small" id="admBaselineReadmit">4.2%</div>
+                                    <div class="admin-compare-tag">Baseline</div>
+                                </div>
+                                <div class="admin-compare-arrow" id="admArrowReadmit">→</div>
+                                <div class="admin-compare-col">
+                                    <div class="admin-compare-val" id="admCurrentReadmit">--%</div>
+                                    <div class="admin-compare-tag">Current</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="admin-compare-card">
+                            <div class="admin-compare-label">RPM Revenue / Month</div>
+                            <div class="admin-compare-row">
+                                <div class="admin-compare-col">
+                                    <div class="admin-compare-val-small" id="admBaselineRpm">$0</div>
+                                    <div class="admin-compare-tag">Baseline</div>
+                                </div>
+                                <div class="admin-compare-arrow" id="admArrowRpm">→</div>
+                                <div class="admin-compare-col">
+                                    <div class="admin-compare-val" id="admCurrentRpm">$0</div>
+                                    <div class="admin-compare-tag">Current</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: TEAM Quality Composite -->
+                <div class="admin-section">
+                    <div class="admin-section-header">
+                        <span class="admin-section-icon" style="background:#7c3aed;">★</span>
+                        <div>
+                            <div class="admin-section-title">TEAM Quality Composite</div>
+                            <div class="admin-section-sub">CMS quality measures & projected score movement</div>
+                        </div>
+                    </div>
+                    <div class="admin-team-grid">
+                        <div class="admin-team-card">
+                            <div class="admin-team-label">SCB Achievement Rate</div>
+                            <div class="admin-team-value" id="admScbRate">--%</div>
+                            <div class="admin-team-delta" id="admScbDelta"></div>
+                            <div class="admin-team-note">Substantial Clinical Benefit</div>
+                        </div>
+                        <div class="admin-team-card">
+                            <div class="admin-team-label">Readmission Rate</div>
+                            <div class="admin-team-value" id="admTeamReadmit">--%</div>
+                            <div class="admin-team-delta" id="admReadmitDelta"></div>
+                            <div class="admin-team-note">90-day all-cause</div>
+                        </div>
+                        <div class="admin-team-card">
+                            <div class="admin-team-label">ER Visit Rate</div>
+                            <div class="admin-team-value" id="admTeamEr">--%</div>
+                            <div class="admin-team-delta" id="admErDelta"></div>
+                            <div class="admin-team-note">90-day post-op</div>
+                        </div>
+                        <div class="admin-team-card" style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);">
+                            <div class="admin-team-label">Projected Quality Score</div>
+                            <div class="admin-team-value" id="admQualityScore">--</div>
+                            <div class="admin-team-delta" id="admQualityDelta"></div>
+                            <div class="admin-team-note">Composite (higher = better)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Forecasting -->
+                <div class="admin-section">
+                    <div class="admin-section-header">
+                        <span class="admin-section-icon" style="background:#0891b2;">📈</span>
+                        <div>
+                            <div class="admin-section-title">Quarterly Forecast</div>
+                            <div class="admin-section-sub">Projected impact — current month × 3 (estimates)</div>
+                        </div>
+                    </div>
+                    <div class="admin-forecast-grid">
+                        <div class="admin-forecast-card">
+                            <div class="admin-forecast-label">RPM Revenue (Quarter)</div>
+                            <div class="admin-forecast-value" id="admForecastRpm">$0</div>
+                            <div class="admin-forecast-note">Current month × 3</div>
+                        </div>
+                        <div class="admin-forecast-card">
+                            <div class="admin-forecast-label">PROM Compliance (EOQ)</div>
+                            <div class="admin-forecast-value" id="admForecastProm">--%</div>
+                            <div class="admin-forecast-note">Projected at current trajectory</div>
+                        </div>
+                        <div class="admin-forecast-card">
+                            <div class="admin-forecast-label">Readmission Trend</div>
+                            <div class="admin-forecast-value" id="admForecastReadmit">--</div>
+                            <div class="admin-forecast-note">Quarter projection</div>
+                        </div>
+                        <div class="admin-forecast-card">
+                            <div class="admin-forecast-label">Penalty Avoidance (Quarter)</div>
+                            <div class="admin-forecast-value" id="admForecastPenalty" style="color:#059669;">$0</div>
+                            <div class="admin-forecast-note">Estimated revenue protected</div>
+                        </div>
+                    </div>
+                    <div class="admin-forecast-disclaimer">
+                        ⚡ All forecasts are estimates based on current-month extrapolation. Actual results will vary with patient volume and compliance trends.
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Dashboard Tabs -->
-        <div style="display: flex; gap: 0; margin-bottom: 0; border-bottom: 2px solid #e5e7eb;">
-            <button id="tabPatients" class="dashboard-tab active" onclick="switchTab('patients')" style="padding: 12px 24px; font-size: 1rem; font-weight: 600; border: none; background: none; cursor: pointer; border-bottom: 3px solid #2c5aa0; color: #2c5aa0; margin-bottom: -2px;">
+            <!-- ========== DETAILED METRICS VIEW (hidden by default) ========== -->
+            <div id="adminDetailView" style="display:none;">
+                <!-- Surgeon PROM Compliance Bars -->
+                <div class="admin-section">
+                    <div class="admin-section-header">
+                        <span class="admin-section-icon" style="background:#4338ca;">📊</span>
+                        <div>
+                            <div class="admin-section-title">PROM Compliance by Surgeon</div>
+                            <div class="admin-section-sub">Completion rates and overdue counts per provider</div>
+                        </div>
+                    </div>
+                    <div id="adminPromBySurgeon" style="padding:4px 0;"></div>
+                </div>
+                <!-- RPM Billing Detail -->
+                <div class="admin-section">
+                    <div class="admin-section-header">
+                        <span class="admin-section-icon" style="background:#059669;">💰</span>
+                        <div>
+                            <div class="admin-section-title">RPM Billing Detail</div>
+                            <div class="admin-section-sub" id="adminRpmMonth">This month</div>
+                        </div>
+                    </div>
+                    <div id="adminRpmSummary" style="padding:4px 0;"></div>
+                </div>
+                <!-- Alert Breakdown -->
+                <div class="admin-section">
+                    <div class="admin-section-header">
+                        <span class="admin-section-icon" style="background:#dc2626;">⚠</span>
+                        <div>
+                            <div class="admin-section-title">Alert Breakdown</div>
+                            <div class="admin-section-sub">Active alerts across all patients</div>
+                        </div>
+                    </div>
+                    <div id="adminAlertBreakdown" style="padding:4px 0;"></div>
+                </div>
+            </div>
+            <!-- View All Patients toggle -->
+            <div class="view-all-toggle" style="margin-top: 8px;">
+                <button onclick="toggleAdminFullTable()">📋 View All Patients</button>
+            </div>
+        </div>
+        <div class="dashboard-tabs">
+            <button id="tabPatients" class="dashboard-tab active" onclick="switchTab('patients')">
                 👥 Patients
             </button>
-            <button id="tabProm" class="dashboard-tab" onclick="switchTab('prom')" style="padding: 12px 24px; font-size: 1rem; font-weight: 600; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; color: #6b7280; margin-bottom: -2px;">
+            <button id="tabProm" class="dashboard-tab" onclick="switchTab('prom')">
                 📋 PROM Compliance
             </button>
         </div>
@@ -314,6 +997,16 @@
                 </div>
             </div>
             <div class="modal-body" style="overflow-y: auto; flex: 1;">
+                <!-- Quick Jump Menu -->
+                <div id="modalJumpMenu" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;padding:10px 0;border-bottom:1px solid var(--sro-gray-200, #e5e7eb);position:sticky;top:0;background:white;z-index:5;">
+                    <button class="btn btn-sm" style="font-size:0.75rem;padding:5px 12px;background:var(--sro-gray-100,#f3f4f6);border:1px solid var(--sro-gray-200,#e5e7eb);border-radius:6px;cursor:pointer;" onclick="document.getElementById('complianceScorecard').scrollIntoView({behavior:'smooth'})">📊 Scorecard</button>
+                    <button class="btn btn-sm" style="font-size:0.75rem;padding:5px 12px;background:var(--sro-gray-100,#f3f4f6);border:1px solid var(--sro-gray-200,#e5e7eb);border-radius:6px;cursor:pointer;" onclick="document.getElementById('promScheduleList').scrollIntoView({behavior:'smooth'})">📋 PROMs</button>
+                    <button class="btn btn-sm" style="font-size:0.75rem;padding:5px 12px;background:var(--sro-gray-100,#f3f4f6);border:1px solid var(--sro-gray-200,#e5e7eb);border-radius:6px;cursor:pointer;" onclick="document.getElementById('painChartCanvas').scrollIntoView({behavior:'smooth'})">📈 Pain</button>
+                    <button class="btn btn-sm" style="font-size:0.75rem;padding:5px 12px;background:var(--sro-gray-100,#f3f4f6);border:1px solid var(--sro-gray-200,#e5e7eb);border-radius:6px;cursor:pointer;" onclick="document.getElementById('checkinsList').scrollIntoView({behavior:'smooth'})">🩺 Check-ins</button>
+                    <button class="btn btn-sm" style="font-size:0.75rem;padding:5px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;cursor:pointer;color:#dc2626;" onclick="document.getElementById('adverseEventsList').scrollIntoView({behavior:'smooth'})">⚠️ Events</button>
+                    <button class="btn btn-sm" style="font-size:0.75rem;padding:5px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;cursor:pointer;color:#2563eb;" onclick="document.getElementById('nursingNotesList').scrollIntoView({behavior:'smooth'})">📝 Notes</button>
+                    <button class="btn btn-sm" style="font-size:0.75rem;padding:5px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;cursor:pointer;color:#059669;" onclick="document.getElementById('tasksList').scrollIntoView({behavior:'smooth'})">✅ Tasks</button>
+                </div>
                 <!-- Surgeon Quick Summary Card -->
                 <div id="surgeonSummaryCard" style="display:none; margin-bottom: 20px;">
                     <div style="background: linear-gradient(135deg, #0f172a, #1e293b); border-radius: 12px; padding: 20px; color: white;">
