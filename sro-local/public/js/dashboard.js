@@ -691,23 +691,30 @@ function nurseQuickNote(patientId) {
 async function resolveAdverseEvent(aeId, patientId) {
     if (!confirm('Mark this event as resolved?')) return;
     try {
-        await fetch('/api/adverse-events/' + aeId, {
+        const resp = await fetch('/api/adverse-events/' + aeId, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ resolved: true, resolved_by: USER_NAME || 'staff' })
         });
+        const result = await resp.json();
+        if (!resp.ok || !result.success) {
+            console.error('Resolve failed:', result);
+            showToast('Error: ' + (result.error || 'unknown'), 'error');
+            return;
+        }
         showToast('Event resolved');
         await loadAlertCaches();
         if (USER_ROLE === 'nurse') await renderNursePanel();
         if (USER_ROLE === 'surgeon') renderSurgeonTieredView();
     } catch(e) {
+        console.error('resolveAdverseEvent error:', e);
         showToast('Error resolving event', 'error');
     }
 }
 
 async function acknowledgeAlert(patientId, alertType) {
     try {
-        await fetch('/api/nurse-ack', {
+        const resp = await fetch('/api/nurse-ack', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -718,11 +725,18 @@ async function acknowledgeAlert(patientId, alertType) {
                 hours: 24
             })
         });
+        const result = await resp.json();
+        if (!resp.ok || !result.success) {
+            console.error('Ack failed:', result);
+            showToast('Error: ' + (result.error || 'unknown'), 'error');
+            return;
+        }
         showToast('Alert acknowledged (24h)');
         await loadAlertCaches();
         if (USER_ROLE === 'nurse') await renderNursePanel();
         if (USER_ROLE === 'surgeon') renderSurgeonTieredView();
     } catch(e) {
+        console.error('acknowledgeAlert error:', e);
         showToast('Error acknowledging alert', 'error');
     }
 }

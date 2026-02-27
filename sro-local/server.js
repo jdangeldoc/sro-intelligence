@@ -335,6 +335,15 @@ if (!preopCols.includes('workup_data')) {
   db.exec("ALTER TABLE preop_assessments ADD COLUMN workup_data TEXT");
 }
 
+// Migration: add resolved_at and resolved_by to adverse_events
+const aeCols = db.pragma('table_info(adverse_events)').map(c => c.name);
+if (!aeCols.includes('resolved_at')) {
+  db.exec("ALTER TABLE adverse_events ADD COLUMN resolved_at DATETIME");
+}
+if (!aeCols.includes('resolved_by')) {
+  db.exec("ALTER TABLE adverse_events ADD COLUMN resolved_by TEXT");
+}
+
 // Insert default clinic if none exists
 const clinicCount = db.prepare('SELECT COUNT(*) as count FROM clinics').get();
 if (clinicCount.count === 0) {
@@ -754,6 +763,175 @@ app.post('/api/checkin', (req, res) => {
   res.json({ id, success: true });
 });
 
+// --- Pre-Visit Intake (patient self-service, token-based) ---
+
+// GET: Returns patient info needed by the previsit form
+app.get('/api/previsit-info/:token', (req, res) => {
+  try {
+    const patient = db.prepare(`
+      SELECT p.id, p.first_name, p.clinic_id,
+             e.surgery_type, e.id as episode_id, e.surgeon_id
+      FROM patients p
+      LEFT JOIN episodes e ON e.patient_id = p.id AND e.status = 'active'
+      WHERE p.token = ?
+    `).get(req.params.token);
+    
+    if (!patient) {
+      return res.status(404).json({ error: 'Invalid or expired link. Please contact your doctor\'s office.' });
+    }
+    
+    // Check if previsit already submitted
+    const existing = db.prepare(`
+      SELECT id, assessed_at FROM preop_assessments 
+      WHERE patient_id = ? AND assessment_type = 'previsit'
+      ORDER BY assessed_at DESC LIMIT 1
+    `).get(patient.id);
+    
+    res.json({
+      first_name: patient.first_name,
+      surgery_type: patient.surgery_type || null,
+      has_previsit: !!existing,
+      previsit_date: existing ? existing.assessed_at : null
+    });
+  } catch(err) {
+    console.error('previsit-info error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST: Receives completed previsit intake
+app.post('/api/previsit', (req, res) => {
+  try {
+    const { token, responses, scores, completed_at } = req.body;
+    if (!token) return res.status(400).json({ error: 'Token required' });
+    
+    const patient = db.prepare(`
+      SELECT p.id as patient_id, p.clinic_id,
+             e.id as episode_id, e.surgery_type, e.surgeon_id
+      FROM patients p
+      LEFT JOIN episodes e ON e.patient_id = p.id AND e.status = 'active'
+      WHERE p.token = ?
+    `).get(token);
+    
+    if (!patient) return res.status(404).json({ error: 'Invalid token' });
+    
+    // Delete any previous previsit assessment (retake replaces)
+    db.prepare('DELETE FROM preop_assessments WHERE patient_id = ? AND assessment_type = ?').run(patient.patient_id, 'previsit');
+    
+    // Determine joint score type and values
+    const jointType = scores.joint_type || (patient.surgery_type && patient.surgery_type.toUpperCase().indexOf('HIP') >= 0 ? 'HOOS-JR' : 'KOOS-JR');
+    const jointScore = scores.joint_score || null;
+    const jointRaw = scores.joint_raw || null;
+    
+    // Determine procedure type from episode
+    let procedureType = null;
+    if (patient.surgery_type) {
+      const st = patient.surgery_type.toUpperCase();
+      if (st.indexOf('KNEE') >= 0 || st === 'TKA') procedureType = 'TKA';
+      else if (st === 'UKA') procedureType = 'UKA';
+      else if (st.indexOf('HIP') >= 0 || st === 'THA') procedureType = 'THA';
+    }
+    
+    // Extract comorbidity flags from responses for the comorbidities JSON
+    const comorbFlags = [];
+    const r = responses || {};
+    if (r.diabetes && r.diabetes.answer && r.diabetes.answer !== 'No') comorbFlags.push('diabetes');
+    if (r.cardiac && r.cardiac.answer === 'Yes') comorbFlags.push('cardiac');
+    if (r.cardiac_chf && r.cardiac_chf.answer && r.cardiac_chf.answer !== 'No') comorbFlags.push('chf');
+    if (r.cardiac_cad && r.cardiac_cad.answer === 'Yes') comorbFlags.push('cad');
+    if (r.cardiac_afib && r.cardiac_afib.answer === 'Yes') comorbFlags.push('afib');
+    if (r.ckd && r.ckd.answer && r.ckd.answer !== 'No') comorbFlags.push('ckd');
+    if (r.copd && r.copd.answer && r.copd.answer !== 'No') comorbFlags.push('copd');
+    if (r.smoker && r.smoker.answer && r.smoker.answer.indexOf('Current') >= 0) comorbFlags.push('smoker');
+    if (r.sleep_apnea && r.sleep_apnea.answer && r.sleep_apnea.answer !== 'No') comorbFlags.push('sleep_apnea');
+    if (r.rheumatoid && r.rheumatoid.answer && r.rheumatoid.answer !== 'No') comorbFlags.push('rheumatoid');
+    if (r.anticoagulant && r.anticoagulant.answer === 'Yes') comorbFlags.push('anticoagulant');
+    if (r.opioid && r.opioid.answer && r.opioid.answer.indexOf('more than 3') >= 0) comorbFlags.push('chronic_opioid');
+    if (r.liver && r.liver.answer === 'Yes') comorbFlags.push('liver');
+    if (r.anemia && r.anemia.answer === 'Yes') comorbFlags.push('anemia');
+    if (scores.bmi && scores.bmi >= 40) comorbFlags.push('morbid_obesity');
+    if (r.dental && r.dental.answer && r.dental.answer.indexOf('Severe') >= 0) comorbFlags.push('dental');
+    
+    const preopId = uuid();
+    const age = r.age ? r.age.answer : null;
+    const sex = r.gender ? r.gender.answer : null;
+    
+    db.prepare(`
+      INSERT INTO preop_assessments (
+        id, patient_id, clinic_id, surgeon_id, assessment_type, procedure_type,
+        age, sex, bmi, comorbidities,
+        joint_score_type, joint_score_preop, koos_jr_raw, hoos_jr_raw,
+        promis_physical_tscore, promis_mental_tscore,
+        cms_back_pain, cms_health_literacy, cms_other_knee_pain,
+        low_back_pain, health_literacy_sils, chronic_narcotics_use,
+        status, intake_responses
+      ) VALUES (?, ?, ?, ?, 'previsit', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'patient_submitted', ?)
+    `).run(
+      preopId, patient.patient_id, patient.clinic_id, patient.surgeon_id,
+      procedureType,
+      age, sex, scores.bmi,
+      JSON.stringify(comorbFlags),
+      jointType, jointScore,
+      jointType === 'KOOS-JR' ? jointRaw : null,
+      jointType === 'HOOS-JR' ? jointRaw : null,
+      scores.promis_physical, scores.promis_mental,
+      scores.cms_low_back || 0,
+      scores.cms_health_literacy != null ? String(scores.cms_health_literacy) : null,
+      scores.cms_other_joint || 0,
+      scores.cms_low_back || 0,
+      scores.cms_health_literacy,
+      scores.cms_narcotics_90d || 0,
+      JSON.stringify(responses)
+    );
+    
+    // Also save scored instruments as pro_assessments for PROM tracking
+    const today = new Date().toISOString().split('T')[0];
+    
+    if (jointScore != null) {
+      const proId = uuid();
+      db.prepare(`
+        INSERT INTO pro_assessments (id, patient_id, episode_id, clinic_id, assessment_type, assessment_date, score, responses)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(proId, patient.patient_id, patient.episode_id, patient.clinic_id,
+        jointType === 'KOOS-JR' ? 'koos_jr' : 'hoos_jr', today, jointScore,
+        JSON.stringify({ raw: jointRaw, interval: jointScore, source: 'previsit' }));
+    }
+    
+    if (scores.promis_physical) {
+      const proId = uuid();
+      db.prepare(`
+        INSERT INTO pro_assessments (id, patient_id, episode_id, clinic_id, assessment_type, assessment_date, score, responses)
+        VALUES (?, ?, ?, ?, 'promis_physical', ?, ?, ?)
+      `).run(proId, patient.patient_id, patient.episode_id, patient.clinic_id,
+        today, scores.promis_physical, JSON.stringify({ source: 'previsit' }));
+    }
+    
+    if (scores.promis_mental) {
+      const proId = uuid();
+      db.prepare(`
+        INSERT INTO pro_assessments (id, patient_id, episode_id, clinic_id, assessment_type, assessment_date, score, responses)
+        VALUES (?, ?, ?, ?, 'promis_mental', ?, ?, ?)
+      `).run(proId, patient.patient_id, patient.episode_id, patient.clinic_id,
+        today, scores.promis_mental, JSON.stringify({ source: 'previsit' }));
+    }
+    
+    // Mark preop PROM schedule as completed if exists
+    try {
+      db.prepare(`
+        UPDATE prom_schedule SET status = 'completed', completed_date = ?
+        WHERE patient_id = ? AND window_name = 'preop' AND status IN ('pending', 'overdue')
+      `).run(today, patient.patient_id);
+    } catch(e) { /* prom_schedule may not have matching record */ }
+    
+    console.log(`[PreVisit] Saved for patient ${patient.patient_id.substring(0,8)}... — ${comorbFlags.length} comorbidities, joint: ${jointScore || 'N/A'}`);
+    
+    res.json({ id: preopId, success: true });
+  } catch(err) {
+    console.error('previsit POST error:', err);
+    res.status(500).json({ error: 'Failed to save responses: ' + err.message });
+  }
+});
+
 // --- Episodes ---
 app.get('/api/episodes', (req, res) => {
   const { patient_id, clinic_id, surgeon_id, status } = req.query;
@@ -1089,12 +1267,26 @@ app.post('/api/adverse-events', (req, res) => {
 
 app.put('/api/adverse-events/:id', (req, res) => {
   const { resolved, notes, resolved_by } = req.body;
-  if (resolved) {
-    db.prepare('UPDATE adverse_events SET resolved = 1, resolved_at = CURRENT_TIMESTAMP, resolved_by = ?, notes = COALESCE(?, notes) WHERE id = ?').run(resolved_by || 'staff', notes, req.params.id);
-  } else {
-    db.prepare('UPDATE adverse_events SET resolved = 0, resolved_at = NULL, resolved_by = NULL, notes = COALESCE(?, notes) WHERE id = ?').run(notes, req.params.id);
+  try {
+    if (resolved) {
+      // Try with new columns first, fall back to just resolved flag
+      try {
+        db.prepare('UPDATE adverse_events SET resolved = 1, resolved_at = CURRENT_TIMESTAMP, resolved_by = ?, notes = COALESCE(?, notes) WHERE id = ?').run(resolved_by || 'staff', notes, req.params.id);
+      } catch(e) {
+        db.prepare('UPDATE adverse_events SET resolved = 1, notes = COALESCE(?, notes) WHERE id = ?').run(notes, req.params.id);
+      }
+    } else {
+      try {
+        db.prepare('UPDATE adverse_events SET resolved = 0, resolved_at = NULL, resolved_by = NULL, notes = COALESCE(?, notes) WHERE id = ?').run(notes, req.params.id);
+      } catch(e) {
+        db.prepare('UPDATE adverse_events SET resolved = 0, notes = COALESCE(?, notes) WHERE id = ?').run(notes, req.params.id);
+      }
+    }
+    res.json({ success: true });
+  } catch(err) {
+    console.error('Error updating adverse event:', err);
+    res.status(500).json({ error: err.message });
   }
-  res.json({ success: true });
 });
 
 // --- Nurse Alert Acknowledgments ---
@@ -1109,14 +1301,19 @@ app.get('/api/nurse-acks', (req, res) => {
 });
 
 app.post('/api/nurse-ack', (req, res) => {
-  const id = uuid();
-  const { patient_id, clinic_id, alert_type, acknowledged_by, hours, note } = req.body;
-  const expiresAt = new Date(Date.now() + (hours || 24) * 60 * 60 * 1000).toISOString();
-  db.prepare(`
-    INSERT INTO nurse_alert_acks (id, patient_id, clinic_id, alert_type, acknowledged_by, expires_at, note)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(id, patient_id, clinic_id, alert_type, acknowledged_by || 'nurse', expiresAt, note || null);
-  res.json({ id, success: true });
+  try {
+    const id = uuid();
+    const { patient_id, clinic_id, alert_type, acknowledged_by, hours, note } = req.body;
+    const expiresAt = new Date(Date.now() + (hours || 24) * 60 * 60 * 1000).toISOString();
+    db.prepare(`
+      INSERT INTO nurse_alert_acks (id, patient_id, clinic_id, alert_type, acknowledged_by, expires_at, note)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(id, patient_id, clinic_id, alert_type, acknowledged_by || 'staff', expiresAt, note || null);
+    res.json({ id, success: true });
+  } catch(err) {
+    console.error('Error creating nurse ack:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.delete('/api/nurse-ack/:id', (req, res) => {

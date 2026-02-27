@@ -883,6 +883,7 @@
                 <div class="actions">
                     <button class="btn btn-sm" style="background:#f59e0b;color:white;" onclick="seedDemoData()" title="Load demo patients for testing">🧪 Seed Demo</button>
                     <button class="btn btn-sm" style="background:#ef4444;color:white;" onclick="clearDemoData()" title="Remove demo patients">🗑️ Clear Demo</button>
+                    <button class="btn btn-sm" style="background:#7c3aed;color:white;" onclick="window.open('/kiosk.html','_blank')" title="Open patient intake kiosk">📋 Intake Kiosk</button>
                     <button class="btn btn-secondary" onclick="exportPatients()">Export CSV</button>
                     <a href="/preop.html" class="btn btn-preop">+ Pre-Op Assessment</a>
                     <button class="btn btn-primary" onclick="openAddPatientModal()">+ Add Patient</button>
@@ -1081,8 +1082,9 @@
                             📞 Log Phone/Manual Check-in
                         </button>
                         <div style="display:flex;gap:6px;margin-top:8px;">
-                            <button class="btn btn-sm" style="flex:1;background:#2563eb;color:white;font-size:0.75rem;" onclick="sendPatientLink('checkin')">📋 Copy Check-in Link</button>
-                            <button class="btn btn-sm btn-preop" style="flex:1;font-size:0.75rem;" onclick="sendPatientLink('preop')">📋 Copy PreOp Link</button>
+                            <button class="btn btn-sm" style="flex:1;background:#2563eb;color:white;font-size:0.75rem;" onclick="sendPatientLink('checkin')">📋 Check-in Link</button>
+                            <button class="btn btn-sm" style="flex:1;background:#7c3aed;color:white;font-size:0.75rem;" onclick="sendPatientLink('previsit')">📋 Pre-Visit Link</button>
+                            <button class="btn btn-sm btn-preop" style="flex:1;font-size:0.75rem;" onclick="sendPatientLink('preop')">📋 PreOp Link</button>
                         </div>
                         <p style="font-size:0.65rem;color:#6b7280;margin-top:4px;text-align:center;">No PHI in links — HIPAA safe. Paste into text or email.</p>
                     </div>
@@ -1534,16 +1536,20 @@
             var match = linkInput.value.match(/[?&]t=([^&]+)/);
             if (!match) { alert('No patient token found.'); return; }
             var token = match[1];
-            var baseUrl = 'https://sro-cloud-relay.onrender.com';
-            var link;
+            var baseUrl = window.location.origin; // Works for both localhost and deployed
+            var link, label;
             if (type === 'checkin') {
                 link = baseUrl + '/checkin.html?t=' + token;
+                label = 'Check-in';
+            } else if (type === 'previsit') {
+                link = baseUrl + '/previsit.html?t=' + token;
+                label = 'Pre-Visit Intake';
             } else {
                 link = baseUrl + '/preop.html?t=' + token;
+                label = 'PreOp intake';
             }
             navigator.clipboard.writeText(link).then(function() {
-                var msg = type === 'checkin' ? 'Check-in' : 'PreOp intake';
-                alert(msg + ' link copied!\n\n' + link + '\n\nPaste into text or email.\nNo PHI in link (HIPAA safe).');
+                showToast(label + ' link copied!');
             }).catch(function() {
                 prompt('Copy this link:', link);
             });

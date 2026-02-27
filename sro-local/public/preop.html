@@ -1475,6 +1475,10 @@ function loadDraft(assessment){
     if(assessment.status === 'draft'){
         document.getElementById('draftBadge').style.display = 'inline';
         document.getElementById('draftBadge').textContent = 'DRAFT LOADED';
+    } else if(assessment.status === 'patient_submitted' || assessment.assessment_type === 'previsit'){
+        document.getElementById('draftBadge').style.display = 'inline';
+        document.getElementById('draftBadge').textContent = '📱 PATIENT SUBMITTED — ' + (assessment.assessed_at || '').split('T')[0];
+        document.getElementById('draftBadge').style.background = '#7c3aed';
     } else {
         document.getElementById('draftBadge').style.display = 'inline';
         document.getElementById('draftBadge').textContent = 'SAVED — ' + (assessment.assessed_at || '').split('T')[0];
