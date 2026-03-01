@@ -480,6 +480,10 @@
                 <div class="welcome-sub" id="welcomeSub"></div>
                 <div class="welcome-clinic" id="welcomeClinic">White River Orthopaedic & Sports Medicine</div>
             </div>
+            <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
+                <button class="btn btn-primary" style="font-size:1rem;padding:12px 28px;white-space:nowrap;" onclick="openAddPatientModal()">+ Add New Patient</button>
+                <button class="btn btn-secondary" style="font-size:0.85rem;padding:8px 20px;white-space:nowrap;" onclick="openHelpModal()">❓ Help</button>
+            </div>
         </div>
 
         <!-- Surgeon KPI Strip -->
@@ -546,6 +550,10 @@
                     <h1 id="nurseWelcomeText">Welcome back</h1>
                     <div class="welcome-sub" id="nurseWelcomeSub"></div>
                     <div class="welcome-clinic" id="nurseWelcomeClinic">White River Orthopaedic & Sports Medicine</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
+                    <button class="btn btn-primary" style="font-size:1rem;padding:12px 28px;white-space:nowrap;" onclick="openAddPatientModal()">+ Add New Patient</button>
+                    <button class="btn btn-secondary" style="font-size:0.85rem;padding:8px 20px;white-space:nowrap;" onclick="openHelpModal()">❓ Help</button>
                 </div>
             </div>
             <!-- KPI Strip -->
@@ -628,6 +636,10 @@
                     <h1 id="adminWelcomeText">Welcome back</h1>
                     <div class="welcome-sub" id="adminWelcomeSub"></div>
                     <div class="welcome-clinic" id="adminWelcomeClinic">White River Orthopaedic & Sports Medicine</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
+                    <button class="btn btn-primary" style="font-size:1rem;padding:12px 28px;white-space:nowrap;" onclick="openAddPatientModal()">+ Add New Patient</button>
+                    <button class="btn btn-secondary" style="font-size:0.85rem;padding:8px 20px;white-space:nowrap;" onclick="openHelpModal()">❓ Help</button>
                 </div>
             </div>
 
@@ -1335,6 +1347,21 @@
     </div>
 
     <!-- RPM Log Modal -->
+
+    <!-- Help Modal -->
+    <div id="helpModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2>❓ Help & Quick Start</h2>
+                <button class="btn btn-close" onclick="closeHelpModal()">×</button>
+            </div>
+            <div class="modal-body" style="padding: 24px;">
+                <p style="color:var(--sro-gray-500);font-size:0.95rem;">Help content coming soon. This will include quick-start guides, workflow tips, and support information.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- RPM Log Modal (actual) -->
     <div id="rpmLogModal" class="modal" style="display: none;">
         <div class="modal-content modal-small">
             <div class="modal-header">

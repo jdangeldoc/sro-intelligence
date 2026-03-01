@@ -2024,6 +2024,14 @@ function closeAddPatientModal() {
     document.getElementById('addPatientModal').style.display = 'none';
 }
 
+function openHelpModal() {
+    document.getElementById('helpModal').style.display = 'flex';
+}
+
+function closeHelpModal() {
+    document.getElementById('helpModal').style.display = 'none';
+}
+
 async function handleAddPatient(event) {
     event.preventDefault();
     
