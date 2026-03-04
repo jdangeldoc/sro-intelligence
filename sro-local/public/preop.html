@@ -25,7 +25,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
 .card h3{font-size:1rem;color:#1e40af;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #e5e7eb}
 
 /* FULL-SCREEN INTAKE */
-.fs-screen{display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:white;z-index:1000;flex-direction:column}
+.fs-screen{display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;height:100dvh;background:white;z-index:1000;flex-direction:column}
 .fs-screen.active{display:flex}
 .fs-top{flex-shrink:0;padding:10px 20px;display:flex;align-items:center;gap:16px;border-bottom:2px solid #e5e7eb}
 .fs-top .back-btn{padding:8px 16px;border:1px solid #d1d5db;background:white;border-radius:8px;cursor:pointer;font-size:1rem}
@@ -33,7 +33,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
 .fs-bar-fill{height:100%;background:#2563eb;border-radius:5px;transition:width 0.3s}
 .fs-top .section-tag{color:#2563eb;font-weight:600;font-size:0.9rem}
 .fs-qcount{font-size:0.85rem;color:#6b7280;white-space:nowrap}
-.fs-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;overflow-y:auto}
+.fs-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .fs-question{font-size:2rem;font-weight:800;text-align:center;max-width:700px;margin-bottom:30px;line-height:1.3}
 .fs-options{display:flex;flex-direction:column;gap:10px;width:100%;max-width:480px}
 .fs-options.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:500px}
@@ -116,6 +116,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
 
 @media(max-width:900px){.dec-grid{grid-template-columns:1fr 1fr}.results-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:600px){.dec-grid{grid-template-columns:1fr}.fs-question{font-size:1.4rem}}
+
+/* Session 6: iPad Safari fixes */
+@supports (-webkit-touch-callout: none) {
+    input, select, textarea { font-size: max(16px, 1em) !important; }
+    .fs-option { min-height: 52px; } /* Touch-friendly intake buttons */
+    .wi-status { min-height: 44px; padding: 8px 12px !important; font-size: 0.85rem !important; } /* Workup selects */
+    .tab-link { min-height: 44px; }
+}
 </style>
 </head>
 <body>
@@ -623,7 +631,8 @@ function buildQuestions(joint) {
     qs.push({id:"opioid",section:"Pain Medicine",text:"Takes OPIOID pain medicine?",type:"choice",options:["No","Yes - less than 3 months","Yes - more than 3 months"]});
     qs.push({id:"cms_low_back_pain",section:"CMS Risk Variables",text:"Have you had LOW BACK PAIN in the past month?",type:"choice",options:["No","Yes"]});
     qs.push({id:"cms_health_literacy",section:"CMS Risk Variables",text:"How comfortable are you FILLING OUT medical forms by yourself?",type:"choice",options:["Extremely","Quite a bit","Somewhat","A little bit","Not at all"],scoring:[4,3,2,1,0]});
-    qs.push({id:"cms_other_joint_pain",section:"CMS Risk Variables",text:"Is there pain in any OTHER major joints (hip, knee, shoulder, ankle)?",type:"choice",options:["None","Mild","Moderate","Severe","Extreme"],scoring:[0,1,2,3,4]});
+    qs.push({id:"cms_other_joint_yn",section:"CMS Risk Variables",text:"Do you have pain in any OTHER major joints (hip, knee, shoulder, ankle)?",type:"choice",options:["No","Yes"]});
+    qs.push({id:"cms_other_joint_pain",section:"CMS Risk Variables",text:"How SEVERE is the pain in the other joint(s)?",type:"choice",options:["Mild","Moderate","Severe","Extreme"],scoring:[1,2,3,4],conditional:"cms_other_joint_yn:Yes"});
     qs.push({id:"cms_narcotics_90d",section:"CMS Risk Variables",text:"Have you used NARCOTIC pain medicine for 90 or more days before surgery?",type:"choice",options:["No","Yes"]});
     qs.push({id:"living",section:"Home Situation",text:"Living situation?",type:"choice",options:["Lives ALONE","With spouse/partner","With family","Nursing home"]});
     qs.push({id:"help",section:"Home Situation",text:"Help at home for 2 weeks after surgery?",type:"choice",options:["Yes","No","Not sure"]});
@@ -1707,6 +1716,7 @@ function loadPatientList(){
     }).catch(function(e){console.log('Patient load error:',e);});
 }
 function loadPatient(){
+    var npBanner=document.getElementById('noPatientBanner');if(npBanner)npBanner.remove();
     var sel=document.getElementById('patientSelect');var opt=sel.options[sel.selectedIndex];if(!opt||!opt.value)return;
     var patId=opt.value;
     var s=opt.getAttribute('data-surg')||'TKA';var d=opt.getAttribute('data-dt')||'';
@@ -1743,6 +1753,21 @@ function loadPatient(){
 
 // INIT
 renderComorbTable();
+// Session 5: Redirect guard — if no patient param, send to dashboard
+(function() {
+    var params = new URLSearchParams(window.location.search);
+    if (!params.get('patient')) {
+        // Allow access if page was navigated to directly (staff picking from dropdown)
+        // Show a banner instead of hard redirect
+        var banner = document.createElement('div');
+        banner.id = 'noPatientBanner';
+        banner.style.cssText = 'background:#fef3c7;border:1px solid #f59e0b;color:#92400e;padding:12px 20px;border-radius:8px;margin:16px auto;max-width:800px;text-align:center;font-size:0.95rem;';
+        banner.innerHTML = '⚠️ No patient selected — choose from the dropdown above, or <a href="/dashboard.html" style="color:#2c5aa0;font-weight:600;">return to Dashboard</a> to pick one.';
+        var content = document.querySelector('.container') || document.querySelector('.content') || document.body;
+        if (content.firstChild) content.insertBefore(banner, content.firstChild);
+        else content.appendChild(banner);
+    }
+})();
 loadPatientList();
 
 // Role-based adjustments

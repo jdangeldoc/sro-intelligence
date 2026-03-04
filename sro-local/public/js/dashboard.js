@@ -65,18 +65,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Render nurse panel if nurse role
     if (USER_ROLE === 'nurse') {
-        document.getElementById('nursePanel').style.display = 'block';
+        document.getElementById('nurseWelcomePanel').style.display = 'block';
+        document.getElementById('nurseTiersContainer').style.display = 'block';
+        document.getElementById('worklistSidebar').style.display = 'block';
         // Set welcome text
         document.getElementById('nurseWelcomeText').textContent = 'Welcome back, ' + USER_NAME;
         var activeCount = patients.filter(function(p) { return p.episode_id; }).length;
         document.getElementById('nurseWelcomeSub').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) + '  •  ' + activeCount + ' active patients';
         // Hide the 6-card stat grid (replaced by KPI strip)
         document.querySelector('.stats-grid').style.display = 'none';
-        // Hide the flat patient table by default
-        var ntableEl = document.querySelector('#panelPatients .table-container');
-        var ntoolbarEl = document.querySelector('#panelPatients .toolbar');
-        if (ntableEl) ntableEl.style.display = 'none';
-        if (ntoolbarEl) ntoolbarEl.style.display = 'none';
+        // Patient table stays VISIBLE as main content (sidebar has worklist)
         await renderNursePanel();
     }
     
@@ -87,29 +85,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('adminWelcomeSub').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
         // Hide the 6-card stat grid (replaced by executive sections)
         document.querySelector('.stats-grid').style.display = 'none';
-        // Hide the flat patient table by default
-        var atableEl = document.querySelector('#panelPatients .table-container');
-        var atoolbarEl = document.querySelector('#panelPatients .toolbar');
-        if (atableEl) atableEl.style.display = 'none';
-        if (atoolbarEl) atoolbarEl.style.display = 'none';
+        // Patient table stays visible for admin
         await renderAdminPanel();
     }
     
     // Render surgeon tiered view
     if (USER_ROLE === 'surgeon') {
-        document.getElementById('surgeonWelcome').style.display = 'flex';
-        document.getElementById('surgeonKpiStrip').style.display = 'flex';
+        document.getElementById('surgeonWelcome').style.display = 'block';
         document.getElementById('surgeonTieredPanel').style.display = 'block';
+        // Show worklist sidebar
+        document.getElementById('worklistSidebar').style.display = 'block';
         // Set welcome text
         document.getElementById('welcomeText').textContent = 'Welcome back, ' + USER_NAME;
         document.getElementById('welcomeSub').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
         // Hide the 6-card stat grid (replaced by KPI strip)
         document.querySelector('.stats-grid').style.display = 'none';
-        // Hide the flat patient table by default (tiered view replaces it)
-        const tableEl = document.querySelector('#panelPatients .table-container');
-        const toolbarEl = document.querySelector('#panelPatients .toolbar');
-        if (tableEl) tableEl.style.display = 'none';
-        if (toolbarEl) toolbarEl.style.display = 'none';
+        // Patient table stays VISIBLE as main content (sidebar has worklist)
         renderSurgeonTieredView();
     }
     
@@ -339,6 +330,7 @@ function renderTierDecisionCard(item) {
     } else if (item.alertType) {
         resolveBtn = '<button class="tier-btn ack" onclick="event.stopPropagation();acknowledgeAlert(\'' + item.patientId + '\',\'' + item.alertType + '\')" title="Suppress 24h">✓ Ack</button>';
     }
+    var smartBtn = getSmartActionHtmlSurgeon(item);
     return '<div class="tier-item" onclick="openPatientModal(\'' + item.patientId + '\')">' +
         '<div class="tier-item-top"><div>' +
         '<span class="tier-item-name">' + item.name + '</span>' +
@@ -350,7 +342,7 @@ function renderTierDecisionCard(item) {
         '</div>' +
         '<div class="tier-item-issue critical">' + item.icon + ' ' + item.issue + '</div>' +
         '<div class="tier-item-actions">' +
-        '<button class="tier-btn primary" onclick="event.stopPropagation();openPatientModal(\'' + item.patientId + '\')">' + (item.cta || 'View') + '</button>' +
+        smartBtn +
         '<button class="tier-btn" onclick="event.stopPropagation();window.location.href=\'/preop.html?patient=' + item.patientId + '\'">PreOp</button>' +
         '<button class="tier-btn" onclick="event.stopPropagation();window.location.href=\'/surgical-prep.html?patient=' + item.patientId + '\'">Surg Prep</button>' +
         resolveBtn +
@@ -363,6 +355,7 @@ function renderTierReviewCard(item) {
     if (item.alertType) {
         ackBtn = '<button class="tier-btn ack" onclick="event.stopPropagation();acknowledgeAlert(\'' + item.patientId + '\',\'' + item.alertType + '\')" title="Suppress 24h" style="margin-top:6px;">✓ Ack</button>';
     }
+    var smartBtn = getSmartActionHtmlSurgeon(item);
     return '<div class="tier-item" onclick="openPatientModal(\'' + item.patientId + '\')">' +
         '<div class="tier-item-top"><div>' +
         '<span class="tier-item-name">' + item.name + '</span>' +
@@ -374,7 +367,7 @@ function renderTierReviewCard(item) {
         '</div>' +
         '<div class="tier-item-issue ' + item.issueClass + '">' + item.icon + ' ' + item.issue + '</div>' +
         '<div class="tier-item-actions" style="margin-top:4px;">' +
-        '<button class="tier-btn" onclick="event.stopPropagation();openPatientModal(\'' + item.patientId + '\')">View</button>' +
+        smartBtn +
         ackBtn +
         '</div></div>';
 }
@@ -619,6 +612,125 @@ async function renderNursePanel() {
     }
 }
 
+// ============ SMART NOTIFICATION ACTIONS (4A-4D) ============
+
+// 4B: Map alertType → primary action with label, icon, and handler
+function getSmartActionHtml(item) {
+    var pid = item.patientId;
+    var token = item.token;
+    var alertType = item.alertType;
+    
+    switch(alertType) {
+        case 'readmission':
+        case 'er_visit':
+            return '<button class="nt-btn nt-smart" onclick="event.stopPropagation();smartOpenPatientSection(\'' + pid + '\',\'adverseEventsList\',\'' + alertType + '\')">📍 View Events</button>';
+        case 'high_pain':
+        case 'moderate_pain':
+            return '<button class="nt-btn nt-smart" onclick="event.stopPropagation();smartOpenPatientSection(\'' + pid + '\',\'painChartCanvas\',\'' + alertType + '\')">📈 Pain Trend</button>';
+        case 'no_preop':
+        case 'preop_needed':
+            return '<button class="nt-btn nt-smart" onclick="event.stopPropagation();smartNavigate(\'' + pid + '\',\'/preop.html?patient=' + pid + '\',\'' + alertType + '\')">📋 Open PreOp</button>';
+        case 'workup_urgent':
+            return '<button class="nt-btn nt-smart" onclick="event.stopPropagation();smartNavigate(\'' + pid + '\',\'/preop.html?patient=' + pid + '&tab=workup\',\'' + alertType + '\')">🔬 Open Workup</button>';
+        case 'missed_checkin':
+        case 'skipped_pt':
+            if (!token) return '';
+            return '<button class="nt-btn nt-smart" onclick="event.stopPropagation();smartSendLink(\'' + pid + '\',\'' + token + '\',\'checkin\',\'' + alertType + '\')">📤 Send Check-in</button>';
+        case 'prom_overdue':
+            if (!token) return '';
+            return '<button class="nt-btn nt-smart" onclick="event.stopPropagation();smartSendLink(\'' + pid + '\',\'' + token + '\',\'prom\',\'' + alertType + '\')">📤 Send PROM Link</button>';
+        default:
+            return '';
+    }
+}
+
+// Surgeon-facing smart action (same mapping, different CSS class)
+function getSmartActionHtmlSurgeon(item) {
+    var pid = item.patientId;
+    var alertType = item.alertType;
+    
+    switch(alertType) {
+        case 'readmission':
+        case 'er_visit':
+            return '<button class="tier-btn primary" onclick="event.stopPropagation();smartOpenPatientSection(\'' + pid + '\',\'adverseEventsList\',\'' + alertType + '\')">📍 View Events</button>';
+        case 'high_pain':
+            return '<button class="tier-btn primary" onclick="event.stopPropagation();smartOpenPatientSection(\'' + pid + '\',\'painChartCanvas\',\'' + alertType + '\')">📈 Pain Trend</button>';
+        case 'no_preop':
+            return '<button class="tier-btn primary" onclick="event.stopPropagation();smartNavigate(\'' + pid + '\',\'/preop.html?patient=' + pid + '\',\'' + alertType + '\')">📋 Open PreOp</button>';
+        case 'workup_urgent':
+            return '<button class="tier-btn primary" onclick="event.stopPropagation();smartNavigate(\'' + pid + '\',\'/preop.html?patient=' + pid + '&tab=workup\',\'' + alertType + '\')">🔬 Workup</button>';
+        case 'moderate_pain':
+            return '<button class="tier-btn" onclick="event.stopPropagation();smartOpenPatientSection(\'' + pid + '\',\'painChartCanvas\',\'' + alertType + '\')">📈 Pain</button>';
+        case 'missed_checkin':
+            return '<button class="tier-btn" onclick="event.stopPropagation();smartOpenPatientSection(\'' + pid + '\',\'checkinsList\',\'' + alertType + '\')">View Check-ins</button>';
+        case 'prom_overdue':
+            return '<button class="tier-btn" onclick="event.stopPropagation();smartOpenPatientSection(\'' + pid + '\',\'promScheduleList\',\'' + alertType + '\')">📋 PROMs</button>';
+        default:
+            return '<button class="tier-btn primary" onclick="event.stopPropagation();openPatientModal(\'' + pid + '\')">View</button>';
+    }
+}
+
+// 4C: Open patient detail and scroll directly to the right section
+async function smartOpenPatientSection(patientId, sectionId, alertType) {
+    await openPatientModal(patientId);
+    // Allow time for detail mode to render
+    setTimeout(function() {
+        var section = document.getElementById(sectionId);
+        if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 600);
+    // 4D: Auto-log the action
+    logAlertAction(patientId, alertType, 'viewed_' + sectionId);
+}
+
+// 4C: Navigate to another page (PreOp, Workup, etc.) and log
+function smartNavigate(patientId, url, alertType) {
+    logAlertAction(patientId, alertType, 'navigated_' + url.split('?')[0].replace('/', ''));
+    window.location.href = url;
+}
+
+// 4C: Copy a link (check-in or PROM) and log
+function smartSendLink(patientId, token, linkType, alertType) {
+    var url;
+    if (linkType === 'prom') {
+        // PROM collection link (pre-visit page)
+        url = 'https://sro-cloud-relay.onrender.com/checkin.html?t=' + token + '&c=' + CLINIC_ID + '&mode=prom';
+    } else {
+        url = 'https://sro-cloud-relay.onrender.com/checkin.html?t=' + token + '&c=' + CLINIC_ID;
+    }
+    navigator.clipboard.writeText(url).then(function() {
+        showToast((linkType === 'prom' ? 'PROM' : 'Check-in') + ' link copied — paste into text or email');
+    }).catch(function() {
+        // Fallback: select from a temporary input
+        var tmp = document.createElement('input');
+        tmp.value = url;
+        document.body.appendChild(tmp);
+        tmp.select();
+        document.execCommand('copy');
+        document.body.removeChild(tmp);
+        showToast((linkType === 'prom' ? 'PROM' : 'Check-in') + ' link copied');
+    });
+    // 4D: Auto-log
+    logAlertAction(patientId, alertType, 'sent_' + linkType + '_link');
+}
+
+// 4D: Auto-log nurse/staff actions on alerts to nursing_notes
+function logAlertAction(patientId, alertType, actionTaken) {
+    if (!patientId || !alertType) return;
+    var noteText = '[Auto] Alert action: ' + alertType + ' → ' + actionTaken;
+    fetch('/api/nursing-notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            patient_id: patientId,
+            clinic_id: CLINIC_ID,
+            author_first: USER_NAME ? USER_NAME.split(' ')[0] : 'System',
+            author_last: USER_NAME ? USER_NAME.split(' ').slice(1).join(' ') : '',
+            event_type: 'alert_action',
+            content: noteText
+        })
+    }).catch(function(e) { console.warn('Failed to log alert action:', e); });
+}
+
 function renderNurseTierItem(item) {
     var linkBtn = item.token ? '<button class="nt-btn" onclick="event.stopPropagation();nurseQuickCopyLink(\'' + item.token + '\')">📋 Link</button>' : '';
     // Resolve button for adverse events (ER/readmission)
@@ -631,6 +743,7 @@ function renderNurseTierItem(item) {
     if (item.alertType && !item.aeId) {
         ackBtn = '<button class="nt-btn nt-ack" onclick="event.stopPropagation();acknowledgeAlert(\'' + item.patientId + '\',\'' + item.alertType + '\')" title="Suppress for 24h">✓ Ack</button>';
     }
+    var smartBtn = getSmartActionHtml(item);
     return '<div class="nt-item" onclick="openPatientModal(\'' + item.patientId + '\')">' +
         '<div class="nt-item-icon">' + item.icon + '</div>' +
         '<div class="nt-item-body">' +
@@ -639,7 +752,7 @@ function renderNurseTierItem(item) {
         '<div class="nt-item-detail">' + item.detail + '</div>' +
         '</div>' +
         '<div class="nt-item-actions">' +
-        '<button class="nt-btn nt-primary" onclick="event.stopPropagation();openPatientModal(\'' + item.patientId + '\')">View</button>' +
+        (smartBtn || '<button class="nt-btn nt-primary" onclick="event.stopPropagation();openPatientModal(\'' + item.patientId + '\')">View</button>') +
         linkBtn +
         '<button class="nt-btn" onclick="event.stopPropagation();nurseQuickNote(\'' + item.patientId + '\')">📝 Note</button>' +
         resolveBtn + ackBtn +
@@ -1322,16 +1435,25 @@ function filterPatients() {
     renderAdminPanel();
 }
 
-// ============ PATIENT MODAL ============
+// ============ PATIENT DETAIL (INLINE MODE) ============
 async function openPatientModal(patientId) {
     currentPatient = patients.find(p => p.id === patientId);
     if (!currentPatient) return;
     
     currentEpisode = { id: currentPatient.episode_id };
     
-    // Show modal
-    document.getElementById('patientModal').style.display = 'flex';
-    document.getElementById('modalPatientName').innerHTML = 
+    // Toggle to detail mode (hide list, show detail)
+    document.getElementById('listMode').style.display = 'none';
+    document.getElementById('detailMode').style.display = 'block';
+    window.scrollTo(0, 0);
+    
+    // Clear search
+    var searchInput = document.getElementById('patientSearchInput');
+    if (searchInput) searchInput.value = '';
+    var dropdown = document.getElementById('searchResultsDropdown');
+    if (dropdown) dropdown.style.display = 'none';
+    
+    document.getElementById('detailPatientName').innerHTML = 
         `${currentPatient.first_name} ${currentPatient.last_name}` +
         (currentPatient.mrn ? ` <span style="font-size:0.8rem;color:#6b7280;font-weight:400;">[${currentPatient.mrn}]</span>` : '');
     
@@ -1400,28 +1522,44 @@ function renderSurgeonSummary(patientId) {
         bmiEl.style.color = '#64748b';
     }
     
-    // Joint Score
+    // Joint Score — 3A: instrument label, 3B: tooltip, 3C: timestamp
     const scoreEl = document.getElementById('sumJointScore');
     const labelEl = document.getElementById('sumJointLabel');
     if (preop?.joint_score_preop) {
         scoreEl.textContent = Math.round(preop.joint_score_preop);
-        labelEl.textContent = preop.joint_score_type === 'koos_jr' ? 'KOOS Jr' : preop.joint_score_type === 'hoos_jr' ? 'HOOS Jr' : 'SCORE';
+        const instrument = preop.joint_score_type === 'koos_jr' ? 'KOOS Jr' : preop.joint_score_type === 'hoos_jr' ? 'HOOS Jr' : 'PROM';
+        labelEl.textContent = instrument + ' (Baseline)';
         scoreEl.style.color = '#60a5fa';
+        // 3B: tooltip on the score
+        scoreEl.title = instrument + ': 0–100 scale. Higher = better function. Baseline collected pre-operatively.';
+        // 3C: timestamp
+        const scoreDate = preop.assessed_at ? new Date(preop.assessed_at).toLocaleDateString() : null;
+        const timestampEl = document.getElementById('sumScoreTimestamp');
+        if (timestampEl) {
+            timestampEl.textContent = scoreDate ? 'Assessed ' + scoreDate : '';
+            timestampEl.style.display = scoreDate ? '' : 'none';
+        }
     } else {
         scoreEl.textContent = '-';
-        labelEl.textContent = 'SCORE';
+        scoreEl.title = '';
+        labelEl.textContent = 'No PROM';
+        const timestampEl = document.getElementById('sumScoreTimestamp');
+        if (timestampEl) timestampEl.style.display = 'none';
     }
     
-    // Projected
+    // Projected — add tooltip
     const projEl = document.getElementById('sumProjected');
     if (preop?.projected_postop_score) {
         projEl.textContent = Math.round(preop.projected_postop_score);
+        const instrument = preop.joint_score_type === 'koos_jr' ? 'KOOS Jr' : 'HOOS Jr';
+        projEl.title = 'Predicted ' + instrument + ' at ~1 year post-op, adjusted for comorbidities.';
     } else {
         projEl.textContent = '-';
         projEl.style.color = '#64748b';
+        projEl.title = '';
     }
     
-    // Risk badge
+    // Risk badge — 3D: add "SURGICAL" qualifier to separate from PROM score
     const riskEl = document.getElementById('sumRiskBadge');
     if (preop?.risk_tier) {
         const tier = preop.risk_tier.toUpperCase();
@@ -1753,13 +1891,13 @@ async function loadPromTrendChart(patientId) {
         ctx.fillStyle = '#2c5aa0';
         ctx.font = 'bold 12px sans-serif';
         ctx.textAlign = 'left';
-        ctx.fillText('● ' + scoreType, padding.left, 16);
+        ctx.fillText('● ' + scoreType + ' Score (0–100, higher = better)', padding.left, 16);
         if (preop && preop.projected_postop_score) {
             ctx.fillStyle = '#c4b5fd';
-            ctx.fillText('--- Projected', padding.left + 80, 16);
+            ctx.fillText('--- Projected', padding.left + 260, 16);
         }
         ctx.fillStyle = '#16a34a';
-        ctx.fillText(`--- SCB (≥${scbThreshold} pts)`, padding.left + 180, 16);
+        ctx.fillText(`--- SCB (≥${scbThreshold} pts)`, padding.left + 360, 16);
         
     } catch (error) {
         console.error('Error loading PROM trend chart:', error);
@@ -1849,21 +1987,24 @@ async function loadPatientPreopInfo(patientId) {
         }
         
         const preop = data.preop;
+        const instrumentName = preop.jointScoreType === 'koos_jr' ? 'KOOS Jr' : 'HOOS Jr';
+        const assessedDate = preop.assessedAt ? new Date(preop.assessedAt).toLocaleDateString() : '';
         let html = `
             <div class="preop-grid">
                 <div class="preop-stat">
-                    <div><span class="risk-badge risk-${preop.riskTier.toLowerCase()}">${preop.riskTier}</span></div>
-                    <div class="preop-stat-label">Risk Tier</div>
+                    <div><span class="risk-badge risk-${preop.riskTier.toLowerCase()}" title="Surgical risk tier based on comorbidity profile">${preop.riskTier}</span></div>
+                    <div class="preop-stat-label">Surgical Risk</div>
                 </div>
-                <div class="preop-stat">
+                <div class="preop-stat" title="${instrumentName}: 0–100 scale. Higher = better function.">
                     <div class="preop-stat-value">${preop.jointScore}</div>
-                    <div class="preop-stat-label">${preop.jointScoreType === 'koos_jr' ? 'KOOS Jr' : 'HOOS Jr'}</div>
+                    <div class="preop-stat-label">${instrumentName} (Baseline)</div>
+                    ${assessedDate ? '<div style="font-size:0.6rem;color:#9ca3af;margin-top:2px;">' + assessedDate + '</div>' : ''}
                 </div>
-                <div class="preop-stat">
+                <div class="preop-stat" title="Predicted ${instrumentName} at ~1 year post-op, adjusted for comorbidities">
                     <div class="preop-stat-value" style="color: #22c55e;">${preop.projectedScore}</div>
-                    <div class="preop-stat-label">Projected</div>
+                    <div class="preop-stat-label">Projected ${instrumentName}</div>
                 </div>
-                <div class="preop-stat">
+                <div class="preop-stat" title="Expected improvement from baseline to projected post-op">
                     <div class="preop-stat-value" style="color: #8b5cf6;">+${preop.expectedImprovement}</div>
                     <div class="preop-stat-label">Expected Δ</div>
                 </div>
@@ -2001,7 +2142,12 @@ function openEpisodeTimeline() {
 }
 
 function closePatientModal() {
-    document.getElementById('patientModal').style.display = 'none';
+    closePatientDetail();
+}
+function closePatientDetail() {
+    document.getElementById('detailMode').style.display = 'none';
+    document.getElementById('listMode').style.display = 'block';
+    window.scrollTo(0, 0);
     currentPatient = null;
     currentEpisode = null;
     
@@ -2024,12 +2170,93 @@ function closeAddPatientModal() {
     document.getElementById('addPatientModal').style.display = 'none';
 }
 
+// ============ HELP MODAL ============
 function openHelpModal() {
     document.getElementById('helpModal').style.display = 'flex';
 }
-
 function closeHelpModal() {
     document.getElementById('helpModal').style.display = 'none';
+}
+
+// ============ WORKLIST SIDEBAR TOGGLE ============
+function toggleWorklist() {
+    var sidebar = document.getElementById('worklistSidebar');
+    var main = document.getElementById('dashboardMain');
+    var showBtn = document.getElementById('showWorklistBtn');
+    var hideBtn = document.getElementById('worklistToggleBtn');
+    
+    if (sidebar.classList.contains('collapsed')) {
+        // Expand
+        sidebar.classList.remove('collapsed');
+        if (main) main.classList.remove('expanded');
+        if (showBtn) showBtn.style.display = 'none';
+        if (hideBtn) hideBtn.innerHTML = '◀ Hide';
+        try { localStorage.setItem('sro_worklist_open', '1'); } catch(e) {}
+    } else {
+        // Collapse
+        sidebar.classList.add('collapsed');
+        if (main) main.classList.add('expanded');
+        if (showBtn) showBtn.style.display = '';
+        if (hideBtn) hideBtn.innerHTML = '▶ Show';
+        try { localStorage.setItem('sro_worklist_open', '0'); } catch(e) {}
+    }
+}
+
+// Restore worklist preference on load
+(function() {
+    try {
+        var pref = localStorage.getItem('sro_worklist_open');
+        if (pref === '0') {
+            // User previously collapsed it — collapse after a small delay to let elements render
+            setTimeout(function() {
+                var sidebar = document.getElementById('worklistSidebar');
+                if (sidebar && sidebar.style.display !== 'none') {
+                    toggleWorklist();
+                }
+            }, 500);
+        }
+    } catch(e) {}
+})();
+
+// ============ PATIENT SEARCH BAR ============
+let searchDebounceTimer = null;
+function handlePatientSearch(query) {
+    clearTimeout(searchDebounceTimer);
+    // Find ALL search dropdowns and update them
+    const dropdowns = document.querySelectorAll('.search-results-dropdown');
+    
+    if (!query || query.trim().length < 1) {
+        dropdowns.forEach(d => d.style.display = 'none');
+        return;
+    }
+    
+    searchDebounceTimer = setTimeout(() => {
+        const q = query.trim().toLowerCase();
+        const results = patients.filter(p => {
+            const fullName = `${p.first_name} ${p.last_name}`.toLowerCase();
+            const lastName = (p.last_name || '').toLowerCase();
+            const firstName = (p.first_name || '').toLowerCase();
+            const mrn = (p.mrn || '').toLowerCase();
+            const token = (p.token || '').toLowerCase();
+            return fullName.includes(q) || lastName.includes(q) || firstName.includes(q) || mrn.includes(q) || token.includes(q);
+        }).slice(0, 8);
+        
+        const html = results.length === 0 
+            ? '<div class="search-result-item" style="color:#6b7280;cursor:default;">No patients found</div>'
+            : results.map(p => {
+                const dayInfo = p.surgery_date ? 
+                    `Day ${Math.floor((Date.now() - new Date(p.surgery_date)) / 86400000)}` : '';
+                return `<div class="search-result-item" onclick="openPatientModal('${p.id}')">
+                    <div>
+                        <span class="search-result-name">${p.last_name}, ${p.first_name}</span>
+                        ${p.mrn ? `<span class="search-result-meta" style="margin-left:8px;">[${p.mrn}]</span>` : ''}
+                    </div>
+                    <div class="search-result-meta">${p.surgery_type || ''} ${dayInfo}</div>
+                </div>`;
+            }).join('');
+        
+        dropdowns.forEach(d => { d.innerHTML = html; d.style.display = 'block'; });
+    }, 200);
 }
 
 async function handleAddPatient(event) {
@@ -2661,8 +2888,8 @@ async function handleSaveNote(event) {
 
 // ============ AUTO-REFRESH ============
 setInterval(async () => {
-    // Only refresh if patient modal is NOT open
-    if (document.getElementById('patientModal').style.display !== 'flex') {
+    // Only refresh if detail view is NOT open
+    if (document.getElementById('detailMode').style.display !== 'block') {
         await loadStats();
         await loadAlertCaches();
         await loadPatients();
@@ -2868,7 +3095,7 @@ async function exportEpisodePDF() {
         html += `<div class="info-grid">`;
         html += `<div class="info-item"><div class="info-label">BMI</div><div class="info-val">${pre.bmi ? parseFloat(pre.bmi).toFixed(1) : '-'}</div></div>`;
         html += `<div class="info-item"><div class="info-label">ASA Class</div><div class="info-val">${pre.asa_class || '-'}</div></div>`;
-        html += `<div class="info-item"><div class="info-label">Pre-Op Score</div><div class="info-val">${pre.joint_score_preop ? Math.round(pre.joint_score_preop) : '-'}</div></div>`;
+        html += `<div class="info-item"><div class="info-label">Pre-Op Score</div><div class="info-val">${pre.joint_score_preop ? Math.round(pre.joint_score_preop) : '-'} ${pre.joint_score_type === 'koos_jr' ? '(KOOS Jr)' : pre.joint_score_type === 'hoos_jr' ? '(HOOS Jr)' : ''}</div></div>`;
         html += `</div>`;
         if (pre.comorbidities) {
             const cList = pre.comorbidities.split(',').filter(c => c.trim());

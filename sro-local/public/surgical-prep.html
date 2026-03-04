@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="css/styles.css">
     <style>
         .prep-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        .prep-tabs { display: flex; gap: 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 24px; overflow-x: auto; }
+        .prep-tabs { display: flex; gap: 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 24px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         .prep-tab { padding: 12px 16px; font-size: 0.9rem; font-weight: 600; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; color: #6b7280; margin-bottom: -2px; white-space: nowrap; }
         .prep-tab.active { border-bottom-color: #2c5aa0; color: #2c5aa0; }
         .prep-panel { display: none; }
@@ -58,6 +58,15 @@
         .patient-header h2 { margin: 0; font-size: 1.3rem; color: #1e293b; }
         .patient-header .meta { font-size: 0.85rem; color: #6b7280; }
         
+        /* Session 6: iPad Safari fixes */
+        @supports (-webkit-touch-callout: none) {
+            input, select, textarea { font-size: max(16px, 1em) !important; }
+            .prep-tab { min-height: 44px; }
+            .allergy-chip { min-height: 44px; padding: 8px 14px; font-size: 0.9rem; }
+            .btn { min-height: 44px; }
+            input[type="checkbox"] { width: 22px; height: 22px; }
+        }
+        
         @media print {
             .navbar, .prep-tabs, .print-bar, .btn { display: none !important; }
             .result-card { color: black !important; background: white !important; border: 2px solid #000 !important; }
@@ -67,6 +76,24 @@
             .rec-item { background: #f0f0f0 !important; }
             .equip-list li { border-color: #ccc !important; color: black !important; }
         }
+        
+        /* 5D: Allergy quick-select chips */
+        .allergy-chip {
+            padding: 5px 12px; border-radius: 16px; border: 1.5px solid #d1d5db;
+            background: white; color: #374151; font-size: 0.82rem; cursor: pointer;
+            transition: all 0.15s;
+        }
+        .allergy-chip:hover { border-color: #93c5fd; background: #eff6ff; }
+        .allergy-chip.active { background: #dc2626; color: white; border-color: #dc2626; font-weight: 600; }
+        
+        /* 5A/5B: Import badge */
+        .import-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            background: #dbeafe; color: #1e40af; font-size: 0.7rem; font-weight: 600;
+            padding: 2px 8px; border-radius: 10px; margin-left: 8px;
+        }
+        .import-badge .dismiss { cursor: pointer; opacity: 0.6; font-size: 0.8rem; }
+        .import-badge .dismiss:hover { opacity: 1; }
     </style>
 </head>
 <body>
@@ -459,7 +486,17 @@
                         <h3>Other Relevant History</h3>
                         <div class="field-row">
                             <label>Allergies (medications, latex, metals)</label>
-                            <textarea id="histAllergies" rows="2" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;resize:vertical;" placeholder="e.g., Penicillin — hives, Latex — anaphylaxis, Nickel — rash"></textarea>
+                            <div id="allergyQuickSelect" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
+                                <button type="button" class="allergy-chip" data-allergy="Penicillin" onclick="toggleAllergyChip(this)">Penicillin</button>
+                                <button type="button" class="allergy-chip" data-allergy="Cephalosporins" onclick="toggleAllergyChip(this)">Cephalosporins</button>
+                                <button type="button" class="allergy-chip" data-allergy="Sulfa" onclick="toggleAllergyChip(this)">Sulfa</button>
+                                <button type="button" class="allergy-chip" data-allergy="NSAIDs" onclick="toggleAllergyChip(this)">NSAIDs</button>
+                                <button type="button" class="allergy-chip" data-allergy="Latex" onclick="toggleAllergyChip(this)">Latex</button>
+                                <button type="button" class="allergy-chip" data-allergy="Metals (Nickel)" onclick="toggleAllergyChip(this)">Metals (Nickel)</button>
+                                <button type="button" class="allergy-chip" data-allergy="Alpha-gal" onclick="toggleAllergyChip(this)">Alpha-gal</button>
+                                <button type="button" class="allergy-chip" data-allergy="Codeine/Morphine" onclick="toggleAllergyChip(this)">Codeine/Morphine</button>
+                            </div>
+                            <textarea id="histAllergies" rows="2" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;resize:vertical;" placeholder="Additional allergies or reaction details (e.g., Penicillin — hives, Latex — anaphylaxis)"></textarea>
                         </div>
                         <div class="field-row">
                             <label>Current Medications</label>
@@ -570,6 +607,17 @@
         document.addEventListener('DOMContentLoaded', async () => {
             if (!CLINIC_ID) { window.location.href = '/index.html'; return; }
             
+            // Session 5: Redirect guard — warn if no patient param
+            const urlCheck = new URLSearchParams(window.location.search);
+            if (!urlCheck.get('patient')) {
+                const banner = document.createElement('div');
+                banner.id = 'noPatientBanner';
+                banner.style.cssText = 'background:#fef3c7;border:1px solid #f59e0b;color:#92400e;padding:12px 20px;border-radius:8px;margin:0 0 16px 0;text-align:center;font-size:0.95rem;';
+                banner.innerHTML = '⚠️ No patient selected — choose from the dropdown above, or <a href="/dashboard.html" style="color:#2c5aa0;font-weight:600;">return to Dashboard</a> to pick one.';
+                const header = document.querySelector('.patient-header');
+                if (header) header.parentNode.insertBefore(banner, header.nextSibling);
+            }
+            
             const roleLabels = { surgeon: 'Surgeon', nurse: 'Nurse', admin: 'Admin' };
             const roleColors = { surgeon: '#2c5aa0', nurse: '#059669', admin: '#7c3aed' };
             document.getElementById('userName').innerHTML = USER_NAME + 
@@ -624,6 +672,7 @@
         }
 
         async function selectPatient() {
+            var npBanner = document.getElementById('noPatientBanner'); if (npBanner) npBanner.remove();
             const id = document.getElementById('patientSelect').value;
             if (!id) {
                 currentPatient = null;
@@ -645,6 +694,8 @@
             ['contractContactMethod','contractTransport','insPlanType','insAuthStatus'].forEach(id => { const el = document.getElementById(id); if (el) el.selectedIndex = 0; });
             ['histPT','histInjCort','histInjHA','histInjPRP','histArthroscopy','histBracing','histNSAIDs','insTEAM','insBPCI','insCJR','insCommBundle','insMSSP'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
             document.querySelectorAll('#consentGeneralRisks input').forEach(cb => cb.checked = false);
+            document.querySelectorAll('.allergy-chip').forEach(b => b.classList.remove('active'));
+            var oldBadge = document.getElementById('historyImportBadge'); if (oldBadge) oldBadge.remove();
             ['contractSignedBadge','consentSignedBadge','insAuthBadge'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
             
             document.getElementById('patientName').textContent = 
@@ -682,6 +733,9 @@
             
             runCalculator();
             await loadSurgPrepData(id);
+            
+            // 5A: Auto-import intake data into Hist/PE if fields are empty
+            importIntakeToHistPE();
         }
 
         // ============ PROSTHESIS CALCULATOR ============
@@ -1267,6 +1321,129 @@ ${additional ? '<p><strong>Additional risks discussed:</strong> ' + additional +
             if (entry) entry[field] = value;
         }
 
+        // ============ 5A/5B: AUTO-IMPORT INTAKE → HIST/PE ============
+        function importIntakeToHistPE() {
+            if (!currentPreop || !currentPreop.intake_responses) return;
+            
+            var ir;
+            try { ir = typeof currentPreop.intake_responses === 'string' ? JSON.parse(currentPreop.intake_responses) : currentPreop.intake_responses; }
+            catch(e) { return; }
+            if (!ir || typeof ir !== 'object') return;
+            
+            var imported = [];
+            
+            // --- Medications field ---
+            var medsEl = document.getElementById('histMedications');
+            if (medsEl && !medsEl.value.trim()) {
+                var meds = [];
+                var anticoag = (ir.anticoagulant || {}).answer || '';
+                if (anticoag === 'Yes') {
+                    var reason = (ir.anticoag_reason || {}).answer || '';
+                    meds.push('Anticoagulant (blood thinner)' + (reason ? ' — for: ' + reason : ''));
+                }
+                var opioid = (ir.opioid || {}).answer || '';
+                if (opioid && opioid !== 'No') meds.push('Opioid: ' + opioid);
+                var dietMed = (ir.diet_medication || {}).answer || '';
+                if (dietMed === 'Yes') {
+                    var glp1 = (ir.diet_glp1 || {}).answer || '';
+                    var lbs = (ir.diet_weight_lost || {}).answer || '';
+                    meds.push('Diet medication' + (glp1 === 'Yes' ? ' (GLP-1 — HOLD before surgery)' : '') + (lbs ? ', lost ' + lbs + ' lbs' : ''));
+                }
+                var diabetes = (ir.diabetes || {}).answer || '';
+                if (diabetes && diabetes !== 'No') meds.push('Diabetes management: ' + diabetes);
+                
+                if (meds.length > 0) {
+                    medsEl.value = meds.join('\n');
+                    imported.push('medications');
+                }
+            }
+            
+            // --- Comorbidity summary → Surgeon Notes (append, don't overwrite) ---
+            var notesEl = document.getElementById('histSurgeonNotes');
+            if (notesEl && !notesEl.value.trim()) {
+                var notes = [];
+                // Cardiac
+                var cardiac = (ir.cardiac || {}).answer || '';
+                if (cardiac === 'Yes') {
+                    var subs = [];
+                    if ((ir.cardiac_chf || {}).answer && (ir.cardiac_chf || {}).answer !== 'No') subs.push('CHF: ' + ir.cardiac_chf.answer);
+                    if ((ir.cardiac_cad || {}).answer === 'Yes') subs.push('CAD');
+                    if ((ir.cardiac_afib || {}).answer === 'Yes') subs.push('Afib');
+                    if (subs.length) notes.push('Cardiovascular: ' + subs.join(', '));
+                }
+                if ((ir.ckd || {}).answer === 'Yes') notes.push('CKD');
+                var smoker = (ir.smoker || {}).answer || '';
+                if (smoker === 'Current smoker' || smoker === 'Quit recently') notes.push('Smoking: ' + smoker);
+                var apnea = (ir.sleep_apnea || {}).answer || '';
+                if (apnea && apnea !== 'No') notes.push('Sleep apnea: ' + apnea);
+                var ra = (ir.rheumatoid || {}).answer || '';
+                if (ra && ra !== 'No') notes.push(ra);
+                var dental = (ir.dental || {}).answer || '';
+                if (dental === 'Severe') notes.push('Dental: Severe — infection risk');
+                var uti = (ir.chronic_uti || {}).answer || '';
+                if (uti === 'Yes') notes.push('Chronic UTI');
+                var urinary = (ir.urinary || {}).answer || '';
+                if (urinary && urinary !== 'No') notes.push('Urinary: ' + urinary);
+                var otherMed = (ir.other_medical || {}).answer || '';
+                if (otherMed) notes.push('Other: ' + otherMed);
+                // Home situation
+                var living = (ir.living || {}).answer || '';
+                var help = (ir.help || {}).answer || '';
+                if (living || help) notes.push('Home: ' + living + (help ? ', help: ' + help : ''));
+                // Mental health flags
+                var phq1 = (ir.phq_1 || {}).score || 0;
+                var phq2 = (ir.phq_2 || {}).score || 0;
+                if (phq1 + phq2 >= 3) notes.push('⚠️ PHQ-2: ' + (phq1+phq2) + ' (depression screen positive)');
+                var gad1 = (ir.gad_1 || {}).score || 0;
+                var gad2 = (ir.gad_2 || {}).score || 0;
+                if (gad1 + gad2 >= 3) notes.push('⚠️ GAD-2: ' + (gad1+gad2) + ' (anxiety screen positive)');
+                // BMI
+                if (currentPreop.bmi) {
+                    var bmiVal = parseFloat(currentPreop.bmi);
+                    if (bmiVal >= 40) notes.push('⚠️ BMI ' + bmiVal.toFixed(1) + ' (morbid obesity)');
+                    else if (bmiVal >= 35) notes.push('BMI ' + bmiVal.toFixed(1) + ' (class II obesity)');
+                }
+                
+                if (notes.length > 0) {
+                    notesEl.value = '[From Intake]\n' + notes.join('\n');
+                    imported.push('surgeon notes');
+                }
+            }
+            
+            // --- Nutrition/GLP-1 alert → Medications if not already there ---
+            // (Already handled above in meds section)
+            
+            // 5B: Show import badge if anything was imported
+            if (imported.length > 0) {
+                showImportBadge('historyImportBadge', imported);
+            }
+        }
+        
+        function showImportBadge(badgeId, fields) {
+            var existing = document.getElementById(badgeId);
+            if (existing) existing.remove();
+            var histHeader = document.querySelector('#panelHistory .input-card h3');
+            if (!histHeader) return;
+            var badge = document.createElement('span');
+            badge.id = badgeId;
+            badge.className = 'import-badge';
+            badge.innerHTML = '↗ Imported from Intake (' + fields.join(', ') + ') <span class="dismiss" onclick="this.parentElement.remove()" title="Dismiss">✕</span>';
+            histHeader.appendChild(badge);
+        }
+
+        // 5D: Allergy quick-select chip toggle
+        function toggleAllergyChip(btn) {
+            btn.classList.toggle('active');
+        }
+        function getSelectedAllergies() {
+            return Array.from(document.querySelectorAll('.allergy-chip.active')).map(b => b.dataset.allergy);
+        }
+        function setSelectedAllergies(list) {
+            document.querySelectorAll('.allergy-chip').forEach(b => {
+                b.classList.toggle('active', (list || []).indexOf(b.dataset.allergy) !== -1);
+            });
+        }
+
         async function saveHistory() {
             const data = {
                 surgeries: historyEntries,
@@ -1280,6 +1457,7 @@ ${additional ? '<p><strong>Additional risks discussed:</strong> ' + additional +
                     bracing: document.getElementById('histBracing').checked,
                     nsaids: document.getElementById('histNSAIDs').checked
                 },
+                allergy_chips: getSelectedAllergies(),
                 allergies: document.getElementById('histAllergies').value,
                 medications: document.getElementById('histMedications').value,
                 surgeon_notes: document.getElementById('histSurgeonNotes').value
@@ -1300,6 +1478,7 @@ ${additional ? '<p><strong>Additional risks discussed:</strong> ' + additional +
                 if (data.treatments.bracing) document.getElementById('histBracing').checked = true;
                 if (data.treatments.nsaids) document.getElementById('histNSAIDs').checked = true;
             }
+            if (data.allergy_chips) setSelectedAllergies(data.allergy_chips);
             if (data.allergies) document.getElementById('histAllergies').value = data.allergies;
             if (data.medications) document.getElementById('histMedications').value = data.medications;
             if (data.surgeon_notes) document.getElementById('histSurgeonNotes').value = data.surgeon_notes;
