@@ -494,6 +494,18 @@ if (!aeCols.includes('resolved_by')) {
   db.exec("ALTER TABLE adverse_events ADD COLUMN resolved_by TEXT");
 }
 
+// --- Portal status columns on episodes ---
+const epCols2 = db.prepare("PRAGMA table_info(episodes)").all().map(c => c.name);
+if (!epCols2.includes('baseline_completed')) {
+  db.exec("ALTER TABLE episodes ADD COLUMN baseline_completed INTEGER DEFAULT 0");
+}
+if (!epCols2.includes('conservative_completed')) {
+  db.exec("ALTER TABLE episodes ADD COLUMN conservative_completed INTEGER DEFAULT 0");
+}
+if (!epCols2.includes('portal_last_accessed')) {
+  db.exec("ALTER TABLE episodes ADD COLUMN portal_last_accessed DATETIME");
+}
+
 // Insert default clinic if none exists
 const clinicCount = db.prepare('SELECT COUNT(*) as count FROM clinics').get();
 if (clinicCount.count === 0) {
@@ -1079,6 +1091,63 @@ app.get('/api/validate-token/:token', (req, res) => {
   res.json({
     patient_id: patient.id, first_name: patient.first_name, clinic_id: patient.clinic_id,
     episode_id: patient.episode_id, surgery_type: patient.surgery_type, days_post_op: daysPostOp
+  });
+});
+
+// --- Portal Status (for dashboard Portal button/badge) ---
+app.get('/api/portal-status/:patientId', (req, res) => {
+  const patient = db.prepare(`
+    SELECT p.id, p.token, p.first_name, p.last_name, p.date_of_birth, p.phone,
+           e.id as episode_id, e.surgery_type, e.surgery_date, e.status as episode_status,
+           e.baseline_completed, e.conservative_completed, e.portal_last_accessed
+    FROM patients p
+    LEFT JOIN episodes e ON e.patient_id = p.id AND e.status = 'active'
+    WHERE p.id = ?
+  `).get(req.params.patientId);
+
+  if (!patient) return res.status(404).json({ error: 'Patient not found' });
+
+  // Check if preop assessment exists (baseline)
+  const hasPreop = db.prepare(`
+    SELECT COUNT(*) as cnt FROM preop_assessments WHERE patient_id = ?
+  `).get(req.params.patientId);
+
+  // Check PROM status
+  const promCount = db.prepare(`
+    SELECT COUNT(*) as cnt FROM pro_assessments WHERE patient_id = ?
+  `).get(req.params.patientId);
+
+  // Derive module statuses
+  const baselineDone = patient.baseline_completed || (hasPreop.cnt > 0);
+  let healthStatus = baselineDone ? 'complete' : 'not_started';
+  let treatmentStatus = patient.conservative_completed ? 'complete' : (baselineDone ? 'not_started' : 'locked');
+  
+  // Check-in: available if surgery date is in the past
+  let checkinStatus = 'locked';
+  if (patient.surgery_date) {
+    const surgDate = new Date(patient.surgery_date);
+    if (surgDate <= new Date()) checkinStatus = 'available';
+  }
+
+  // Survey: check PROM schedule
+  let surveyStatus = 'locked';
+  if (patient.surgery_date && promCount.cnt > 0) {
+    surveyStatus = 'complete';
+  }
+
+  res.json({
+    token: patient.token,
+    episode_type: patient.surgery_type,
+    surgery_date: patient.surgery_date,
+    baseline_completed: baselineDone ? 1 : 0,
+    conservative_completed: patient.conservative_completed || 0,
+    portal_last_accessed: patient.portal_last_accessed,
+    modules: {
+      health: healthStatus,
+      treatment: treatmentStatus,
+      checkin: checkinStatus,
+      survey: surveyStatus
+    }
   });
 });
 
