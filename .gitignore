@@ -1,3 +1,38 @@
-﻿node_modules/
-PreOp_Optimizer 
-sro-cloud-relay/sro-cloud-relay 
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# Node
+node_modules/
+
+# Logs
+*.log
+logs/
+
+# Claude Code worktrees — never commit
+.claude/worktrees/
+
+# Large binaries / build output
+dist/
+build/
+*.exe
+*.zip
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Secrets
+.env
+*.env
+secrets.py
+api_keys.py
+
+# Previously excluded
+PreOp_Optimizer/
+sro-cloud-relay/sro-cloud-relay/
