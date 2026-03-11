@@ -36,3 +36,6 @@ api_keys.py
 # Previously excluded
 PreOp_Optimizer/
 sro-cloud-relay/sro-cloud-relay/
+
+# Nested git repos — committed independently
+sro-local/
