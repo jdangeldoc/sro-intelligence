@@ -1,0 +1,10 @@
+{
+  "name": "SRO_Intelligence",
+  "priority": 1,
+  "workflow": "Medical",
+  "goal": "AI-powered surgical workflow intelligence and ortho documentation system.",
+  "notes": "",
+  "nextAction": "",
+  "time": "Weekday",
+  "prompt_stack": ["surgery_mode", "code_mode", "strict_verification"]
+}
