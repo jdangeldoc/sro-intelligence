@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(for f:*)",
+      "Bash(do echo:*)",
+      "Read(//c/Users/jdang/OneDrive - Jefferygroup/DocProjectVault/02_Products/SRO_Intelligence/**)",
+      "Bash(done)"
+    ]
+  }
+}

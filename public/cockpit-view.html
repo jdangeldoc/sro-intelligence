@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SRO Cockpit</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600&family=Rajdhani:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #000; overflow: hidden; font-family: 'Rajdhani', sans-serif; }
+        #cockpit-wrapper { position: relative; width: 100vw; height: 100vh; }
+        #cockpit-bg { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
+        .cockpit-hotspot { position: absolute; cursor: pointer; z-index: 50; background: transparent; border: 1px dashed transparent; transition: all 0.15s ease; border-radius: 12px; }
+        .cockpit-hotspot:hover { background: rgba(0, 229, 255, 0.08); border-color: rgba(0, 229, 255, 0.4); box-shadow: 0 0 20px rgba(0, 229, 255, 0.15); }
+        #back-btn { position: absolute; top: 12px; left: 16px; z-index: 50; color: #00e5ff; font-size: 14px; text-decoration: none; background: rgba(0,0,0,0.6); padding: 6px 14px; border-radius: 4px; border: 1px solid rgba(0,229,255,0.2); transition: all 0.15s ease; }
+        #back-btn:hover { background: rgba(0,0,0,0.8); border-color: rgba(0,229,255,0.5); color: #00ffff; }
+        #detail-panel { position: absolute; right: 0; top: 0; width: 400px; height: 100%; background: rgba(8,12,20,0.95); border-left: 2px solid rgba(0,229,255,0.3); transform: translateX(100%); transition: transform 0.3s ease; z-index: 100; overflow-y: auto; padding: 24px; }
+        #detail-panel.open { transform: translateX(0); }
+        #close-btn { position: absolute; top: 12px; right: 16px; background: none; border: none; color: #00e5ff; font-size: 24px; cursor: pointer; }
+        #detail-content h2 { font-family: 'Orbitron', monospace; color: #00e5ff; font-size: 18px; margin: 0 0 16px 0; padding-top: 24px; }
+        .detail-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(0,229,255,0.08); font-size: 15px; color: #ccc; }
+        .status-ok { color: #4caf50; }
+        .status-alert { color: #f44336; }
+        .status-warning { color: #ffab00; }
+        .status-pending { color: rgba(255,255,255,0.3); }
+    </style>
+</head>
+<body>
+    <div id="cockpit-wrapper">
+        <img id="cockpit-bg" src="/cockpit/cockpit_bg.png" alt="Cockpit Background">
+        <div class="cockpit-hotspot" style="left:38%;top:5%;width:24%;height:20%" onclick="openStageDetail('decision')"></div>
+        <div class="cockpit-hotspot" style="left:10%;top:12%;width:22%;height:22%" onclick="openStageDetail('preop')"></div>
+        <div class="cockpit-hotspot" style="left:68%;top:12%;width:22%;height:22%" onclick="openStageDetail('surgery')"></div>
+        <div class="cockpit-hotspot" style="left:8%;top:38%;width:22%;height:22%" onclick="openStageDetail('billing')"></div>
+        <div class="cockpit-hotspot" style="left:70%;top:38%;width:22%;height:22%" onclick="openStageDetail('postop')"></div>
+        <div class="cockpit-hotspot" style="left:14%;top:65%;width:22%;height:20%" onclick="openStageDetail('engagement')"></div>
+        <div class="cockpit-hotspot" style="left:60%;top:65%;width:22%;height:20%" onclick="openStageDetail('pt')"></div>
+        <div class="cockpit-hotspot" style="left:32%;top:30%;width:36%;height:35%" onclick="openPatientDetail()"></div>
+        <a id="back-btn" href="/dashboard.html">← Back to Dashboard</a>
+        <div id="detail-panel">
+            <button id="close-btn" onclick="closeDetail()">×</button>
+            <div id="detail-content"></div>
+        </div>
+    </div>
+    <script>
+        const patientId = new URLSearchParams(window.location.search).get('patient');
+        const stageConfig = {
+            decision: { label: 'Decision', items: [{ text: 'Risk Assessment Complete', status: 'ok' }, { text: 'Medical Clearance Needed', status: 'warning' }, { text: 'Surgeon Review Required', status: 'pending' }] },
+            preop: { label: 'Pre-Op Preparation', items: [{ text: 'NPO Status Confirmed', status: 'ok' }, { text: 'Consent Forms Signed', status: 'ok' }, { text: 'Laboratory Tests Complete', status: 'ok' }] },
+            surgery: { label: 'Surgery', items: [{ text: 'Operating Room Prepped', status: 'ok' }, { text: 'Implants Verified', status: 'ok' }, { text: 'Anesthesia Cleared Patient', status: 'ok' }] },
+            billing: { label: 'Billing & Insurance', items: [{ text: 'Insurance Authorization Approved', status: 'ok' }, { text: 'Estimated Cost Confirmed', status: 'ok' }, { text: 'Insurance Verification Complete', status: 'ok' }] },
+            postop: { label: 'Post-Op Recovery', items: [{ text: 'Patient Stable', status: 'ok' }, { text: 'Pain Control Adequate', status: 'ok' }, { text: 'Vitals Monitor Active', status: 'ok' }] },
+            engagement: { label: 'Patient Engagement', items: [{ text: 'Family Communication Sent', status: 'ok' }, { text: 'Discharge Planning Started', status: 'pending' }, { text: 'Follow-up Appointment Scheduled', status: 'pending' }] },
+            pt: { label: 'Physical Therapy', items: [{ text: 'PT Consultation Scheduled', status: 'pending' }, { text: 'Exercise Plan Ready', status: 'pending' }, { text: 'Mobility Assessment Planned', status: 'pending' }] }
+        };
+        function openStageDetail(stageId) {
+            const panel = document.getElementById('detail-panel');
+            const content = document.getElementById('detail-content');
+            const info = stageConfig[stageId] || { label: stageId, items: [] };
+            const icons = { ok: '✓', alert: '⚠', warning: '◆', pending: '○' };
+            const itemsHtml = info.items.map(item => `<div class="detail-item"><span class="status-${item.status}">${icons[item.status]}</span><span>${item.text}</span></div>`).join('');
+            content.innerHTML = `<h2>${info.label}</h2>${itemsHtml}`;
+            panel.classList.add('open');
+        }
+        function openPatientDetail() {
+            const panel = document.getElementById('detail-panel');
+            const content = document.getElementById('detail-content');
+            if (patientId) {
+                fetch(`/api/patients/${patientId}`).then(res => res.json()).then(patient => {
+                    const age = patient.date_of_birth ? Math.floor((new Date() - new Date(patient.date_of_birth)) / (365.25 * 24 * 60 * 60 * 1000)) : 'N/A';
+                    content.innerHTML = `<h2>${patient.first_name} ${patient.last_name}</h2><div class="detail-item"><span style="color:#00e5ff;">◆</span><span><strong>MRN:</strong> ${patient.mrn || 'N/A'}</span></div><div class="detail-item"><span style="color:#00e5ff;">◆</span><span><strong>Age:</strong> ${age}</span></div><div class="detail-item"><span style="color:#00e5ff;">◆</span><span><strong>Sex:</strong> ${patient.sex || 'N/A'}</span></div><div class="detail-item"><span style="color:#00e5ff;">◆</span><span><strong>Status:</strong> <span class="status-ok">Active</span></span></div>`;
+                }).catch(err => { console.error('Error fetching patient:', err); content.innerHTML = '<h2>Patient Info</h2><div class="detail-item" style="color:#f44336;">Error loading patient data</div>'; });
+            } else {
+                content.innerHTML = '<h2>Patient Information</h2><div class="detail-item"><span style="color:#ffab00;">◆</span><span>No patient selected</span></div>';
+            }
+            panel.classList.add('open');
+        }
+        function closeDetail() {
+            document.getElementById('detail-panel').classList.remove('open');
+        }
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetail(); });
+    </script>
+</body>
+</html>
