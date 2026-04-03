@@ -2,9 +2,13 @@
   "name": "SRO_Intelligence",
   "priority": 1,
   "workflow": "Medical",
-  "goal": "AI-powered surgical workflow intelligence and ortho documentation system.",
+  "goal": "AI-powered orthopedic surgical documentation and workflow automation",
   "notes": "",
-  "nextAction": "",
+  "nextAction": "Fix nested repo issues (sro-local, sro-cloud-relay), consolidate git structure",
   "time": "Weekday",
-  "prompt_stack": ["surgery_mode", "code_mode", "strict_verification"]
+  "prompt_stack": [
+    "surgery_mode",
+    "code_mode",
+    "strict_verification"
+  ]
 }
