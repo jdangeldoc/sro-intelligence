@@ -4,7 +4,7 @@
   "workflow": "AppCoding",
   "goal": "AI-powered orthopedic surgical documentation and workflow automation",
   "notes": "",
-  "nextAction": "Fix nested repo issues (sro-local, sro-cloud-relay), consolidate git structure",
+  "nextAction": "Fix nested repo issues (sro-local, sro-cloud-relay)",
   "time": "Weekday",
   "prompt_stack": [
     "surgery_mode",
