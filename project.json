@@ -3,8 +3,8 @@
   "priority": 1,
   "workflow": "AppCoding",
   "goal": "AI-powered orthopedic surgical documentation and workflow automation",
-  "notes": "",
-  "nextAction": "Fix nested repo issues (sro-local, sro-cloud-relay)",
+  "notes": "sro-local = Express+SQLite app (port 3000), sro-cloud-relay = cloud relay (port 3001)",
+  "nextAction": "Continue building the surgical documentation workflow",
   "time": "Weekday",
   "prompt_stack": [
     "surgery_mode",
