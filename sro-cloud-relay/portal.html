@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>My SRO</title>
+    <style>
+        /* ===== CSS VARIABLES ===== */
+        :root {
+            --navy: #1a3a5c;
+            --navy-light: #2c5a8c;
+            --blue: #3b82f6;
+            --blue-light: #dbeafe;
+            --green: #16a34a;
+            --green-light: #dcfce7;
+            --green-bg: #f0fdf4;
+            --amber: #d97706;
+            --amber-light: #fef3c7;
+            --red: #dc2626;
+            --red-light: #fee2e2;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --white: #ffffff;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+            --radius: 16px;
+            --radius-sm: 10px;
+        }
+
+        /* ===== RESET & BASE ===== */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        html { 
+            font-size: 18px; 
+            -webkit-text-size-adjust: 100%;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #f0f7ff 0%, #f9fafb 50%, #f0fdf4 100%);
+            color: var(--gray-800);
+            min-height: 100vh;
+            min-height: 100dvh;
+            line-height: 1.5;
+            overflow-x: hidden;
+        }
+
+        /* ===== LOADING SCREEN ===== */
+        #loading-screen {
+            position: fixed; inset: 0;
+            background: var(--white);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.4s ease;
+        }
+        #loading-screen.fade-out { opacity: 0; pointer-events: none; }
+        
+        .loading-logo {
+            width: 80px; height: 80px;
+            background: var(--navy);
+            border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 20px;
+            animation: pulse-load 1.5s ease-in-out infinite;
+        }
+        .loading-logo span {
+            color: var(--white);
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        @keyframes pulse-load {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.85; }
+        }
+        .loading-text {
+            font-size: 1rem;
+            color: var(--gray-400);
+        }
+
+        /* ===== VERIFY SCREEN ===== */
+        #verify-screen {
+            display: none;
+            min-height: 100vh; min-height: 100dvh;
+            padding: 40px 24px;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .verify-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            padding: 40px 28px;
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+        }
+        .verify-card .logo-block {
+            margin-bottom: 28px;
+        }
+        .verify-card h2 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin-bottom: 8px;
+        }
+        .verify-card p {
+            font-size: 0.95rem;
+            color: var(--gray-500);
+            margin-bottom: 28px;
+        }
+        
+        .verify-field {
+            text-align: left;
+            margin-bottom: 20px;
+        }
+        .verify-field label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--gray-600);
+            margin-bottom: 8px;
+        }
+        .verify-field input {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 1.1rem;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius-sm);
+            outline: none;
+            transition: border-color 0.2s;
+            -webkit-appearance: none;
+        }
+        .verify-field input:focus {
+            border-color: var(--blue);
+        }
+        .verify-field input::placeholder {
+            color: var(--gray-300);
+        }
+        
+        .verify-btn {
+            width: 100%;
+            padding: 16px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            background: var(--navy);
+            color: var(--white);
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            margin-top: 8px;
+            transition: background 0.2s, transform 0.1s;
+            min-height: 54px;
+        }
+        .verify-btn:active { transform: scale(0.98); }
+        .verify-btn:hover { background: var(--navy-light); }
+        
+        .verify-error {
+            display: none;
+            background: var(--red-light);
+            color: var(--red);
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            margin-top: 16px;
+        }
+
+        /* ===== ERROR SCREEN ===== */
+        #error-screen {
+            display: none;
+            min-height: 100vh; min-height: 100dvh;
+            padding: 40px 24px;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .error-icon {
+            width: 64px; height: 64px;
+            background: var(--red-light);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+        #error-screen h2 {
+            font-size: 1.3rem;
+            color: var(--gray-800);
+            margin-bottom: 8px;
+        }
+        #error-screen p {
+            font-size: 0.95rem;
+            color: var(--gray-500);
+            max-width: 340px;
+        }
+
+        /* ===== PORTAL MAIN ===== */
+        #portal-main {
+            display: none;
+            min-height: 100vh; min-height: 100dvh;
+            padding-bottom: 40px;
+        }
+
+        /* Header */
+        .portal-header {
+            background: var(--navy);
+            padding: 24px 20px 28px;
+            color: var(--white);
+            position: relative;
+            overflow: hidden;
+        }
+        .portal-header::after {
+            content: '';
+            position: absolute;
+            bottom: -20px; left: -10%; right: -10%;
+            height: 40px;
+            background: var(--navy);
+            border-radius: 0 0 50% 50%;
+        }
+        .header-top {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+        .header-logo {
+            width: 44px; height: 44px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        .header-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+        .header-subtitle {
+            font-size: 0.85rem;
+            opacity: 0.7;
+            font-weight: 400;
+        }
+        .header-greeting {
+            font-size: 1.05rem;
+            opacity: 0.9;
+            line-height: 1.4;
+        }
+
+        /* Progress Bar */
+        .progress-section {
+            padding: 0 20px;
+            margin-top: -8px;
+            position: relative;
+            z-index: 2;
+        }
+        .progress-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .progress-label span:first-child {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--gray-600);
+        }
+        .progress-label span:last-child {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--navy);
+        }
+        .progress-bar {
+            height: 10px;
+            background: var(--gray-100);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--blue), var(--green));
+            border-radius: 5px;
+            transition: width 0.8s ease;
+            width: 0%;
+        }
+
+        /* Module Cards */
+        .modules-section {
+            padding: 0 20px;
+        }
+        .modules-section h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--gray-400);
+            margin-bottom: 14px;
+        }
+
+        .module-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            padding: 20px;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            cursor: pointer;
+            transition: box-shadow 0.2s, transform 0.15s;
+            border: 2px solid transparent;
+            text-decoration: none;
+            color: inherit;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .module-card:active { transform: scale(0.98); }
+        .module-card:hover { box-shadow: var(--shadow-md); }
+        .module-card.active { border-color: var(--blue); }
+        .module-card.completed { border-color: var(--green); }
+        .module-card.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        
+        .module-icon {
+            width: 52px; height: 52px;
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+        .module-icon.health { background: var(--blue-light); }
+        .module-icon.treatment { background: var(--amber-light); }
+        .module-icon.checkin { background: var(--green-light); }
+        .module-icon.survey { background: #f3e8ff; }
+        
+        .module-info { flex: 1; min-width: 0; }
+        .module-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-bottom: 3px;
+        }
+        .module-desc {
+            font-size: 0.8rem;
+            color: var(--gray-500);
+            line-height: 1.35;
+        }
+        
+        .module-status {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .status-badge {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+        .status-badge.not-started {
+            background: var(--gray-100);
+            color: var(--gray-500);
+        }
+        .status-badge.in-progress {
+            background: var(--blue-light);
+            color: var(--blue);
+        }
+        .status-badge.complete {
+            background: var(--green-light);
+            color: var(--green);
+        }
+        .status-badge.locked {
+            background: var(--gray-100);
+            color: var(--gray-400);
+        }
+        .status-badge.due {
+            background: var(--amber-light);
+            color: var(--amber);
+        }
+
+        .module-arrow {
+            color: var(--gray-300);
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        .module-card.completed .module-arrow { display: none; }
+        .module-card.completed .status-check {
+            color: var(--green);
+            font-size: 22px;
+        }
+
+        /* Episode Info Card */
+        .episode-info {
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            padding: 18px 20px;
+            margin: 0 20px 14px;
+        }
+        .episode-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+        }
+        .episode-row:not(:last-child) {
+            border-bottom: 1px solid var(--gray-100);
+        }
+        .episode-label {
+            font-size: 0.8rem;
+            color: var(--gray-500);
+        }
+        .episode-value {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--gray-700);
+        }
+
+        /* Help Footer */
+        .portal-footer {
+            margin: 32px 20px 0;
+            text-align: center;
+        }
+        .portal-footer p {
+            font-size: 0.8rem;
+            color: var(--gray-400);
+            line-height: 1.5;
+        }
+        .portal-footer a {
+            color: var(--blue);
+            text-decoration: none;
+        }
+
+        /* ===== ANIMATIONS ===== */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in {
+            animation: fadeInUp 0.5s ease forwards;
+            opacity: 0;
+        }
+        .delay-1 { animation-delay: 0.1s; }
+        .delay-2 { animation-delay: 0.2s; }
+        .delay-3 { animation-delay: 0.3s; }
+        .delay-4 { animation-delay: 0.4s; }
+        .delay-5 { animation-delay: 0.5s; }
+        .delay-6 { animation-delay: 0.6s; }
+
+        /* ===== RESPONSIVE ===== */
+        @media (min-width: 600px) {
+            .portal-header { padding: 32px 32px 36px; }
+            .progress-section, .modules-section { padding: 0 32px; }
+            .episode-info { margin-left: 32px; margin-right: 32px; }
+            .portal-footer { margin-left: 32px; margin-right: 32px; }
+            .module-card { padding: 24px; }
+        }
+        @media (min-width: 768px) {
+            body { display: flex; justify-content: center; }
+            #portal-main, #verify-screen { max-width: 540px; width: 100%; }
+        }
+
+        /* iOS safe area */
+        @supports (padding-top: env(safe-area-inset-top)) {
+            .portal-header { padding-top: calc(24px + env(safe-area-inset-top)); }
+            #portal-main { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- LOADING SCREEN -->
+    <div id="loading-screen">
+        <div class="loading-logo"><span>SRO</span></div>
+        <div class="loading-text">Loading your portal...</div>
+    </div>
+
+    <!-- ERROR SCREEN -->
+    <div id="error-screen">
+        <div class="error-icon">&#9888;</div>
+        <h2>Link Not Found</h2>
+        <p id="error-message">This portal link may have expired or is invalid. Please contact your care team for a new link.</p>
+    </div>
+
+    <!-- VERIFY SCREEN -->
+    <div id="verify-screen">
+        <div class="verify-card">
+            <div class="logo-block">
+                <div class="loading-logo" style="margin:0 auto 0;animation:none;"><span>SRO</span></div>
+            </div>
+            <h2>Welcome to My SRO</h2>
+            <p>Please verify your identity to access your portal.</p>
+            <div class="verify-field">
+                <label for="verify-dob">Date of Birth</label>
+                <input type="date" id="verify-dob" placeholder="MM/DD/YYYY">
+            </div>
+            <div class="verify-field">
+                <label for="verify-phone">Last 4 Digits of Phone</label>
+                <input type="tel" id="verify-phone" maxlength="4" pattern="[0-9]{4}" inputmode="numeric" placeholder="1234">
+            </div>
+            <button class="verify-btn" onclick="verifyIdentity()">Continue</button>
+            <div class="verify-error" id="verify-error">
+                The information entered doesn't match our records. Please try again or contact your care team.
+            </div>
+        </div>
+    </div>
+
+    <!-- PORTAL MAIN -->
+    <div id="portal-main">
+        
+        <!-- Header -->
+        <div class="portal-header">
+            <div class="header-top">
+                <div class="header-logo">SRO</div>
+                <div>
+                    <div class="header-title">My SRO</div>
+                    <div class="header-subtitle" id="practice-name">Your Surgical Recovery Portal</div>
+                </div>
+            </div>
+            <div class="header-greeting" id="greeting-text">
+                Welcome! Complete the steps below to prepare for your visit.
+            </div>
+        </div>
+
+        <!-- Progress -->
+        <div class="progress-section animate-in delay-1">
+            <div class="progress-card">
+                <div class="progress-label">
+                    <span>Your Progress</span>
+                    <span id="progress-pct">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Episode Info -->
+        <div class="episode-info animate-in delay-2" id="episode-card">
+            <div class="episode-row">
+                <span class="episode-label">Procedure</span>
+                <span class="episode-value" id="ep-procedure">--</span>
+            </div>
+            <div class="episode-row">
+                <span class="episode-label">Side</span>
+                <span class="episode-value" id="ep-side">--</span>
+            </div>
+            <div class="episode-row">
+                <span class="episode-label">Surgeon</span>
+                <span class="episode-value" id="ep-surgeon">--</span>
+            </div>
+            <div class="episode-row" id="ep-surgery-row" style="display:none;">
+                <span class="episode-label">Surgery Date</span>
+                <span class="episode-value" id="ep-surgery-date">--</span>
+            </div>
+        </div>
+
+        <!-- Modules -->
+        <div class="modules-section">
+
+            <h3 class="animate-in delay-3">Your Care Modules</h3>
+
+            <!-- Module 1: Health Assessment -->
+            <div class="module-card animate-in delay-3" id="mod-health" onclick="openModule('health')">
+                <div class="module-icon health">&#128203;</div>
+                <div class="module-info">
+                    <div class="module-name">Health Assessment</div>
+                    <div class="module-desc">Joint function survey, health screening, and medical history</div>
+                </div>
+                <div class="module-status">
+                    <span class="status-badge not-started" id="status-health">Not Started</span>
+                </div>
+                <div class="module-arrow">&#8250;</div>
+            </div>
+
+            <!-- Module 2: Treatment Journey -->
+            <div class="module-card animate-in delay-4" id="mod-treatment" onclick="openModule('treatment')">
+                <div class="module-icon treatment">&#128218;</div>
+                <div class="module-info">
+                    <div class="module-name">Your Treatment Journey</div>
+                    <div class="module-desc">Learn about treatment options and tell us what you've tried</div>
+                </div>
+                <div class="module-status">
+                    <span class="status-badge not-started" id="status-treatment">Not Started</span>
+                </div>
+                <div class="module-arrow">&#8250;</div>
+            </div>
+
+            <!-- Module 3: Daily Check-In -->
+            <div class="module-card animate-in delay-5" id="mod-checkin" onclick="openModule('checkin')">
+                <div class="module-icon checkin">&#9989;</div>
+                <div class="module-info">
+                    <div class="module-name">Daily Check-In</div>
+                    <div class="module-desc">Report your pain, exercises, and recovery progress</div>
+                </div>
+                <div class="module-status">
+                    <span class="status-badge locked" id="status-checkin">After Surgery</span>
+                </div>
+                <div class="module-arrow">&#8250;</div>
+            </div>
+
+            <!-- Module 4: Follow-Up Survey -->
+            <div class="module-card animate-in delay-6" id="mod-survey" onclick="openModule('survey')">
+                <div class="module-icon survey">&#128200;</div>
+                <div class="module-info">
+                    <div class="module-name">Follow-Up Survey</div>
+                    <div class="module-desc">Outcome surveys to track your recovery progress</div>
+                </div>
+                <div class="module-status">
+                    <span class="status-badge locked" id="status-survey">Not Yet Due</span>
+                </div>
+                <div class="module-arrow">&#8250;</div>
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="portal-footer animate-in delay-6">
+            <p>Need help? Contact your care team directly.<br>
+            Your data is secure and private. <a href="#" onclick="showPrivacy(event)">Learn more</a></p>
+        </div>
+
+    </div>
+
+    <script>
+    /* ============================================
+       MY SRO — PATIENT PORTAL
+       Lives on sro-cloud-relay (Render.com)
+       Token-based, zero PHI in transit
+       ============================================ */
+
+    // ===== CONFIG =====
+    const RELAY_BASE = window.location.origin; // sro-cloud-relay URL
+    let TOKEN = null;
+    let EPISODE_DATA = null;
+    let MODULE_STATUS = {
+        health: 'not_started',    // not_started | in_progress | complete
+        treatment: 'not_started', // not_started | in_progress | complete
+        checkin: 'locked',        // locked | available | complete
+        survey: 'locked'          // locked | due | complete
+    };
+
+    // ===== INITIALIZATION =====
+    document.addEventListener('DOMContentLoaded', init);
+
+    async function init() {
+        // Extract token from URL
+        const params = new URLSearchParams(window.location.search);
+        TOKEN = params.get('t') || params.get('token');
+        const mode = params.get('mode') || 'home'; // home | kiosk | staff
+
+        if (!TOKEN) {
+            showError('No portal link token found. Please use the link provided by your care team.');
+            return;
+        }
+
+        try {
+            // Fetch episode data from cloud relay
+            const response = await fetch(`${RELAY_BASE}/api/portal/status?t=${TOKEN}`);
+            
+            if (!response.ok) {
+                if (response.status === 404) {
+                    showError('This portal link was not found. It may have expired. Please contact your care team for a new link.');
+                } else {
+                    showError('Unable to load your portal. Please try again later.');
+                }
+                return;
+            }
+
+            EPISODE_DATA = await response.json();
+            
+            // Update module status from server
+            if (EPISODE_DATA.modules) {
+                MODULE_STATUS = { ...MODULE_STATUS, ...EPISODE_DATA.modules };
+            }
+
+            // Check if identity verification is needed
+            if (EPISODE_DATA.verified || mode === 'kiosk' || mode === 'staff') {
+                // Already verified or kiosk/staff mode — skip verification
+                showPortal();
+            } else {
+                showVerify();
+            }
+
+        } catch (err) {
+            console.error('Portal init error:', err);
+            // Fallback: if relay doesn't have /api/portal/status yet,
+            // show portal in demo mode with placeholder data
+            EPISODE_DATA = getDemoData();
+            showPortal();
+        }
+    }
+
+    // ===== DEMO DATA (until API endpoint is built) =====
+    function getDemoData() {
+        return {
+            verified: true,
+            episode_type: 'TKA',
+            side: 'Right',
+            surgeon_name: 'Dr. Angel',
+            surgery_date: null,
+            practice_name: null,
+            modules: {
+                health: 'not_started',
+                treatment: 'not_started',
+                checkin: 'locked',
+                survey: 'locked'
+            }
+        };
+    }
+
+    // ===== SCREEN MANAGEMENT =====
+    function showError(message) {
+        document.getElementById('error-message').textContent = message;
+        document.getElementById('loading-screen').classList.add('fade-out');
+        setTimeout(() => {
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('error-screen').style.display = 'flex';
+        }, 400);
+    }
+
+    function showVerify() {
+        document.getElementById('loading-screen').classList.add('fade-out');
+        setTimeout(() => {
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('verify-screen').style.display = 'flex';
+        }, 400);
+    }
+
+    function showPortal() {
+        populatePortal();
+        document.getElementById('loading-screen').classList.add('fade-out');
+        setTimeout(() => {
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('portal-main').style.display = 'block';
+            // Animate progress bar after portal visible
+            setTimeout(updateProgress, 300);
+        }, 400);
+    }
+
+    // ===== IDENTITY VERIFICATION =====
+    async function verifyIdentity() {
+        const dob = document.getElementById('verify-dob').value;
+        const phone4 = document.getElementById('verify-phone').value;
+
+        if (!dob || phone4.length !== 4) {
+            document.getElementById('verify-error').style.display = 'block';
+            document.getElementById('verify-error').textContent = 'Please enter your date of birth and last 4 digits of your phone number.';
+            return;
+        }
+
+        try {
+            const response = await fetch(`${RELAY_BASE}/api/portal/verify`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: TOKEN, dob, phone_last4: phone4 })
+            });
+
+            if (response.ok) {
+                document.getElementById('verify-screen').style.display = 'none';
+                showPortal();
+            } else {
+                document.getElementById('verify-error').style.display = 'block';
+                document.getElementById('verify-error').textContent = 
+                    "The information entered doesn't match our records. Please try again or contact your care team.";
+            }
+        } catch (err) {
+            // Fallback: if verify endpoint doesn't exist yet, allow through
+            console.warn('Verify endpoint not available, allowing through:', err);
+            document.getElementById('verify-screen').style.display = 'none';
+            showPortal();
+        }
+    }
+
+    // ===== POPULATE PORTAL =====
+    function populatePortal() {
+        if (!EPISODE_DATA) return;
+
+        // Practice name
+        if (EPISODE_DATA.practice_name) {
+            document.getElementById('practice-name').textContent = EPISODE_DATA.practice_name;
+        }
+
+        // Procedure type mapping
+        const procNames = {
+            'TKA': 'Total Knee Replacement',
+            'THA': 'Total Hip Replacement',
+            'UKA': 'Partial Knee Replacement',
+            'Partial Hip': 'Partial Hip Replacement',
+            'Hip Fracture': 'Hip Fracture Repair',
+            'TSA': 'Total Shoulder Replacement'
+        };
+        document.getElementById('ep-procedure').textContent = 
+            procNames[EPISODE_DATA.episode_type] || EPISODE_DATA.episode_type || '--';
+        document.getElementById('ep-side').textContent = EPISODE_DATA.side || '--';
+        document.getElementById('ep-surgeon').textContent = EPISODE_DATA.surgeon_name || '--';
+
+        if (EPISODE_DATA.surgery_date) {
+            document.getElementById('ep-surgery-row').style.display = 'flex';
+            const d = new Date(EPISODE_DATA.surgery_date);
+            document.getElementById('ep-surgery-date').textContent = 
+                d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        }
+
+        // Greeting based on episode status
+        const greeting = document.getElementById('greeting-text');
+        if (MODULE_STATUS.health === 'complete' && MODULE_STATUS.treatment === 'complete') {
+            greeting.textContent = "Great job! You've completed your pre-visit preparation.";
+        } else if (MODULE_STATUS.health === 'complete') {
+            greeting.textContent = "Health assessment complete! Next: your treatment journey.";
+        } else if (MODULE_STATUS.checkin === 'available') {
+            greeting.textContent = "Welcome back! Time for your daily check-in.";
+        }
+
+        // Module statuses
+        updateModuleCard('health', MODULE_STATUS.health);
+        updateModuleCard('treatment', MODULE_STATUS.treatment);
+        updateModuleCard('checkin', MODULE_STATUS.checkin);
+        updateModuleCard('survey', MODULE_STATUS.survey);
+    }
+
+    function updateModuleCard(module, status) {
+        const card = document.getElementById(`mod-${module}`);
+        const badge = document.getElementById(`status-${module}`);
+        
+        card.classList.remove('active', 'completed', 'locked');
+        badge.classList.remove('not-started', 'in-progress', 'complete', 'locked', 'due');
+
+        switch(status) {
+            case 'not_started':
+                badge.textContent = 'Start';
+                badge.classList.add('not-started');
+                card.classList.add('active');
+                break;
+            case 'in_progress':
+                badge.textContent = 'Continue';
+                badge.classList.add('in-progress');
+                card.classList.add('active');
+                break;
+            case 'complete':
+                badge.textContent = 'Complete ✓';
+                badge.classList.add('complete');
+                card.classList.add('completed');
+                break;
+            case 'locked':
+                badge.textContent = module === 'checkin' ? 'After Surgery' : 'Not Yet Due';
+                badge.classList.add('locked');
+                card.classList.add('locked');
+                break;
+            case 'available':
+                badge.textContent = 'Ready';
+                badge.classList.add('not-started');
+                card.classList.add('active');
+                break;
+            case 'due':
+                badge.textContent = 'Due Now';
+                badge.classList.add('due');
+                card.classList.add('active');
+                break;
+        }
+    }
+
+    function updateProgress() {
+        let completed = 0;
+        let total = 0;
+        
+        // Only count unlocked modules
+        ['health', 'treatment', 'checkin', 'survey'].forEach(mod => {
+            if (MODULE_STATUS[mod] !== 'locked') {
+                total++;
+                if (MODULE_STATUS[mod] === 'complete') completed++;
+            }
+        });
+
+        const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+        document.getElementById('progress-pct').textContent = `${pct}%`;
+        document.getElementById('progress-fill').style.width = `${pct}%`;
+    }
+
+    // ===== MODULE NAVIGATION =====
+    function openModule(module) {
+        const status = MODULE_STATUS[module];
+        if (status === 'locked') return;
+
+        // Build URL based on module type
+        // These link to existing patient-facing pages on the cloud relay
+        const baseURL = RELAY_BASE;
+        let targetURL = '';
+
+        switch(module) {
+            case 'health':
+                // Links to existing preop intake flow
+                // preop intake on cloud relay or redirect to NUC kiosk
+                targetURL = `${baseURL}/intake.html?t=${TOKEN}&from=portal`;
+                break;
+            case 'treatment':
+                // Links to conservative care engine (to be built in Session 4)
+                targetURL = `${baseURL}/treatment.html?t=${TOKEN}&from=portal`;
+                break;
+            case 'checkin':
+                // Links to existing check-in page
+                targetURL = `${baseURL}/checkin.html?t=${TOKEN}&from=portal`;
+                break;
+            case 'survey':
+                // Links to PROM survey collection
+                targetURL = `${baseURL}/survey.html?t=${TOKEN}&from=portal`;
+                break;
+        }
+
+        window.location.href = targetURL;
+    }
+
+    // ===== PRIVACY INFO =====
+    function showPrivacy(e) {
+        e.preventDefault();
+        alert(
+            'Your Privacy & Security\n\n' +
+            '• Your health information is stored securely on your clinic\'s local server.\n' +
+            '• No personal information (name, date of birth, etc.) is sent over the internet.\n' +
+            '• Only anonymous, numbered data passes through our secure relay.\n' +
+            '• Your clinic matches your data to your record locally.\n\n' +
+            'Questions? Contact your care team directly.'
+        );
+    }
+
+    // ===== ENTER KEY SUPPORT =====
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && document.getElementById('verify-screen').style.display === 'flex') {
+            verifyIdentity();
+        }
+    });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pre-Visit Health Questionnaire | SRO Intelligence</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; color: #1e293b; overflow: hidden; height: 100dvh; font-size: 18px; }
+
+/* Loading / Error screens */
+.screen { display: none; position: fixed; inset: 0; z-index: 100; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+.screen.active { display: flex; }
+
+#loadingScreen { background: #f8fafc; }
+#loadingScreen .spinner { width: 48px; height: 48px; border: 4px solid #e2e8f0; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#loadingScreen p { margin-top: 16px; font-size: 1.1rem; color: #64748b; }
+
+#errorScreen { background: #fef2f2; }
+#errorScreen .error-icon { font-size: 3rem; margin-bottom: 16px; }
+#errorScreen h2 { color: #dc2626; margin-bottom: 8px; }
+#errorScreen p { color: #7f1d1d; max-width: 400px; text-align: center; }
+
+/* Welcome screen */
+#welcomeScreen { background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; text-align: center; }
+#welcomeScreen .logo { font-size: 2.5rem; font-weight: 800; margin-bottom: 8px; letter-spacing: -1px; }
+#welcomeScreen .logo span { color: #93c5fd; }
+#welcomeScreen h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 12px; }
+#welcomeScreen p { font-size: 1rem; color: #bfdbfe; max-width: 480px; line-height: 1.6; margin-bottom: 8px; }
+#welcomeScreen .time-est { font-size: 0.85rem; color: #93c5fd; margin-top: 12px; margin-bottom: 24px; }
+.start-btn { background: white; color: #1e40af; font-size: 1.2rem; font-weight: 700; padding: 16px 48px; border: none; border-radius: 12px; cursor: pointer; transition: transform 0.15s; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+.start-btn:active { transform: scale(0.96); }
+#welcomeName { font-weight: 700; }
+.welcome-note { font-size: 0.8rem !important; color: #93c5fd !important; margin-top: 16px !important; max-width: 400px; }
+
+/* Thank you screen */
+#thankYouScreen { background: linear-gradient(135deg, #065f46 0%, #10b981 100%); color: white; text-align: center; }
+#thankYouScreen .check-icon { font-size: 4rem; margin-bottom: 16px; }
+#thankYouScreen h1 { font-size: 1.8rem; margin-bottom: 12px; }
+#thankYouScreen p { font-size: 1rem; color: #a7f3d0; max-width: 480px; line-height: 1.6; }
+#thankYouScreen .done-note { margin-top: 24px; font-size: 0.85rem; color: #6ee7b7; }
+
+/* Already submitted screen */
+#alreadyScreen { background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%); color: white; text-align: center; }
+#alreadyScreen h1 { font-size: 1.5rem; margin-bottom: 12px; }
+#alreadyScreen p { color: #ddd6fe; max-width: 440px; line-height: 1.6; }
+.retake-btn { background: rgba(255,255,255,0.2); color: white; font-size: 1rem; font-weight: 600; padding: 14px 36px; border: 2px solid rgba(255,255,255,0.4); border-radius: 12px; cursor: pointer; margin-top: 24px; }
+.retake-btn:active { background: rgba(255,255,255,0.3); }
+
+/* Submitting overlay */
+#submittingOverlay { background: rgba(0,0,0,0.6); z-index: 200; }
+#submittingOverlay .spinner { width: 48px; height: 48px; border: 4px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
+#submittingOverlay p { color: white; font-size: 1.1rem; margin-top: 16px; }
+
+/* ===== PAGED QUESTION FLOW ===== */
+#pageScreen { background: #f8fafc; flex-direction: column; padding: 0; overflow: hidden; }
+
+/* Progress header */
+.pg-header { width: 100%; padding: 10px 20px; background: white; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; }
+.pg-progress { height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin-bottom: 6px; }
+.pg-progress-fill { height: 100%; background: linear-gradient(90deg, #22c55e, #16a34a); transition: width 0.4s; border-radius: 4px; }
+.pg-label { text-align: center; font-size: 14px; font-weight: 600; color: #64748b; }
+
+/* Scrollable body */
+.pg-body { flex: 1; overflow-y: auto; padding: 16px 20px 12px; display: flex; justify-content: center; }
+.pg-card { background: white; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); padding: 28px 32px; width: 100%; max-width: 880px; }
+
+/* Page title */
+.pg-title { font-size: 24px; font-weight: 700; color: #1e293b; text-align: center; margin-bottom: 20px; }
+
+/* Section headers */
+.sec-hdr { font-size: 13px; font-weight: 700; color: #2563eb; text-transform: uppercase; letter-spacing: 1px; margin: 18px 0 8px; padding-bottom: 4px; border-bottom: 2px solid #eff6ff; }
+.sec-hdr:first-child { margin-top: 0; }
+
+/* Question rows — 2 col layout for Y/N */
+.q-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; }
+.q-grid.single-col { grid-template-columns: 1fr; }
+
+.q-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; gap: 12px; min-height: 48px; }
+.q-row:last-child { border-bottom: none; }
+.q-row.full-width { grid-column: 1 / -1; }
+
+.q-label { font-size: 18px; color: #1e293b; flex: 1; line-height: 1.3; }
+
+/* Toggle buttons (Y/N) */
+.yn-wrap { display: flex; gap: 6px; flex-shrink: 0; }
+.yn-btn { min-width: 56px; height: 44px; border-radius: 8px; border: 2px solid #e2e8f0; background: white; font-size: 15px; font-weight: 600; color: #94a3b8; cursor: pointer; transition: all 0.15s; }
+.yn-btn:hover { border-color: #cbd5e1; }
+.yn-btn.sel-y { background: #2563eb; border-color: #2563eb; color: white; }
+.yn-btn.sel-n { background: #f1f5f9; border-color: #cbd5e1; color: #64748b; }
+
+/* Choice buttons (single-select row) */
+.ch-wrap { display: flex; gap: 6px; flex-wrap: wrap; }
+.ch-btn { padding: 10px 16px; min-height: 44px; border-radius: 8px; border: 2px solid #e2e8f0; background: white; font-size: 15px; font-weight: 500; color: #475569; cursor: pointer; transition: all 0.15s; text-align: center; }
+.ch-btn:hover { border-color: #93c5fd; background: #eff6ff; }
+.ch-btn.selected { background: #2563eb; border-color: #2563eb; color: white; }
+
+/* Multi-select chips */
+.ms-wrap { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.ms-btn { padding: 8px 14px; border-radius: 20px; border: 2px solid #e2e8f0; background: white; font-size: 15px; color: #475569; cursor: pointer; transition: all 0.15s; }
+.ms-btn:hover { border-color: #93c5fd; }
+.ms-btn.selected { background: #dbeafe; border-color: #2563eb; color: #1e40af; }
+
+/* Sub-options (conditional reveal) */
+.sub-row { display: none; padding: 4px 0 4px 20px; grid-column: 1 / -1; }
+.sub-row.show { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sub-label { font-size: 15px; color: #64748b; margin-right: 4px; }
+
+/* Likert row (5 buttons) */
+.lk-block { margin-bottom: 14px; }
+.lk-block:last-child { margin-bottom: 0; }
+.lk-text { font-size: 18px; color: #1e293b; margin-bottom: 6px; line-height: 1.3; font-weight: 500; }
+.lk-row { display: flex; gap: 6px; }
+.lk-btn { flex: 1; min-height: 44px; padding: 8px 4px; border-radius: 8px; border: 2px solid #e2e8f0; background: white; font-size: 14px; font-weight: 500; color: #475569; cursor: pointer; transition: all 0.15s; text-align: center; line-height: 1.2; }
+.lk-btn:hover { border-color: #93c5fd; background: #eff6ff; }
+.lk-btn.selected { background: #2563eb; border-color: #2563eb; color: white; }
+
+/* Slider (age/weight) */
+.sl-wrap { display: flex; align-items: center; gap: 14px; justify-content: center; margin: 6px 0; }
+.sl-wrap input[type=range] { flex: 1; max-width: 340px; height: 8px; -webkit-appearance: none; appearance: none; background: #e2e8f0; border-radius: 4px; outline: none; }
+.sl-wrap input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 32px; height: 32px; border-radius: 50%; background: #2563eb; cursor: pointer; box-shadow: 0 2px 8px rgba(37,99,235,0.4); }
+.sl-val { font-size: 28px; font-weight: 800; color: #2563eb; min-width: 50px; text-align: center; }
+.sl-unit { font-size: 14px; color: #94a3b8; }
+
+/* Toggle group (demographics — big buttons) */
+.tg-wrap { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin: 6px 0; }
+.tg-btn { padding: 12px 24px; min-height: 48px; min-width: 80px; border-radius: 10px; border: 2px solid #e2e8f0; background: white; font-size: 18px; font-weight: 600; color: #475569; cursor: pointer; transition: all 0.15s; text-align: center; }
+.tg-btn:hover { border-color: #93c5fd; background: #eff6ff; }
+.tg-btn.selected { background: #2563eb; border-color: #2563eb; color: white; }
+
+/* Text input */
+.txt-area { width: 100%; min-height: 80px; border: 2px solid #e2e8f0; border-radius: 10px; padding: 12px; font-size: 16px; font-family: inherit; resize: vertical; outline: none; }
+.txt-area:focus { border-color: #2563eb; }
+
+/* Footer nav */
+.pg-footer { width: 100%; padding: 10px 20px; background: white; border-top: 1px solid #e2e8f0; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; }
+.q-back { background: transparent; border: 1px solid #d1d5db; border-radius: 8px; padding: 10px 20px; font-size: 16px; color: #64748b; cursor: pointer; }
+.q-back:disabled { opacity: 0.3; cursor: default; }
+.pg-next { background: #2563eb; color: white; border: none; border-radius: 10px; padding: 12px 32px; font-size: 16px; font-weight: 600; cursor: pointer; }
+.pg-next:active { background: #1d4ed8; }
+.pg-next:disabled { opacity: 0.35; cursor: default; }
+
+/* Dense pages — smaller font */
+.dense .lk-text { font-size: 16px; }
+.dense .lk-btn { font-size: 13px; min-height: 40px; padding: 6px 3px; }
+.dense .lk-block { margin-bottom: 10px; }
+.dense .q-label { font-size: 16px; }
+
+@media (max-width: 768px) {
+  .pg-card { padding: 18px 14px; }
+  .q-grid { grid-template-columns: 1fr; }
+  .lk-btn { font-size: 13px; padding: 6px 2px; }
+  .tg-btn { padding: 10px 16px; font-size: 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loadingScreen" class="screen active">
+    <div class="spinner"></div>
+    <p>Loading your questionnaire...</p>
+</div>
+
+<!-- Error -->
+<div id="errorScreen" class="screen">
+    <div class="error-icon">&#9888;&#65039;</div>
+    <h2>Link Error</h2>
+    <p id="errorMsg">This link may be expired or invalid. Please contact your doctor's office for a new link.</p>
+</div>
+
+<!-- Welcome -->
+<div id="welcomeScreen" class="screen">
+    <div class="logo">SRO<span>Intelligence</span></div>
+    <h1>Pre-Visit Health Questionnaire</h1>
+    <p>Welcome<span id="welcomeName"></span>! Your doctor's office has requested some health information before your upcoming visit.</p>
+    <p>Your answers help your care team prepare for your appointment and provide the best possible care.</p>
+    <div class="time-est">&#9201;&#65039; Takes about 10-15 minutes</div>
+    <button class="start-btn" onclick="startIntake()">Begin Questionnaire &rarr;</button>
+    <p class="welcome-note">&#128274; Your responses are sent securely. No personal information is stored online.</p>
+</div>
+
+<!-- Already submitted -->
+<div id="alreadyScreen" class="screen">
+    <div style="font-size:3rem;margin-bottom:16px;">&#9989;</div>
+    <h1>You've Already Completed This</h1>
+    <p>Your health questionnaire was submitted on <strong id="alreadyDate"></strong>. Your care team has your responses.</p>
+    <p style="margin-top:12px;color:#ddd6fe;">Want to update your answers? You can retake the questionnaire below. Your newest responses will replace the previous ones.</p>
+    <button class="retake-btn" onclick="startIntake()">Retake Questionnaire &rarr;</button>
+</div>
+
+<!-- ===== PAGED QUESTION FLOW ===== -->
+<div id="pageScreen" class="screen">
+    <div class="pg-header">
+        <div class="pg-progress"><div class="pg-progress-fill" id="pgFill"></div></div>
+        <div class="pg-label" id="pgLabel">Page 1 of 8</div>
+    </div>
+    <div class="pg-body" id="pgBody"></div>
+    <div class="pg-footer">
+        <button class="q-back" id="pgBack" onclick="pgNav(-1)">&larr; Back</button>
+        <button class="pg-next" id="pgNext" onclick="pgNav(1)">Next &rarr;</button>
+    </div>
+</div>
+
+<!-- Thank You -->
+<div id="thankYouScreen" class="screen">
+    <div class="check-icon">&#9989;</div>
+    <h1>Thank You!</h1>
+    <p>Your health questionnaire has been received. Your care team will review your answers before your visit.</p>
+    <p style="margin-top:16px;color:#a7f3d0;">If you need to update anything, you can use this same link to retake the questionnaire.</p>
+    <div class="done-note">You can close this page now.</div>
+    <button onclick="window.location.href='/kiosk.html'" style="margin-top:24px;background:rgba(255,255,255,0.2);color:white;border:2px solid rgba(255,255,255,0.4);padding:14px 36px;border-radius:12px;font-size:1rem;font-weight:600;cursor:pointer;">Next Patient &rarr;</button>
+</div>
+
+<!-- Submitting overlay -->
+<div id="submittingOverlay" class="screen">
+    <div class="spinner"></div>
+    <p>Submitting your responses...</p>
+</div>
+
+<script>
+// ========== CONFIG ==========
+var TOKEN = null;
+var patientInfo = null;
+var responses = {};
+var currentPage = 0;
+var joint = null; // 'knee' or 'hip' or null
+var TOTAL_PAGES = 8;
+
+// ========== INIT ==========
+(function init() {
+    var params = new URLSearchParams(window.location.search);
+    TOKEN = params.get('t') || params.get('token');
+    if (!TOKEN) {
+        showScreen('errorScreen');
+        document.getElementById('errorMsg').textContent = 'No patient token found in the link. Please use the link provided by your doctor\'s office.';
+        return;
+    }
+    fetch('/api/previsit-info/' + TOKEN)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.error) { showError(data.error); return; }
+            patientInfo = data;
+            // Determine joint
+            if (data.surgery_type) {
+                var st = data.surgery_type.toUpperCase();
+                if (st.indexOf('KNEE') >= 0 || st === 'TKA' || st === 'UKA') joint = 'knee';
+                else if (st.indexOf('HIP') >= 0 || st === 'THA') joint = 'hip';
+            }
+            if (data.first_name) {
+                document.getElementById('welcomeName').textContent = ', ' + data.first_name;
+            }
+            if (data.has_previsit && data.previsit_date) {
+                document.getElementById('alreadyDate').textContent = new Date(data.previsit_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                showScreen('alreadyScreen');
+            } else {
+                showScreen('welcomeScreen');
+            }
+        })
+        .catch(function() {
+            showError('Could not connect to the server. Please try again in a moment.');
+        });
+})();
+
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+    document.getElementById(id).classList.add('active');
+}
+function showError(msg) {
+    document.getElementById('errorMsg').textContent = msg;
+    showScreen('errorScreen');
+}
+
+// ========== START ==========
+function startIntake() {
+    responses = {};
+    currentPage = 1;
+    showScreen('pageScreen');
+    renderPage(1);
+}
+
+// ========== NAVIGATION ==========
+function pgNav(dir) {
+    collectPage(currentPage);
+    var next = currentPage + dir;
+    if (next < 1) return;
+    if (next > TOTAL_PAGES) { submitResponses(); return; }
+    currentPage = next;
+    renderPage(next);
+}
+
+function renderPage(pg) {
+    currentPage = pg;
+    document.getElementById('pgFill').style.width = (pg / TOTAL_PAGES * 100) + '%';
+    document.getElementById('pgLabel').textContent = 'Page ' + pg + ' of ' + TOTAL_PAGES;
+    document.getElementById('pgBack').disabled = (pg === 1);
+    document.getElementById('pgNext').textContent = (pg === TOTAL_PAGES) ? 'Submit \u2192' : 'Next \u2192';
+
+    var body = document.getElementById('pgBody');
+    var html = '<div class="pg-card' + (pg === 4 || pg === 6 ? ' dense' : '') + '">';
+
+    if (pg === 1) html += renderPage1();
+    else if (pg === 2) html += renderPage2();
+    else if (pg === 3) html += renderPage3();
+    else if (pg === 4) html += renderPage4();
+    else if (pg === 5) html += renderPage5();
+    else if (pg === 6) html += renderPage6();
+    else if (pg === 7) html += renderPage7();
+    else if (pg === 8) html += renderPage8();
+
+    html += '</div>';
+    body.innerHTML = html;
+    body.scrollTop = 0;
+    bindEvents();
+}
+
+// ========== HELPERS ==========
+function R(id) { return responses[id] ? responses[id].answer : null; }
+function setR(id, answer, score) { responses[id] = { answer: answer, score: score !== undefined ? score : null }; }
+
+function ynHTML(id, label, opts) {
+    var cur = R(id);
+    var yc = cur === 'Yes' ? ' sel-y' : '';
+    var nc = cur === 'No' ? ' sel-n' : '';
+    return '<div class="q-row" data-qid="' + id + '"><span class="q-label">' + label + '</span>' +
+        '<div class="yn-wrap">' +
+        '<button class="yn-btn' + yc + '" data-yn="Yes">Yes</button>' +
+        '<button class="yn-btn' + nc + '" data-yn="No">No</button>' +
+        '</div></div>';
+}
+
+function choiceRowHTML(id, label, options, scoring) {
+    var cur = R(id);
+    var h = '<div class="q-row full-width" data-qid="' + id + '"><span class="q-label">' + label + '</span>' +
+        '<div class="ch-wrap">';
+    for (var i = 0; i < options.length; i++) {
+        var sel = (cur === options[i]) ? ' selected' : '';
+        var sc = scoring ? scoring[i] : 'null';
+        h += '<button class="ch-btn' + sel + '" data-opt="' + encodeOpt(options[i]) + '" data-score="' + sc + '">' + options[i] + '</button>';
+    }
+    h += '</div></div>';
+    return h;
+}
+
+function subRowHTML(parentId, id, label, options, scoring) {
+    var show = R(parentId) === 'Yes' ? ' show' : '';
+    var cur = R(id);
+    var h = '<div class="sub-row' + show + '" data-parent="' + parentId + '" data-qid="' + id + '">';
+    if (label) h += '<span class="sub-label">' + label + '</span>';
+    h += '<div class="ch-wrap">';
+    for (var i = 0; i < options.length; i++) {
+        var sel = (cur === options[i]) ? ' selected' : '';
+        var sc = scoring ? scoring[i] : 'null';
+        h += '<button class="ch-btn' + sel + '" data-opt="' + encodeOpt(options[i]) + '" data-score="' + sc + '">' + options[i] + '</button>';
+    }
+    h += '</div></div>';
+    return h;
+}
+
+function likertHTML(id, text, options, scoring) {
+    var cur = R(id);
+    var h = '<div class="lk-block" data-qid="' + id + '"><div class="lk-text">' + text + '</div><div class="lk-row">';
+    for (var i = 0; i < options.length; i++) {
+        var sel = (cur === options[i]) ? ' selected' : '';
+        var sc = scoring ? scoring[i] : 'null';
+        h += '<button class="lk-btn' + sel + '" data-opt="' + encodeOpt(options[i]) + '" data-score="' + sc + '">' + options[i] + '</button>';
+    }
+    h += '</div></div>';
+    return h;
+}
+
+function sliderHTML(id, label, min, max, def, unit) {
+    var val = R(id) != null ? R(id) : def;
+    return '<div class="q-row full-width" data-qid="' + id + '"><span class="q-label">' + label + '</span>' +
+        '<div class="sl-wrap">' +
+        '<span class="sl-unit">' + min + '</span>' +
+        '<input type="range" min="' + min + '" max="' + max + '" value="' + val + '" data-slider="' + id + '">' +
+        '<span class="sl-unit">' + max + '</span>' +
+        '<span class="sl-val" id="sv_' + id + '">' + val + '</span>' +
+        '<span class="sl-unit">' + unit + '</span>' +
+        '</div></div>';
+}
+
+function toggleGroupHTML(id, label, options) {
+    var cur = R(id);
+    var h = '<div class="q-row full-width" data-qid="' + id + '" style="flex-direction:column;align-items:stretch;">' +
+        '<span class="q-label" style="text-align:center;margin-bottom:4px;">' + label + '</span>' +
+        '<div class="tg-wrap">';
+    for (var i = 0; i < options.length; i++) {
+        var sel = (cur === options[i]) ? ' selected' : '';
+        h += '<button class="tg-btn' + sel + '" data-opt="' + encodeOpt(options[i]) + '">' + options[i] + '</button>';
+    }
+    h += '</div></div>';
+    return h;
+}
+
+function textAreaHTML(id, label, placeholder) {
+    var val = R(id) || '';
+    return '<div class="q-row full-width" data-qid="' + id + '" style="flex-direction:column;align-items:stretch;">' +
+        '<span class="q-label">' + label + '</span>' +
+        '<textarea class="txt-area" data-text="' + id + '" placeholder="' + (placeholder || '') + '">' + val + '</textarea>' +
+        '</div>';
+}
+
+function encodeOpt(s) { return btoa(unescape(encodeURIComponent(s))); }
+function decodeOpt(s) { return decodeURIComponent(escape(atob(s))); }
+
+// ========== PAGE RENDERERS ==========
+function renderPage1() {
+    var h = '<div class="pg-title">About You</div><div class="q-grid single-col">';
+    h += sliderHTML('age', 'How old are you?', 18, 100, 65, 'years');
+    h += toggleGroupHTML('gender', 'What is your gender?', ['Male','Female','Prefer not to say']);
+    h += toggleGroupHTML('height_ft', 'Height \u2014 feet?', ['4 feet','5 feet','6 feet','7 feet']);
+    h += toggleGroupHTML('height_in', 'Height \u2014 inches?', ['0 in','1 in','2 in','3 in','4 in','5 in','6 in','7 in','8 in','9 in','10 in','11 in']);
+    h += sliderHTML('weight', 'Weight (pounds)?', 80, 450, 180, 'lbs');
+    h += '</div>';
+    return h;
+}
+
+function renderPage2() {
+    var h = '<div class="pg-title">Heart &amp; Major Organs</div><div class="q-grid">';
+
+    h += '<div class="sec-hdr" style="grid-column:1/-1">Heart</div>';
+    h += ynHTML('cardiac', 'Do you have any HEART problems?');
+    // cardiac sub-questions — show as sub-rows
+    h += '</div>'; // close grid temporarily for conditional block
+    h += subRowHTML('cardiac', 'cardiac_chf', 'Heart failure (CHF)?', ['No','Yes \u2014 mild','Yes \u2014 moderate or severe']);
+    h += subRowHTML('cardiac', 'cardiac_cad', 'Blockage or CAD?', ['No','Yes']);
+    h += subRowHTML('cardiac', 'cardiac_afib', 'A-Fib?', ['No','Yes']);
+    h += '<div class="q-grid">';
+    h += ynHTML('valve_disease', 'Valve disease?');
+    h += ynHTML('arrhythmia_other', 'Other arrhythmia?');
+
+    h += '<div class="sec-hdr" style="grid-column:1/-1">Organs</div>';
+    h += choiceRowHTML('diabetes', 'Diabetes?', ['No','Yes \u2014 diet controlled','Yes \u2014 I take pills','Yes \u2014 I take insulin']);
+    h += choiceRowHTML('ckd', 'Kidney disease?', ['No','Yes \u2014 mild','Yes \u2014 moderate or severe']);
+    h += ynHTML('liver', 'Liver problems?');
+    h += ynHTML('inflammatory_arthritis', 'Inflammatory arthritis?');
+    h += '</div>';
+    h += subRowHTML('inflammatory_arthritis', 'rheumatoid', 'Type:', ['No','Yes \u2014 Rheumatoid Arthritis','Yes \u2014 Psoriatic Arthritis','Yes \u2014 Other inflammatory']);
+    h += '<div class="q-grid">';
+
+    h += '<div class="sec-hdr" style="grid-column:1/-1">Lungs</div>';
+    h += choiceRowHTML('copd', 'Lung or breathing problems?', ['No','Yes \u2014 mild (asthma)','Yes \u2014 moderate/severe (COPD)']);
+    h += choiceRowHTML('sleep_apnea', 'Sleep apnea?', ['No','Yes \u2014 I use a CPAP','Yes \u2014 I don\'t use a CPAP']);
+    h += ynHTML('asthma', 'Asthma?');
+    h += choiceRowHTML('smoker', 'Do you smoke?', ['Never smoked','Quit more than 1 year ago','Quit recently','Current smoker']);
+    h += '</div>';
+
+    // STOP-BANG conditional on sleep_apnea=No
+    h += '<div class="sub-row' + (R('sleep_apnea') === 'No' ? ' show' : '') + '" data-parent-val="sleep_apnea:No" style="flex-direction:column;padding:8px 0;">';
+    h += '<div class="sec-hdr">Sleep Screening</div><div class="q-grid">';
+    h += ynHTML('sb_snore', 'Do you SNORE loudly?');
+    h += ynHTML('sb_tired', 'Often feel TIRED during the day?');
+    h += ynHTML('sb_observed', 'Anyone observed you STOP BREATHING while sleeping?');
+    h += '</div></div>';
+
+    return h;
+}
+
+function renderPage3() {
+    var h = '<div class="pg-title">Urinary, Bleeding &amp; Medications</div><div class="q-grid">';
+
+    h += '<div class="sec-hdr" style="grid-column:1/-1">Urinary</div>';
+    h += choiceRowHTML('urinary', 'Urinary problems?', ['No','Yes \u2014 mild','Yes \u2014 moderate or severe']);
+    h += ynHTML('chronic_uti', 'Chronic or recurrent UTI?');
+    h += ynHTML('incontinence', 'Incontinence?');
+
+    h += '<div class="sec-hdr" style="grid-column:1/-1">Bleeding</div>';
+    h += ynHTML('anticoagulant', 'Do you take BLOOD THINNERS?');
+    h += ynHTML('bleeding_disorder', 'Bleeding disorder?');
+    h += '</div>';
+    h += subRowHTML('anticoagulant', 'anticoag_reason', 'Reason:', ['Heart condition','Blood clot (DVT) history','Stroke prevention','Other']);
+    h += '<div class="q-grid">';
+
+    h += '<div class="sec-hdr" style="grid-column:1/-1">Medications</div>';
+    h += choiceRowHTML('opioid', 'Opioid pain medicine?', ['No','Yes \u2014 less than 3 months','Yes \u2014 more than 3 months']);
+    // conditional cms_narcotics_90d
+    h += '</div>';
+    var showNarc = R('opioid') && R('opioid').indexOf('Yes') >= 0;
+    h += '<div class="sub-row' + (showNarc ? ' show' : '') + '" data-parent-val="opioid:Yes">';
+    h += '<div class="q-row" data-qid="cms_narcotics_90d"><span class="q-label">Narcotic pain medicine for 90+ days?</span>';
+    h += '<div class="yn-wrap">';
+    var narcY = R('cms_narcotics_90d') === 'Yes' ? ' sel-y' : '';
+    var narcN = R('cms_narcotics_90d') === 'No' ? ' sel-n' : '';
+    h += '<button class="yn-btn' + narcY + '" data-yn="Yes">Yes</button>';
+    h += '<button class="yn-btn' + narcN + '" data-yn="No">No</button>';
+    h += '</div></div></div>';
+    h += '<div class="q-grid">';
+
+    h += '<div class="sec-hdr" style="grid-column:1/-1">Other</div>';
+    h += choiceRowHTML('anemia', 'Anemia (low blood count)?', ['No','Yes']);
+    h += choiceRowHTML('dental', 'Dental problems?', ['None','Mild','Severe \u2014 needs dental work']);
+    h += ynHTML('prior_joint_surgery', 'Prior surgery on this same joint?');
+
+    h += '<div class="sec-hdr" style="grid-column:1/-1">Nutrition</div>';
+    h += ynHTML('nutrition_sweets', 'Diet mostly SWEETS or CARBS?');
+    h += ynHTML('diet_medication', 'Taking a WEIGHT LOSS medication?');
+    h += '</div>';
+    h += subRowHTML('diet_medication', 'diet_glp1', 'GLP-1 (Ozempic, Wegovy, etc.)?', ['No','Yes']);
+    var showDiet = R('diet_medication') === 'Yes';
+    h += '<div class="sub-row' + (showDiet ? ' show' : '') + '" data-parent="diet_medication">';
+    h += '<div class="q-row" data-qid="diet_weight_lost"><span class="q-label">Pounds lost?</span>';
+    h += '<div class="sl-wrap">';
+    var dwVal = R('diet_weight_lost') != null ? R('diet_weight_lost') : 0;
+    h += '<input type="range" min="0" max="150" value="' + dwVal + '" data-slider="diet_weight_lost">';
+    h += '<span class="sl-val" id="sv_diet_weight_lost">' + dwVal + '</span><span class="sl-unit">lbs</span>';
+    h += '</div></div></div>';
+
+    h += '<div class="q-grid single-col">';
+    h += textAreaHTML('current_medications', 'List your CURRENT MEDICATIONS (or type "none"):', 'Example: Lisinopril 10mg daily, Metformin 500mg...');
+    h += textAreaHTML('allergies', 'ALLERGIES to medications, latex, or metals?', 'Example: Penicillin \u2014 rash, or "No known allergies"');
+    h += '</div>';
+
+    return h;
+}
+
+function renderPage4() {
+    var h = '';
+    if (joint === 'knee') {
+        h += '<div class="pg-title">About Your Knee</div>';
+        var kqs = [
+            ['koos_1','How often does your KNEE bother you?','freq'],
+            ['koos_2','Have you changed activities because of your knee?','amount'],
+            ['koos_3','How hard is it to TWIST or PIVOT on your knee?','diff'],
+            ['koos_4','How hard is it to STRAIGHTEN your knee fully?','diff'],
+            ['koos_5','How hard is it going UP or DOWN STAIRS?','diff'],
+            ['koos_6','How hard is it STANDING?','diff'],
+            ['koos_7','How hard is it GETTING UP from a chair?','diff']
+        ];
+        for (var i = 0; i < kqs.length; i++) {
+            var opts;
+            if (kqs[i][2] === 'freq') opts = ['Never','Monthly','Weekly','Daily','Always'];
+            else if (kqs[i][2] === 'amount') opts = ['Not at all','A little','Somewhat','A lot','Totally'];
+            else opts = ['No problem','A little hard','Somewhat hard','Very hard','Extremely hard'];
+            h += likertHTML(kqs[i][0], (i+1) + '. ' + kqs[i][1], opts, [0,1,2,3,4]);
+        }
+    } else if (joint === 'hip') {
+        h += '<div class="pg-title">About Your Hip</div>';
+        var hqs = [
+            ['hoos_1','How hard is it going DOWN STAIRS?','diff'],
+            ['hoos_2','How hard is it getting IN or OUT of a car?','diff'],
+            ['hoos_3','How hard is WALKING on flat ground?','diff'],
+            ['hoos_4','How hard is it putting on SOCKS or SHOES?','diff'],
+            ['hoos_5','How hard is GETTING UP from a chair?','diff'],
+            ['hoos_6','How bad is your morning hip STIFFNESS?','sev']
+        ];
+        for (var i = 0; i < hqs.length; i++) {
+            var opts;
+            if (hqs[i][2] === 'sev') opts = ['None','Mild','Moderate','Severe','Extreme'];
+            else opts = ['No problem','A little hard','Somewhat hard','Very hard','Extremely hard'];
+            h += likertHTML(hqs[i][0], (i+1) + '. ' + hqs[i][1], opts, [0,1,2,3,4]);
+        }
+    } else {
+        h += '<div class="pg-title">Joint Function</div>';
+        h += '<p style="text-align:center;color:#64748b;padding:32px;">Joint-specific questions will appear based on your scheduled procedure.</p>';
+    }
+
+    // Supplemental multi-select
+    h += '<div class="sec-hdr">Which activities bother you most?</div>';
+    h += '<div class="ms-wrap" data-multi="activities_bothered">';
+    var acts = ['Walking','Stairs','Getting dressed','Driving','Sports/exercise','Housework','Other'];
+    var curActs = R('activities_bothered') ? R('activities_bothered').split(', ') : [];
+    for (var i = 0; i < acts.length; i++) {
+        var sel = curActs.indexOf(acts[i]) >= 0 ? ' selected' : '';
+        h += '<button class="ms-btn' + sel + '">' + acts[i] + '</button>';
+    }
+    h += '</div>';
+
+    return h;
+}
+
+function renderPage5() {
+    var h = '<div class="pg-title">General Health</div>';
+    var pLabels = [
+        ['promis_1','In general, how would you rate your HEALTH?'],
+        ['promis_2','How would you rate your QUALITY OF LIFE?'],
+        ['promis_3','How would you rate your PHYSICAL health?'],
+        ['promis_4','How would you rate your MENTAL health?'],
+        ['promis_5','How satisfied are you with your SOCIAL life?']
+    ];
+    var health5 = ['Excellent','Very Good','Good','Fair','Poor'];
+    var health5s = [5,4,3,2,1];
+    for (var i = 0; i < pLabels.length; i++) {
+        h += likertHTML(pLabels[i][0], (i+1) + '. ' + pLabels[i][1], health5, health5s);
+    }
+    h += likertHTML('promis_6', '6. How well can you do your DAILY activities?', ['Completely','Mostly','Somewhat','A little','Not at all'], [5,4,3,2,1]);
+    return h;
+}
+
+function renderPage6() {
+    var h = '<div class="pg-title">Pain &amp; Mood</div>';
+    h += likertHTML('promis_7', '1. What is your average PAIN level?', ['No pain','Mild','Moderate','Severe','Worst pain'], [5,4,3,2,1]);
+    h += likertHTML('promis_8', '2. How is your FATIGUE level?', ['Not tired','A little tired','Somewhat tired','Very tired','Exhausted'], [5,4,3,2,1]);
+    h += likertHTML('promis_9', '3. How often do you feel ANXIOUS or SAD?', ['Never','Rarely','Sometimes','Often','Always'], [5,4,3,2,1]);
+    h += likertHTML('promis_10', '4. How well can you do usual WORK and FAMILY activities?', ['Completely','Mostly','Somewhat','A little','Not at all'], [5,4,3,2,1]);
+
+    h += '<div class="sec-hdr">Over the past 2 weeks...</div>';
+    var mood4 = ['Not at all','Several days','More than half the days','Nearly every day'];
+    var mood4s = [0,1,2,3];
+    h += likertHTML('phq_1', '5. Felt DOWN, depressed, or hopeless?', mood4, mood4s);
+    h += likertHTML('phq_2', '6. LITTLE INTEREST or pleasure in doing things?', mood4, mood4s);
+    h += likertHTML('gad_1', '7. Felt NERVOUS, anxious, or on edge?', mood4, mood4s);
+    h += likertHTML('gad_2', '8. Unable to STOP WORRYING?', mood4, mood4s);
+    return h;
+}
+
+function renderPage7() {
+    var h = '<div class="pg-title">Other Pain &amp; Capacity</div><div class="q-grid single-col">';
+    h += ynHTML('cms_low_back_pain', 'Have you had LOW BACK PAIN in the past month?');
+    h += choiceRowHTML('cms_other_joint_pain', 'Pain in OTHER major joints?', ['None','Mild','Moderate','Severe','Extreme'], [0,1,2,3,4]);
+    h += choiceRowHTML('cms_health_literacy', 'How comfortable filling out medical forms by yourself?', ['Extremely','Quite a bit','Somewhat','A little bit','Not at all'], [4,3,2,1,0]);
+    h += ynHTML('blood_pressure', 'Are you TREATED for high blood pressure?');
+    h += '</div>';
+    return h;
+}
+
+function renderPage8() {
+    var h = '<div class="pg-title">Home &amp; Support</div><div class="q-grid single-col">';
+    h += choiceRowHTML('living', 'What is your living situation?', ['I live ALONE','With spouse or partner','With family','Nursing home or facility']);
+    h += choiceRowHTML('help', 'HELP at home for 2 weeks after surgery?', ['Yes','No','Not sure']);
+    h += choiceRowHTML('transport', 'TRANSPORTATION to follow-up appointments?', ['Yes','Need help','Not sure']);
+    h += choiceRowHTML('stairs', 'STAIRS in your home you must use daily?', ['No stairs','A few steps','A full flight or more']);
+    h += textAreaHTML('other_medical', 'Any OTHER medical problems not listed above?', 'Type any other conditions, surgeries, or concerns...\n\nOr leave blank if none.');
+    h += '</div>';
+    return h;
+}
+
+// ========== COLLECT PAGE DATA ==========
+function collectPage(pg) {
+    // Sliders
+    document.querySelectorAll('[data-slider]').forEach(function(el) {
+        var id = el.dataset.slider;
+        setR(id, parseInt(el.value));
+    });
+    // Text areas
+    document.querySelectorAll('[data-text]').forEach(function(el) {
+        var id = el.dataset.text;
+        setR(id, el.value.trim());
+    });
+    // Multi-select
+    document.querySelectorAll('[data-multi]').forEach(function(wrap) {
+        var id = wrap.dataset.multi;
+        var selected = [];
+        wrap.querySelectorAll('.ms-btn.selected').forEach(function(b) { selected.push(b.textContent); });
+        if (selected.length > 0) setR(id, selected.join(', '));
+    });
+}
+
+// ========== EVENT BINDING ==========
+function bindEvents() {
+    // Y/N buttons
+    document.querySelectorAll('.yn-wrap').forEach(function(wrap) {
+        wrap.querySelectorAll('.yn-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var qid = wrap.closest('[data-qid]').dataset.qid;
+                var val = btn.dataset.yn;
+                wrap.querySelectorAll('.yn-btn').forEach(function(b) { b.classList.remove('sel-y','sel-n'); });
+                btn.classList.add(val === 'Yes' ? 'sel-y' : 'sel-n');
+                setR(qid, val);
+                updateConditionals();
+            });
+        });
+    });
+
+    // Choice buttons
+    document.querySelectorAll('.ch-wrap').forEach(function(wrap) {
+        wrap.querySelectorAll('.ch-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var qid = wrap.closest('[data-qid]').dataset.qid;
+                var opt = decodeOpt(btn.dataset.opt);
+                var sc = btn.dataset.score !== 'null' ? parseFloat(btn.dataset.score) : null;
+                wrap.querySelectorAll('.ch-btn').forEach(function(b) { b.classList.remove('selected'); });
+                btn.classList.add('selected');
+                setR(qid, opt, sc);
+                updateConditionals();
+            });
+        });
+    });
+
+    // Toggle group buttons
+    document.querySelectorAll('.tg-wrap').forEach(function(wrap) {
+        wrap.querySelectorAll('.tg-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var qid = wrap.closest('[data-qid]').dataset.qid;
+                var opt = decodeOpt(btn.dataset.opt);
+                wrap.querySelectorAll('.tg-btn').forEach(function(b) { b.classList.remove('selected'); });
+                btn.classList.add('selected');
+                setR(qid, opt);
+            });
+        });
+    });
+
+    // Likert buttons
+    document.querySelectorAll('.lk-row').forEach(function(row) {
+        row.querySelectorAll('.lk-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var qid = row.closest('[data-qid]').dataset.qid;
+                var opt = decodeOpt(btn.dataset.opt);
+                var sc = btn.dataset.score !== 'null' ? parseFloat(btn.dataset.score) : null;
+                row.querySelectorAll('.lk-btn').forEach(function(b) { b.classList.remove('selected'); });
+                btn.classList.add('selected');
+                setR(qid, opt, sc);
+            });
+        });
+    });
+
+    // Multi-select buttons
+    document.querySelectorAll('.ms-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            btn.classList.toggle('selected');
+        });
+    });
+
+    // Sliders
+    document.querySelectorAll('[data-slider]').forEach(function(el) {
+        el.addEventListener('input', function() {
+            var id = el.dataset.slider;
+            var valEl = document.getElementById('sv_' + id);
+            if (valEl) valEl.textContent = el.value;
+        });
+    });
+}
+
+function updateConditionals() {
+    // Sub-rows with data-parent
+    document.querySelectorAll('.sub-row[data-parent]').forEach(function(row) {
+        var pid = row.dataset.parent;
+        var ans = R(pid);
+        if (ans === 'Yes') row.classList.add('show');
+        else row.classList.remove('show');
+    });
+    // Sub-rows with data-parent-val (e.g. sleep_apnea:No, opioid:Yes)
+    document.querySelectorAll('.sub-row[data-parent-val]').forEach(function(row) {
+        var pv = row.dataset.parentVal.split(':');
+        var ans = R(pv[0]);
+        if (pv[1] === 'Yes') {
+            // Show if answer contains 'Yes'
+            if (ans && ans.indexOf('Yes') >= 0) row.classList.add('show');
+            else row.classList.remove('show');
+        } else {
+            if (ans === pv[1]) row.classList.add('show');
+            else row.classList.remove('show');
+        }
+    });
+}
+
+// ========== SCORING (unchanged) ==========
+var KOOS_JR_TABLE = {0:100,1:91.975,2:84.6,3:79.914,4:76.332,5:73.342,6:70.704,7:68.284,8:65.994,9:63.776,10:61.583,11:59.381,12:57.14,13:54.84,14:52.465,15:50.012,16:47.487,17:44.905,18:42.281,19:39.625,20:36.931,21:34.174,22:31.307,23:28.251,24:24.875,25:20.941,26:15.939,27:8.291,28:0};
+var HOOS_JR_TABLE = {0:100,1:92.34,2:85.257,3:80.55,4:76.776,5:73.472,6:70.426,7:67.516,8:64.664,9:61.815,10:58.93,11:55.985,12:52.965,13:49.858,14:46.652,15:43.335,16:39.902,17:36.363,18:32.735,19:29.009,20:25.103,21:20.805,22:15.633,23:8.104,24:0};
+
+function calculateScores() {
+    var scores = {};
+    // BMI
+    try {
+        var hf = parseInt((responses.height_ft || {}).answer);
+        var hi = parseInt((responses.height_in || {}).answer);
+        var wt = (responses.weight || {}).answer;
+        scores.bmi = (wt / Math.pow(hf * 12 + hi, 2)) * 703;
+    } catch(e) { scores.bmi = null; }
+
+    // Joint PROM
+    var koosKeys = Object.keys(responses).filter(function(k) { return k.startsWith('koos_'); });
+    var hoosKeys = Object.keys(responses).filter(function(k) { return k.startsWith('hoos_'); });
+    if (koosKeys.length > 0) {
+        var rawSum = koosKeys.reduce(function(sum, k) { return sum + (responses[k].score || 0); }, 0);
+        scores.joint_type = 'KOOS-JR';
+        scores.joint_raw = rawSum;
+        scores.joint_score = (rawSum in KOOS_JR_TABLE) ? Math.round(KOOS_JR_TABLE[rawSum] * 10) / 10 : null;
+    } else if (hoosKeys.length > 0) {
+        var rawSum = hoosKeys.reduce(function(sum, k) { return sum + (responses[k].score || 0); }, 0);
+        scores.joint_type = 'HOOS-JR';
+        scores.joint_raw = rawSum;
+        scores.joint_score = (rawSum in HOOS_JR_TABLE) ? Math.round(HOOS_JR_TABLE[rawSum] * 10) / 10 : null;
+    }
+
+    // PROMIS-10
+    var promisScores = [];
+    for (var i = 1; i <= 10; i++) {
+        var r = responses['promis_' + i];
+        promisScores.push(r ? r.score : 3);
+    }
+    scores.promis_physical = Math.min(Math.max(30 + promisScores.slice(0, 6).reduce(function(a, b) { return a + b; }, 0) * 1.5, 20), 80);
+    scores.promis_mental = Math.min(Math.max(30 + promisScores.slice(6).reduce(function(a, b) { return a + b; }, 0) * 2, 20), 80);
+
+    // PHQ-2
+    scores.phq2 = ((responses.phq_1 || {}).score || 0) + ((responses.phq_2 || {}).score || 0);
+    // GAD-2
+    scores.gad2 = ((responses.gad_1 || {}).score || 0) + ((responses.gad_2 || {}).score || 0);
+
+    // STOP-BANG
+    var sbScore = 0;
+    if ((responses.sleep_apnea || {}).answer && responses.sleep_apnea.answer !== 'No') {
+        sbScore = 5;
+    } else {
+        if ((responses.sb_snore || {}).answer === 'Yes') sbScore++;
+        if ((responses.sb_tired || {}).answer === 'Yes') sbScore++;
+        if ((responses.sb_observed || {}).answer === 'Yes') sbScore++;
+        if ((responses.blood_pressure || {}).answer === 'Yes') sbScore++;
+        if (scores.bmi && scores.bmi > 35) sbScore++;
+        if ((responses.age || {}).answer > 50) sbScore++;
+        if ((responses.gender || {}).answer === 'Male') sbScore++;
+    }
+    scores.stop_bang = sbScore;
+
+    // CMS risk variables
+    scores.cms_low_back = ((responses.cms_low_back_pain || {}).answer || '') === 'Yes' ? 1 : 0;
+    scores.cms_health_literacy = (responses.cms_health_literacy || {}).score;
+    scores.cms_other_joint = (responses.cms_other_joint_pain || {}).score || 0;
+    scores.cms_narcotics_90d = ((responses.cms_narcotics_90d || {}).answer || '') === 'Yes' ? 1 : 0;
+
+    return scores;
+}
+
+// ========== SUBMIT (unchanged) ==========
+function submitResponses() {
+    collectPage(currentPage);
+    showScreen('submittingOverlay');
+    var scores = calculateScores();
+    var payload = {
+        token: TOKEN,
+        responses: responses,
+        scores: scores,
+        completed_at: new Date().toISOString()
+    };
+
+    fetch('/api/previsit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.error) {
+            showError('Submission failed: ' + data.error);
+        } else {
+            showScreen('thankYouScreen');
+        }
+    })
+    .catch(function() {
+        showError('Could not submit. Please check your connection and try again.');
+    });
+}
+</script>
+</body>
+</html>

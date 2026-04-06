@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surgery Mode | SRO Intelligence</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        /* Mode Toggle */
+        .mode-toggle {
+            display: flex;
+            justify-content: center;
+            gap: 0;
+            margin-bottom: 20px;
+            background: var(--sro-gray-100, #f3f4f6);
+            border-radius: 12px;
+            padding: 4px;
+            width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .mode-btn {
+            padding: 10px 28px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        .mode-btn.active {
+            background: #dc2626;
+            color: white;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+        }
+        .mode-btn:not(.active) {
+            background: transparent;
+            color: var(--sro-gray-500, #6b7280);
+        }
+        .mode-btn:not(.active):hover {
+            background: var(--sro-gray-200, #e5e7eb);
+            color: var(--sro-gray-700, #374151);
+        }
+        
+        /* Surgery Day Layout */
+        .surgery-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .surgery-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .surgery-header h1 {
+            font-size: 1.8rem;
+            color: #dc2626;
+            margin: 0 0 8px 0;
+        }
+        .surgery-header .date {
+            font-size: 1rem;
+            color: var(--sro-gray-600, #4b5563);
+        }
+        
+        /* Patient Selector */
+        .patient-selector {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .patient-selector label {
+            font-weight: 600;
+            color: var(--sro-gray-700);
+        }
+        .patient-selector select {
+            padding: 10px 16px;
+            border: 2px solid var(--sro-gray-200);
+            border-radius: 8px;
+            font-size: 1rem;
+            min-width: 300px;
+        }
+        .patient-selector select:focus {
+            border-color: #dc2626;
+            outline: none;
+        }
+        .surgery-info {
+            flex: 1;
+            display: flex;
+            gap: 24px;
+            font-size: 0.9rem;
+            color: var(--sro-gray-600);
+        }
+        .surgery-info-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .surgery-info-item strong {
+            color: var(--sro-gray-800);
+        }
+        
+        /* Tabs */
+        .surgery-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid var(--sro-gray-200);
+            margin-bottom: 24px;
+        }
+        .surgery-tab {
+            padding: 12px 24px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: none;
+            background: none;
+            cursor: pointer;
+            color: var(--sro-gray-500);
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+        }
+        .surgery-tab.active {
+            color: #dc2626;
+            border-bottom-color: #dc2626;
+        }
+        .surgery-tab:hover:not(.active) {
+            color: var(--sro-gray-700);
+            background: var(--sro-gray-50);
+        }
+        
+        /* Panels */
+        .surgery-panel {
+            display: none;
+        }
+        .surgery-panel.active {
+            display: block;
+        }
+        
+        /* Card Styles */
+        .surgery-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .surgery-card h2 {
+            font-size: 1.2rem;
+            margin: 0 0 16px 0;
+            color: var(--sro-gray-800);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Op Note Form */
+        .opnote-section {
+            margin-bottom: 20px;
+        }
+        .opnote-section label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--sro-gray-700);
+            margin-bottom: 6px;
+        }
+        .opnote-section textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--sro-gray-200);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            resize: vertical;
+            min-height: 80px;
+        }
+        .opnote-section textarea:focus {
+            border-color: #dc2626;
+            outline: none;
+        }
+        
+        /* Template Buttons */
+        .template-btns {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        .template-btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            border: 1px solid var(--sro-gray-300);
+            background: white;
+            color: var(--sro-gray-700);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .template-btn:hover {
+            background: var(--sro-gray-100);
+            border-color: var(--sro-gray-400);
+        }
+        .template-btn.active {
+            background: #dc2626;
+            color: white;
+            border-color: #dc2626;
+        }
+        
+        /* Dictation Box */
+        .dictation-box {
+            background: #fef2f2;
+            border: 2px dashed #fca5a5;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .dictation-box:hover {
+            background: #fee2e2;
+            border-color: #dc2626;
+        }
+        .dictation-box.recording {
+            background: #fee2e2;
+            border-color: #dc2626;
+            border-style: solid;
+            animation: pulse-border 1.5s infinite;
+        }
+        @keyframes pulse-border {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+        }
+        .dictation-box .mic-icon {
+            font-size: 3rem;
+            margin-bottom: 12px;
+        }
+        .dictation-box .instruction {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #dc2626;
+            margin-bottom: 4px;
+        }
+        .dictation-box .hint {
+            font-size: 0.85rem;
+            color: var(--sro-gray-500);
+        }
+        
+        /* Post-Op Checklist */
+        .postop-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .postop-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 16px;
+            background: var(--sro-gray-50);
+            border-radius: 8px;
+            border: 1px solid var(--sro-gray-200);
+        }
+        .postop-item input[type="checkbox"] {
+            width: 22px;
+            height: 22px;
+            accent-color: #16a34a;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .postop-item-content {
+            flex: 1;
+        }
+        .postop-item-title {
+            font-weight: 600;
+            color: var(--sro-gray-800);
+            margin-bottom: 4px;
+        }
+        .postop-item-desc {
+            font-size: 0.85rem;
+            color: var(--sro-gray-500);
+        }
+        .postop-item.completed {
+            background: #f0fdf4;
+            border-color: #86efac;
+        }
+        .postop-item.completed .postop-item-title {
+            color: #166534;
+        }
+        
+        /* Action Buttons */
+        .action-bar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--sro-gray-200);
+        }
+        .btn-surgery {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-surgery-primary {
+            background: #dc2626;
+            color: white;
+        }
+        .btn-surgery-primary:hover {
+            background: #b91c1c;
+        }
+        .btn-surgery-secondary {
+            background: var(--sro-gray-100);
+            color: var(--sro-gray-700);
+        }
+        .btn-surgery-secondary:hover {
+            background: var(--sro-gray-200);
+        }
+        
+        /* Today's Schedule */
+        .schedule-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .schedule-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            border-bottom: 1px solid var(--sro-gray-100);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .schedule-item:hover {
+            background: var(--sro-gray-50);
+        }
+        .schedule-item:last-child {
+            border-bottom: none;
+        }
+        .schedule-time {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #dc2626;
+            width: 70px;
+        }
+        .schedule-patient {
+            flex: 1;
+        }
+        .schedule-patient-name {
+            font-weight: 600;
+            color: var(--sro-gray-800);
+        }
+        .schedule-patient-procedure {
+            font-size: 0.85rem;
+            color: var(--sro-gray-500);
+        }
+        .schedule-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .schedule-status.pending {
+            background: var(--sro-gray-100);
+            color: var(--sro-gray-600);
+        }
+        .schedule-status.in-progress {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .schedule-status.completed {
+            background: #dcfce7;
+            color: #166534;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="logo-icon">SRO</span>
+            <span class="nav-title">SRO Intelligence</span>
+        </div>
+        <div class="nav-links">
+            <a href="/dashboard.html" class="nav-link">Dashboard</a>
+            <a href="/preop.html" class="nav-link">Pre-Op</a>
+            <a href="/surgical-prep.html" class="nav-link">Surg Prep</a>
+            <a href="/nonop-plan.html" class="nav-link">Non-Op Plan</a>
+            <a href="/analytics.html" class="nav-link">Analytics</a>
+        </div>
+        <div class="nav-user">
+            <span id="userName">Dr. Michael Jones</span>
+            <span style="background:#dc2626;color:white;padding:4px 10px;border-radius:4px;font-size:0.8rem;font-weight:600;">Surgeon</span>
+            <button class="btn btn-sm" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <main class="main-content" style="padding-top: 16px;">
+        <!-- Mode Toggle -->
+        <div class="mode-toggle">
+            <a href="/dashboard.html" class="mode-btn">🏥 Clinic Mode</a>
+            <button class="mode-btn active">🔪 Surgery Mode</button>
+        </div>
+
+        <div class="surgery-container">
+            <div class="surgery-header">
+                <h1>🔪 Surgery Day</h1>
+                <div class="date" id="surgeryDate">Saturday, March 14, 2026</div>
+            </div>
+
+            <!-- Patient Selector -->
+            <div class="patient-selector">
+                <label>Current Patient:</label>
+                <select id="surgeryPatientSelect" onchange="selectSurgeryPatient()">
+                    <option value="">Select patient...</option>
+                    <option value="p1">Davis, Linda — THA (Left) — 7:30 AM</option>
+                    <option value="p2">Thompson, Robert — TKA (Right) — 9:15 AM</option>
+                    <option value="p3">Martinez, Jose — THA (Right) — 11:00 AM</option>
+                </select>
+                <div class="surgery-info" id="surgeryPatientInfo" style="display:none;">
+                    <div class="surgery-info-item">🩺 <strong>Procedure:</strong> <span id="infoProcedure">-</span></div>
+                    <div class="surgery-info-item">📍 <strong>OR:</strong> <span id="infoOR">-</span></div>
+                    <div class="surgery-info-item">⏱️ <strong>Est. Duration:</strong> <span id="infoDuration">-</span></div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="surgery-tabs">
+                <button class="surgery-tab active" onclick="switchSurgeryTab('schedule')">📅 Today's Schedule</button>
+                <button class="surgery-tab" onclick="switchSurgeryTab('opnote')">📝 Op Note Dictation</button>
+                <button class="surgery-tab" onclick="switchSurgeryTab('postop')">✅ Post-Op Orders</button>
+            </div>
+
+            <!-- Schedule Panel -->
+            <div id="panelSchedule" class="surgery-panel active">
+                <div class="surgery-card">
+                    <h2>📅 Today's Surgical Schedule</h2>
+                    <ul class="schedule-list">
+                        <li class="schedule-item" onclick="document.getElementById('surgeryPatientSelect').value='p1'; selectSurgeryPatient();">
+                            <div class="schedule-time">7:30 AM</div>
+                            <div class="schedule-patient">
+                                <div class="schedule-patient-name">Davis, Linda</div>
+                                <div class="schedule-patient-procedure">THA (Left) — MRN: 10005</div>
+                            </div>
+                            <span class="schedule-status completed">Completed</span>
+                        </li>
+                        <li class="schedule-item" onclick="document.getElementById('surgeryPatientSelect').value='p2'; selectSurgeryPatient();">
+                            <div class="schedule-time">9:15 AM</div>
+                            <div class="schedule-patient">
+                                <div class="schedule-patient-name">Thompson, Robert</div>
+                                <div class="schedule-patient-procedure">TKA (Right) — MRN: 10002</div>
+                            </div>
+                            <span class="schedule-status in-progress">In Progress</span>
+                        </li>
+                        <li class="schedule-item" onclick="document.getElementById('surgeryPatientSelect').value='p3'; selectSurgeryPatient();">
+                            <div class="schedule-time">11:00 AM</div>
+                            <div class="schedule-patient">
+                                <div class="schedule-patient-name">Martinez, Jose</div>
+                                <div class="schedule-patient-procedure">THA (Right) — MRN: 10012</div>
+                            </div>
+                            <span class="schedule-status pending">Pending</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Op Note Panel -->
+            <div id="panelOpnote" class="surgery-panel">
+                <div class="surgery-card">
+                    <h2>📝 Op Note Dictation</h2>
+                    
+                    <div style="margin-bottom:20px;">
+                        <label style="font-weight:600;color:var(--sro-gray-700);margin-bottom:8px;display:block;">Quick Templates:</label>
+                        <div class="template-btns">
+                            <button class="template-btn" onclick="loadTemplate('tha')">THA Standard</button>
+                            <button class="template-btn" onclick="loadTemplate('tka')">TKA Standard</button>
+                            <button class="template-btn" onclick="loadTemplate('revision')">Revision</button>
+                            <button class="template-btn" onclick="loadTemplate('blank')">Blank</button>
+                        </div>
+                    </div>
+
+                    <div class="dictation-box" id="dictationBox" onclick="toggleDictation()">
+                        <div class="mic-icon">🎤</div>
+                        <div class="instruction">Click to Start Dictation</div>
+                        <div class="hint">Or press and hold spacebar</div>
+                    </div>
+
+                    <div class="opnote-section" style="margin-top:24px;">
+                        <label>Preoperative Diagnosis:</label>
+                        <textarea id="opPreopDx" placeholder="Primary osteoarthritis, left hip..."></textarea>
+                    </div>
+
+                    <div class="opnote-section">
+                        <label>Postoperative Diagnosis:</label>
+                        <textarea id="opPostopDx" placeholder="Same as above..."></textarea>
+                    </div>
+
+                    <div class="opnote-section">
+                        <label>Procedure Performed:</label>
+                        <textarea id="opProcedure" placeholder="Left total hip arthroplasty, posterior approach..."></textarea>
+                    </div>
+
+                    <div class="opnote-section">
+                        <label>Implants Used:</label>
+                        <textarea id="opImplants" placeholder="Stryker Mako implant system..."></textarea>
+                    </div>
+
+                    <div class="opnote-section">
+                        <label>Operative Findings:</label>
+                        <textarea id="opFindings" placeholder="Severe degenerative changes noted..."></textarea>
+                    </div>
+
+                    <div class="opnote-section">
+                        <label>Description of Procedure:</label>
+                        <textarea id="opDescription" style="min-height:200px;" placeholder="The patient was brought to the operating room..."></textarea>
+                    </div>
+
+                    <div class="opnote-section">
+                        <label>Estimated Blood Loss:</label>
+                        <textarea id="opEBL" placeholder="150 mL"></textarea>
+                    </div>
+
+                    <div class="opnote-section">
+                        <label>Complications:</label>
+                        <textarea id="opComplications" placeholder="None"></textarea>
+                    </div>
+
+                    <div class="action-bar">
+                        <button class="btn-surgery btn-surgery-secondary" onclick="saveOpNoteDraft()">💾 Save Draft</button>
+                        <button class="btn-surgery btn-surgery-secondary" onclick="previewOpNote()">👁️ Preview</button>
+                        <button class="btn-surgery btn-surgery-primary" onclick="finalizeOpNote()">✅ Finalize & Sign</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Post-Op Panel -->
+            <div id="panelPostop" class="surgery-panel">
+                <div class="surgery-card">
+                    <h2>✅ Post-Op Orders & Checklist</h2>
+                    
+                    <div class="postop-grid">
+                        <div class="postop-item" onclick="togglePostopItem(this)">
+                            <input type="checkbox" id="po1">
+                            <div class="postop-item-content">
+                                <div class="postop-item-title">Admit to Orthopedic Floor</div>
+                                <div class="postop-item-desc">Room assignment pending</div>
+                            </div>
+                        </div>
+                        <div class="postop-item" onclick="togglePostopItem(this)">
+                            <input type="checkbox" id="po2">
+                            <div class="postop-item-content">
+                                <div class="postop-item-title">DVT Prophylaxis</div>
+                                <div class="postop-item-desc">Lovenox 40mg SQ daily x 4 weeks</div>
+                            </div>
+                        </div>
+                        <div class="postop-item" onclick="togglePostopItem(this)">
+                            <input type="checkbox" id="po3">
+                            <div class="postop-item-content">
+                                <div class="postop-item-title">Pain Management</div>
+                                <div class="postop-item-desc">Multimodal protocol initiated</div>
+                            </div>
+                        </div>
+                        <div class="postop-item" onclick="togglePostopItem(this)">
+                            <input type="checkbox" id="po4">
+                            <div class="postop-item-content">
+                                <div class="postop-item-title">Physical Therapy Consult</div>
+                                <div class="postop-item-desc">Begin POD 0, weight bearing as tolerated</div>
+                            </div>
+                        </div>
+                        <div class="postop-item" onclick="togglePostopItem(this)">
+                            <input type="checkbox" id="po5">
+                            <div class="postop-item-content">
+                                <div class="postop-item-title">Labs Ordered</div>
+                                <div class="postop-item-desc">CBC, BMP in AM</div>
+                            </div>
+                        </div>
+                        <div class="postop-item" onclick="togglePostopItem(this)">
+                            <input type="checkbox" id="po6">
+                            <div class="postop-item-content">
+                                <div class="postop-item-title">X-Ray Ordered</div>
+                                <div class="postop-item-desc">AP/Lateral of operative hip</div>
+                            </div>
+                        </div>
+                        <div class="postop-item" onclick="togglePostopItem(this)">
+                            <input type="checkbox" id="po7">
+                            <div class="postop-item-content">
+                                <div class="postop-item-title">Diet Advanced</div>
+                                <div class="postop-item-desc">Clear liquids → regular as tolerated</div>
+                            </div>
+                        </div>
+                        <div class="postop-item" onclick="togglePostopItem(this)">
+                            <input type="checkbox" id="po8">
+                            <div class="postop-item-content">
+                                <div class="postop-item-title">Family Updated</div>
+                                <div class="postop-item-desc">Spoke with family in waiting room</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="action-bar">
+                        <button class="btn-surgery btn-surgery-secondary" onclick="printPostopOrders()">🖨️ Print Orders</button>
+                        <button class="btn-surgery btn-surgery-primary" onclick="completePostop()">✅ Complete & Sign</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Tab switching
+        function switchSurgeryTab(tab) {
+            document.querySelectorAll('.surgery-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.surgery-panel').forEach(p => p.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById('panel' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+        }
+
+        // Patient selection
+        function selectSurgeryPatient() {
+            const select = document.getElementById('surgeryPatientSelect');
+            const info = document.getElementById('surgeryPatientInfo');
+            
+            if (select.value) {
+                info.style.display = 'flex';
+                // Demo data
+                if (select.value === 'p1') {
+                    document.getElementById('infoProcedure').textContent = 'THA (Left)';
+                    document.getElementById('infoOR').textContent = 'OR 2';
+                    document.getElementById('infoDuration').textContent = '90 min';
+                } else if (select.value === 'p2') {
+                    document.getElementById('infoProcedure').textContent = 'TKA (Right)';
+                    document.getElementById('infoOR').textContent = 'OR 2';
+                    document.getElementById('infoDuration').textContent = '75 min';
+                } else if (select.value === 'p3') {
+                    document.getElementById('infoProcedure').textContent = 'THA (Right)';
+                    document.getElementById('infoOR').textContent = 'OR 1';
+                    document.getElementById('infoDuration').textContent = '90 min';
+                }
+            } else {
+                info.style.display = 'none';
+            }
+        }
+
+        // Dictation toggle
+        let isRecording = false;
+        function toggleDictation() {
+            const box = document.getElementById('dictationBox');
+            isRecording = !isRecording;
+            
+            if (isRecording) {
+                box.classList.add('recording');
+                box.querySelector('.instruction').textContent = '🔴 Recording... Click to Stop';
+                box.querySelector('.hint').textContent = 'Speak clearly into your microphone';
+            } else {
+                box.classList.remove('recording');
+                box.querySelector('.instruction').textContent = 'Click to Start Dictation';
+                box.querySelector('.hint').textContent = 'Or press and hold spacebar';
+            }
+        }
+
+        // Template loading
+        function loadTemplate(type) {
+            document.querySelectorAll('.template-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (type === 'tha') {
+                document.getElementById('opPreopDx').value = 'Primary osteoarthritis, left hip';
+                document.getElementById('opPostopDx').value = 'Same';
+                document.getElementById('opProcedure').value = 'Left total hip arthroplasty, posterior approach';
+                document.getElementById('opComplications').value = 'None';
+            } else if (type === 'tka') {
+                document.getElementById('opPreopDx').value = 'Primary osteoarthritis, right knee';
+                document.getElementById('opPostopDx').value = 'Same';
+                document.getElementById('opProcedure').value = 'Right total knee arthroplasty, medial parapatellar approach';
+                document.getElementById('opComplications').value = 'None';
+            }
+        }
+
+        // Post-op item toggle
+        function togglePostopItem(el) {
+            const checkbox = el.querySelector('input[type="checkbox"]');
+            checkbox.checked = !checkbox.checked;
+            el.classList.toggle('completed', checkbox.checked);
+        }
+
+        // Placeholder actions
+        function saveOpNoteDraft() { alert('Op Note draft saved!'); }
+        function previewOpNote() { alert('Preview would open in new window'); }
+        function finalizeOpNote() { alert('Op Note finalized and signed!'); }
+        function printPostopOrders() { window.print(); }
+        function completePostop() { alert('Post-op orders completed and signed!'); }
+        function logout() { window.location.href = '/index.html'; }
+
+        // Set today's date
+        document.getElementById('surgeryDate').textContent = new Date().toLocaleDateString('en-US', { 
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+        });
+    </script>
+</body>
+</html>

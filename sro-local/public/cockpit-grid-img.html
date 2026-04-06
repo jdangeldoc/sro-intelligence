@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SRO Cockpit — Grid</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600&family=Rajdhani:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #000; overflow: hidden; font-family: 'Rajdhani', sans-serif; }
+
+        #cockpit-wrapper {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+        }
+
+        #image-frame { position: relative; }
+        #image-frame img { display: block; width: 100%; height: 100%; }
+        #image-frame svg {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+        }
+        #image-frame svg .cockpit-hotspot {
+            pointer-events: auto;
+            fill: transparent;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        #image-frame svg .cockpit-hotspot:hover {
+            fill: rgba(0, 229, 255, 0.12);
+            stroke: rgba(0, 229, 255, 0.6);
+            stroke-width: 0.4;
+        }
+
+        #back-btn {
+            position: fixed; top: 12px; left: 16px; z-index: 60;
+            color: #00e5ff; font-size: 14px; text-decoration: none;
+            background: rgba(0,0,0,0.7); padding: 6px 14px;
+            border-radius: 4px; border: 1px solid rgba(0,229,255,0.2);
+            transition: all 0.15s ease; font-family: 'Rajdhani', sans-serif;
+        }
+        #back-btn:hover { background: rgba(0,0,0,0.9); border-color: rgba(0,229,255,0.5); color: #00ffff; }
+
+        #detail-panel {
+            position: fixed; right: 0; top: 0; width: 420px; height: 100%;
+            background: rgba(8,12,20,0.97); border-left: 2px solid rgba(0,229,255,0.3);
+            transform: translateX(100%); transition: transform 0.3s ease;
+            z-index: 100; overflow-y: auto; padding: 24px;
+        }
+        #detail-panel.open { transform: translateX(0); }
+        #detail-panel::-webkit-scrollbar { width: 6px; }
+        #detail-panel::-webkit-scrollbar-thumb { background: rgba(0,229,255,0.15); border-radius: 3px; }
+
+        #close-btn {
+            position: absolute; top: 12px; right: 16px;
+            background: none; border: none; color: #00e5ff; font-size: 24px; cursor: pointer;
+        }
+        #detail-content h2 {
+            font-family: 'Orbitron', monospace; color: #00e5ff;
+            font-size: 18px; margin: 0 0 16px 0; padding-top: 24px;
+        }
+        .detail-item {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 10px 0; border-bottom: 1px solid rgba(0,229,255,0.08);
+            font-size: 15px; color: #ccc;
+        }
+        .detail-item strong { color: rgba(0,229,255,0.7); }
+        .detail-section { margin-top: 16px; padding-top: 10px; border-top: 1px solid rgba(0,229,255,0.1); }
+        .detail-section h3 {
+            font-family: 'Orbitron', monospace; font-size: 13px;
+            color: rgba(0,229,255,0.6); margin-bottom: 8px; letter-spacing: 1px;
+        }
+        .detail-action-btn {
+            display: inline-block; margin-top: 14px; padding: 8px 18px;
+            font-family: 'Orbitron', monospace; font-size: 11px; color: #00e5ff;
+            border: 1px solid rgba(0,229,255,0.3); border-radius: 6px;
+            background: rgba(0,229,255,0.05); cursor: pointer; text-decoration: none;
+            text-transform: uppercase; letter-spacing: 1px; transition: all 0.2s;
+        }
+        .detail-action-btn:hover { background: rgba(0,229,255,0.12); border-color: rgba(0,229,255,0.5); }
+
+        .status-ok { color: #4caf50; }
+        .status-alert { color: #f44336; }
+        .status-warning { color: #ffab00; }
+        .status-pending { color: rgba(255,255,255,0.3); }
+
+        #last-updated {
+            position: fixed; bottom: 8px; right: 12px; z-index: 50;
+            font-size: 11px; color: rgba(255,255,255,0.2); letter-spacing: 1px;
+        }
+
+        .corner-nav {
+            position: fixed;
+            z-index: 60;
+            font-family: 'Orbitron', monospace;
+            font-size: 11px;
+            letter-spacing: 2px;
+            color: #00e5ff;
+            padding: 10px 20px;
+            border: 1px solid rgba(0,229,255,0.25);
+            border-radius: 4px;
+            background: rgba(6,10,18,0.85);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+        }
+        .corner-nav:hover {
+            background: rgba(0,229,255,0.12);
+            border-color: rgba(0,229,255,0.6);
+            box-shadow: 0 0 15px rgba(0,229,255,0.15);
+            color: #00ffff;
+        }
+    </style>
+</head>
+<body>
+    <div id="cockpit-wrapper">
+        <div id="image-frame">
+            <img id="cockpit-bg" src="/cockpit/grid_bluesteel_bg.png" alt="Cockpit Grid Background">
+            <svg id="cockpit-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <defs>
+                    <!-- Dark fill with faint horizontal scan lines -->
+                    <pattern id="darkScanLines" x="0" y="0" width="100" height="1.2" patternUnits="userSpaceOnUse">
+                        <rect width="100" height="1.2" fill="rgba(0,0,0,0.95)"/>
+                        <line x1="0" y1="0.6" x2="100" y2="0.6" stroke="rgba(0,229,255,0.04)" stroke-width="0.15"/>
+                    </pattern>
+                </defs>
+
+                <!-- DARK BACKING POLYGONS (cover static image text) -->
+                <polygon points="10.08,15.72 10.78,27.69 31.64,27.69 31.44,15.57 10.18,15.72" fill="url(#darkScanLines)" pointer-events="none"/>
+                <polygon points="10.48,36.23 10.68,57.93 30.64,58.08 30.84,36.08 10.28,36.38" fill="url(#darkScanLines)" pointer-events="none"/>
+                <polygon points="10.08,66.77 28.74,66.77 28.64,81.44 10.48,81.44 10.08,66.62" fill="url(#darkScanLines)" pointer-events="none"/>
+                <polygon points="39.42,27.84 39.42,15.12 58.18,14.82 58.58,27.25 39.22,27.54" fill="url(#darkScanLines)" pointer-events="none"/>
+                <polygon points="65.77,27.69 65.67,14.67 86.63,16.17 86.83,27.4 65.77,27.25" fill="url(#darkScanLines)" pointer-events="none"/>
+                <polygon points="65.97,36.98 86.83,36.53 86.73,57.93 66.27,57.49 65.97,37.13" fill="url(#darkScanLines)" pointer-events="none"/>
+                <polygon points="38.92,43.11 44.31,35.63 53.39,35.78 58.38,43.71 58.68,54.19 53.99,61.98 44.11,62.28 38.72,54.79 38.82,42.66" fill="url(#darkScanLines)" pointer-events="none"/>
+                <polygon points="67.76,67.07 67.96,80.69 86.33,80.84 86.23,67.07 67.86,67.22" fill="url(#darkScanLines)" pointer-events="none"/>
+                <polygon points="35.43,67.37 60.78,67.07 60.68,80.99 35.83,80.84 35.43,67.66" fill="url(#darkScanLines)" pointer-events="none"/>
+
+                <!-- HOTSPOT POLYGONS -->
+                <polygon points="10.08,15.72 10.78,27.69 31.64,27.69 31.44,15.57 10.18,15.72" class="cockpit-hotspot" onclick="openStageDetail('conservative')" data-name="Conservative Treatment"/>
+                <polygon points="10.48,36.23 10.68,57.93 30.64,58.08 30.84,36.08 10.28,36.38" class="cockpit-hotspot" onclick="openStageDetail('previoustreatment')" data-name="Previous Treatment"/>
+                <polygon points="10.08,66.77 28.74,66.77 28.64,81.44 10.48,81.44 10.08,66.62" class="cockpit-hotspot" onclick="openStageDetail('comorbidities')" data-name="Comorbidities"/>
+                <polygon points="39.42,27.84 39.42,15.12 58.18,14.82 58.58,27.25 39.22,27.54" class="cockpit-hotspot" onclick="openStageDetail('preop')" data-name="Preop"/>
+                <polygon points="65.77,27.69 65.67,14.67 86.63,16.17 86.83,27.4 65.77,27.25" class="cockpit-hotspot" onclick="openStageDetail('surgery')" data-name="Surgery"/>
+                <polygon points="65.97,36.98 86.83,36.53 86.73,57.93 66.27,57.49 65.97,37.13" class="cockpit-hotspot" onclick="openStageDetail('outcomes')" data-name="Outcomes"/>
+                <polygon points="38.92,43.11 44.31,35.63 53.39,35.78 58.38,43.71 58.68,54.19 53.99,61.98 44.11,62.28 38.72,54.79 38.82,42.66" class="cockpit-hotspot" onclick="openPatientDetail()" data-name="Patient"/>
+                <polygon points="67.76,67.07 67.96,80.69 86.33,80.84 86.23,67.07 67.86,67.22" class="cockpit-hotspot" onclick="openStageDetail('pt')" data-name="Physical Therapy"/>
+                <polygon points="35.43,67.37 60.78,67.07 60.68,80.99 35.83,80.84 35.43,67.66" class="cockpit-hotspot" onclick="openStageDetail('engagement')" data-name="Patient Engagement"/>
+
+                <!-- CORNER BUTTON HOTSPOTS (over image's built-in buttons) -->
+                <rect x="3" y="5" width="17" height="6" rx="1" fill="transparent" class="cockpit-hotspot" data-nav="dashboard"/>
+                <rect x="70" y="5" width="17" height="6" rx="1" fill="transparent" class="cockpit-hotspot" data-nav="implant"/>
+                <rect x="3" y="86" width="17" height="6" rx="1" fill="transparent" class="cockpit-hotspot" data-nav="preoptests"/>
+                <rect x="70" y="86" width="17" height="6" rx="1" fill="transparent" class="cockpit-hotspot" data-nav="remote"/>
+
+                <!-- DATA TEXT OVERLAYS (rendered by JS) -->
+                <g id="svg-text-layer" pointer-events="none"></g>
+            </svg>
+        </div>
+    </div>
+
+    <a id="back-btn" href="/dashboard.html">&larr; Back to Dashboard</a>
+
+
+    <div id="detail-panel">
+        <button id="close-btn" onclick="closeDetail()">&times;</button>
+        <div id="detail-content"></div>
+    </div>
+
+    <div id="last-updated">Last updated: --:--:--</div>
+
+    <script>
+    // ═══════════════════════════════════════════
+    // IMAGE FRAME SIZING (copied from cockpit-view.html)
+    // ═══════════════════════════════════════════
+    var frame = document.getElementById('image-frame');
+    var img = document.getElementById('cockpit-bg');
+
+    function sizeFrame() {
+        var vw = window.innerWidth, vh = window.innerHeight;
+        var imgRatio = img.naturalWidth / img.naturalHeight;
+        var vpRatio = vw / vh;
+        var w, h;
+        if (vpRatio > imgRatio) { h = vh; w = vh * imgRatio; }
+        else { w = vw; h = vw / imgRatio; }
+        frame.style.width = Math.round(w) + 'px';
+        frame.style.height = Math.round(h) + 'px';
+    }
+    img.onload = sizeFrame;
+    window.addEventListener('resize', sizeFrame);
+    if (img.complete && img.naturalWidth > 0) sizeFrame();
+
+    // Theme placeholder (shared cockpit-themes.js loaded at bottom)
+    var T = { accent: '#00e5ff', ok: '#4caf50', alert: '#f44336', warning: '#ffab00' };
+
+    // ═══════════════════════════════════════════
+    // STATE
+    // ═══════════════════════════════════════════
+    var patientId = new URLSearchParams(window.location.search).get('patient');
+    var returnTo = new URLSearchParams(window.location.search).get('returnTo');
+    var returnDate = new URLSearchParams(window.location.search).get('date');
+    var backBtn = document.getElementById('back-btn');
+    if (returnTo === 'worklist') {
+        backBtn.href = '/clinic-worklist.html' + (returnDate ? '?date=' + returnDate : '');
+        backBtn.textContent = '\u2190 Back to Worklist';
+    }
+
+    // Corner nav click handlers (SVG hotspots over image buttons)
+    document.querySelectorAll('[data-nav]').forEach(function(el) {
+        el.style.cursor = 'pointer';
+        el.addEventListener('click', function() {
+            var nav = el.getAttribute('data-nav');
+            if (nav === 'dashboard') window.location.href = '/dashboard.html';
+            else if (nav === 'implant') window.location.href = '/surgical-prep.html?patient=' + patientId;
+            else if (nav === 'preoptests') window.location.href = '/analytics.html?patient=' + patientId;
+            else if (nav === 'remote') window.location.href = '/analytics.html?patient=' + patientId;
+        });
+    });
+
+    // Page navigation map for sectors
+    var pageMap = {
+        conservative: '/nonop-plan.html?patient=' + patientId,
+        preop: '/preop.html?patient=' + patientId,
+        surgery: '/surgical-prep.html?patient=' + patientId,
+        previoustreatment: '/nonop-plan.html?patient=' + patientId,
+        outcomes: '/analytics.html?patient=' + patientId,
+        comorbidities: '/preop.html?patient=' + patientId + '&tab=2',
+        engagement: '/patient-comm.html?patient=' + patientId,
+        pt: '/episode-timeline.html?patient=' + patientId
+    };
+
+    // Double-click on polygon hotspots navigates directly
+    document.querySelectorAll('.cockpit-hotspot').forEach(function(poly) {
+        poly.addEventListener('dblclick', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var name = poly.getAttribute('data-name');
+            var stageKey = {
+                'Conservative Treatment': 'conservative', 'Preop': 'preop', 'Surgery': 'surgery',
+                'Previous Treatment': 'previoustreatment', 'Outcomes': 'outcomes',
+                'Physical Therapy': 'pt', 'Patient Engagement': 'engagement',
+                'Comorbidities': 'comorbidities'
+            }[name];
+            if (stageKey && pageMap[stageKey]) {
+                window.location.href = pageMap[stageKey];
+            }
+        });
+    });
+
+    var S = {
+        patient: null, stageData: null, checkins: [], proAssessments: [],
+        preopAssessments: [], surgicalPrep: [], nursingNotes: [],
+        adverseEvents: [], promSchedule: [], episodeId: null
+    };
+    var icons = { ok: '\u2713', alert: '\u26A0', warning: '\u25C6', pending: '\u25CB' };
+
+    // Grid centroids
+    var centroids = {
+        conservative:      { x: 20.9, y: 21.7 },
+        preop:             { x: 48.8, y: 21.0 },
+        surgery:           { x: 76.3, y: 21.0 },
+        previoustreatment: { x: 20.7, y: 47.1 },
+        patient:           { x: 48.8, y: 48.9 },
+        outcomes:          { x: 76.4, y: 47.2 },
+        comorbidities:     { x: 19.4, y: 74.1 },
+        engagement:        { x: 48.1, y: 74.0 },
+        pt:                { x: 77.1, y: 74.0 }
+    };
+
+    // ═══════════════════════════════════════════
+    // DATA LOADING
+    // ═══════════════════════════════════════════
+    document.addEventListener('DOMContentLoaded', function() {
+        ensureTextLayer();
+        if (!patientId) {
+            showLoadingText('NO PATIENT ID', 49.5, 48);
+        } else {
+            showLoadingText('LOADING...', 49.5, 48);
+            loadAllData();
+        }
+    });
+
+    function safeFetch(url) {
+        return fetch(url).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
+    }
+
+    async function loadAllData() {
+        try {
+            var pRes = await fetch('/api/patients/' + patientId);
+            if (!pRes.ok) throw new Error('not found');
+            S.patient = await pRes.json();
+            if (!S.patient || !S.patient.id) throw new Error('not found');
+            S.episodeId = S.patient.episode_id;
+
+            var fetches = [
+                safeFetch('/api/checkins?patient_id=' + patientId),
+                safeFetch('/api/pro-assessments?patient_id=' + patientId),
+                safeFetch('/api/preop-assessments?patient_id=' + patientId),
+                safeFetch('/api/nursing-notes?patient_id=' + patientId),
+                safeFetch('/api/adverse-events?patient_id=' + patientId),
+                safeFetch('/api/prom-schedule?patient_id=' + patientId),
+                S.episodeId ? safeFetch('/api/episodes/' + S.episodeId + '/stage') : Promise.resolve(null),
+                S.episodeId ? safeFetch('/api/surgical-prep?patient_id=' + patientId) : Promise.resolve([])
+            ];
+            var results = await Promise.all(fetches);
+            S.checkins = Array.isArray(results[0]) ? results[0] : [];
+            S.proAssessments = Array.isArray(results[1]) ? results[1] : [];
+            S.preopAssessments = Array.isArray(results[2]) ? results[2] : [];
+            S.nursingNotes = Array.isArray(results[3]) ? results[3] : [];
+            S.adverseEvents = Array.isArray(results[4]) ? results[4] : [];
+            S.promSchedule = Array.isArray(results[5]) ? results[5] : [];
+            S.stageData = results[6];
+            S.surgicalPrep = Array.isArray(results[7]) ? results[7] : [];
+
+            renderAllOverlays();
+            updateTimestamp();
+            startAutoRefresh();
+        } catch (e) {
+            clearTextLayer();
+            showLoadingText('PATIENT NOT FOUND', 49.5, 46);
+            addSvgText(49.5, 50, 'Return to Dashboard', 1.68, 'rgba(0,229,255,0.6)');
+        }
+    }
+
+    // ═══════════════════════════════════════════
+    // SVG TEXT RENDERING HELPERS
+    // ═══════════════════════════════════════════
+    var NS = 'http://www.w3.org/2000/svg';
+    var textLayer = null;
+
+    function ensureTextLayer() {
+        if (!textLayer) {
+            textLayer = document.getElementById('svg-text-layer');
+            if (!textLayer) {
+                // Create it if missing
+                var svg = document.getElementById('cockpit-svg');
+                if (svg) {
+                    textLayer = document.createElementNS(NS, 'g');
+                    textLayer.setAttribute('id', 'svg-text-layer');
+                    textLayer.setAttribute('pointer-events', 'none');
+                    svg.appendChild(textLayer);
+                }
+            }
+        }
+        return textLayer;
+    }
+
+    function clearTextLayer() {
+        var tl = ensureTextLayer();
+        if (tl) tl.innerHTML = '';
+    }
+
+    function showLoadingText(msg, x, y) {
+        clearTextLayer();
+        addSvgText(x, y, msg, 2.64, '#00e5ff', 'Orbitron, sans-serif');
+    }
+
+    function addSvgText(x, y, content, size, fill, fontFamily, anchor, bold) {
+        // Shadow text for readability against busy background
+        var shadow = document.createElementNS(NS, 'text');
+        shadow.setAttribute('x', parseFloat(x) + 0.1);
+        shadow.setAttribute('y', parseFloat(y) + 0.1);
+        shadow.setAttribute('font-size', size || 1.6);
+        shadow.setAttribute('fill', 'rgba(0,0,0,0.7)');
+        shadow.setAttribute('font-family', fontFamily || 'Rajdhani, sans-serif');
+        shadow.setAttribute('text-anchor', anchor || 'middle');
+        shadow.setAttribute('pointer-events', 'none');
+        if (bold) shadow.setAttribute('font-weight', 'bold');
+        shadow.textContent = content;
+        var tl = ensureTextLayer();
+        if (tl) tl.appendChild(shadow);
+
+        // Actual text
+        var t = document.createElementNS(NS, 'text');
+        t.setAttribute('x', x);
+        t.setAttribute('y', y);
+        t.setAttribute('font-size', size || 1.6);
+        t.setAttribute('fill', fill || '#ffffff');
+        t.setAttribute('font-family', fontFamily || 'Rajdhani, sans-serif');
+        t.setAttribute('text-anchor', anchor || 'middle');
+        t.setAttribute('pointer-events', 'none');
+        if (bold) t.setAttribute('font-weight', 'bold');
+        t.textContent = content;
+        if (tl) tl.appendChild(t);
+        return t;
+    }
+
+    function addSvgTextBlock(x, startY, lines, lineHeight) {
+        // lines: array of { text, size, fill, font, bold }
+        var cy = startY;
+        var lh = lineHeight || 2.88;
+        lines.forEach(function(l) {
+            addSvgText(x, cy, l.text, l.size || 1.5, l.fill || '#ccc', l.font || 'Rajdhani, sans-serif', 'middle', l.bold);
+            cy += lh;
+        });
+    }
+
+    // ═══════════════════════════════════════════
+    // RENDER ALL TEXT OVERLAYS
+    // ═══════════════════════════════════════════
+    function renderAllOverlays() {
+        clearTextLayer();
+        renderPatientHub();
+        renderConservative();
+        renderGridPreop();
+        renderGridSurgery();
+        renderPreviousTreatment();
+        renderGridOutcomes();
+        renderGridComorbidities();
+        renderGridEngagement();
+        renderGridPT();
+    }
+
+    // --- CENTER HUB: Patient (same as cockpit-view.html) ---
+    function renderPatientHub() {
+        var p = S.patient;
+        if (!p) return;
+        var c = centroids.patient;
+        var fn = p.first_name || '', ln = p.last_name || '';
+        var name = (ln + ', ' + fn).toUpperCase();
+        var age = '--';
+        if (p.date_of_birth) {
+            age = Math.floor((Date.now() - new Date(p.date_of_birth).getTime()) / (365.25*24*60*60*1000));
+        }
+        var pain = '--';
+        var painColor = '#00e5ff';
+        if (S.checkins[0] && S.checkins[0].pain_level != null) {
+            var pl = S.checkins[0].pain_level;
+            pain = pl;
+            painColor = pl <= 3 ? '#4caf50' : pl <= 6 ? '#ffab00' : '#f44336';
+        }
+
+        addSvgText(c.x, c.y - 5.5, name, 1.76, '#ffffff', 'Orbitron, sans-serif', 'middle', true);
+        addSvgText(c.x, c.y - 3.0, age + '/M', 1.92, 'rgba(255,255,255,0.6)');
+        addSvgText(c.x, c.y - 0.8, 'MRN: ' + (p.mrn || '----'), 1.56, '#00e5ff');
+        addSvgText(c.x, c.y + 1.6, 'HR --  BP --/--', 1.44, 'rgba(255,255,255,0.5)');
+        if (pain !== '--') {
+            addSvgText(c.x, c.y + 3.6, 'Pain: ' + pain + '/10', 1.56, painColor);
+        }
+        if (p.surgeon_last_name) {
+            addSvgText(c.x, c.y + 5.5, 'Dr. ' + p.surgeon_last_name, 1.44, 'rgba(255,255,255,0.3)');
+        }
+    }
+
+    // --- CONSERVATIVE TREATMENT ---
+    function renderConservative() {
+        var c = centroids.conservative;
+        var completed = 0, inProgress = 0, upcoming = 0;
+        if (S.stageData && S.stageData.stages) {
+            S.stageData.stages.forEach(function(s) {
+                if (s.status === 'completed') completed++;
+                else if (s.status === 'current') inProgress++;
+                else upcoming++;
+            });
+        }
+        addSvgTextBlock(c.x, c.y - 3, [
+            { text: 'CONSERVATIVE', size: 1.6, fill: '#00e5ff', font: 'Orbitron, sans-serif' },
+            { text: 'TREATMENT', size: 1.6, fill: '#00e5ff', font: 'Orbitron, sans-serif' },
+            { text: icons.ok + ' Completed: ' + completed, size: 1.5, fill: completed > 0 ? '#4caf50' : 'rgba(255,255,255,0.4)' },
+            { text: icons.warning + ' In Progress: ' + inProgress, size: 1.5, fill: inProgress > 0 ? '#ffab00' : 'rgba(255,255,255,0.4)' },
+            { text: icons.pending + ' Upcoming: ' + upcoming, size: 1.5, fill: 'rgba(255,255,255,0.4)' }
+        ], 2.4);
+    }
+
+    // --- PREOP ---
+    function renderGridPreop() {
+        var c = centroids.preop;
+        var sp = S.surgicalPrep[0];
+        var pa = S.preopAssessments[0];
+        var consentOk = sp && sp.consent_signed_at;
+        var labsOk = pa && (pa.status === 'complete' || pa.status === 'cleared');
+        var stage = S.stageData ? S.stageData.current_stage : '';
+        var npoOk = ['surgery','postop'].indexOf(stage) >= 0;
+        var allOk = consentOk && labsOk && npoOk;
+        addSvgTextBlock(c.x, c.y - 3, [
+            { text: 'PRE-OP', size: 1.6, fill: '#00e5ff', font: 'Orbitron, sans-serif' },
+            { text: (npoOk ? icons.ok : icons.pending) + ' NPO Confirmed', size: 1.5, fill: npoOk ? '#4caf50' : 'rgba(255,255,255,0.4)' },
+            { text: (consentOk ? icons.ok : icons.pending) + ' Consent Signed', size: 1.5, fill: consentOk ? '#4caf50' : 'rgba(255,255,255,0.4)' },
+            { text: allOk ? 'Ready' : 'In Progress', size: 1.2, fill: allOk ? '#4caf50' : '#ffab00', bold: true }
+        ], 2.4);
+    }
+
+    // --- SURGERY ---
+    function renderGridSurgery() {
+        var c = centroids.surgery;
+        var sp = S.surgicalPrep[0];
+        var p = S.patient;
+        var orOk = sp && sp.history_data;
+        var implOk = sp && sp.prosthesis_data;
+        var surgInfo = p.surgery_type || 'TKA';
+        var summaryText = 'Not Scheduled';
+        var summaryColor = 'rgba(255,255,255,0.4)';
+        if (p.surgery_date) {
+            var sd = new Date(p.surgery_date);
+            if (sd < new Date()) { summaryText = 'Completed'; summaryColor = '#4caf50'; }
+            else { summaryText = shortDate(sd); summaryColor = '#00e5ff'; }
+        }
+        addSvgTextBlock(c.x, c.y - 3, [
+            { text: 'SURGERY', size: 1.6, fill: '#00e5ff', font: 'Orbitron, sans-serif' },
+            { text: (orOk ? icons.ok : icons.pending) + ' OR Prepped', size: 1.5, fill: orOk ? '#4caf50' : 'rgba(255,255,255,0.4)' },
+            { text: (implOk ? icons.ok : icons.pending) + ' Implants Set', size: 1.5, fill: implOk ? '#4caf50' : 'rgba(255,255,255,0.4)' },
+            { text: summaryText + ' \u2022 ' + surgInfo, size: 1.2, fill: summaryColor, bold: true }
+        ], 2.4);
+    }
+
+    // --- PREVIOUS TREATMENT ---
+    function renderPreviousTreatment() {
+        var c = centroids.previoustreatment;
+        var ccDone = S.stageData && S.stageData.stages && S.stageData.stages.some(function(s) { return s.key === 'conservative_care' && s.status === 'completed'; });
+        var ptSessions = S.checkins.filter(function(ck) { return ck.pt_exercises; }).length;
+        addSvgTextBlock(c.x, c.y - 4, [
+            { text: 'PREVIOUS', size: 1.6, fill: '#00e5ff', font: 'Orbitron, sans-serif' },
+            { text: 'TREATMENT', size: 1.6, fill: '#00e5ff', font: 'Orbitron, sans-serif' },
+            { text: (ccDone ? icons.ok : icons.pending) + ' Conservative Care', size: 1.5, fill: ccDone ? '#4caf50' : 'rgba(255,255,255,0.4)' },
+            { text: icons.pending + ' PT Sessions: ' + ptSessions, size: 1.5, fill: ptSessions > 0 ? '#4caf50' : 'rgba(255,255,255,0.4)' },
+            { text: icons.pending + ' Injections: 0', size: 1.5, fill: 'rgba(255,255,255,0.4)' }
+        ], 2.4);
+    }
+
+    // --- OUTCOMES ---
+    function renderGridOutcomes() {
+        var c = centroids.outcomes;
+        var lc = S.checkins[0];
+        var pain = lc ? lc.pain_level : null;
+        var ae = S.adverseEvents;
+        var painStr = pain != null ? pain + '/10' : '--';
+        var painColor = pain == null ? 'rgba(255,255,255,0.4)' : pain <= 3 ? '#4caf50' : pain <= 6 ? '#ffab00' : '#f44336';
+        addSvgTextBlock(c.x, c.y - 3, [
+            { text: 'OUTCOMES', size: 1.6, fill: '#00e5ff', font: 'Orbitron, sans-serif' },
+            { text: icons.alert + ' Pain: ' + painStr, size: 1.5, fill: painColor },
+            { text: ae.length > 0 ? icons.alert + ' Adverse Events: ' + ae.length : icons.ok + ' No Events', size: 1.5, fill: ae.length > 0 ? '#f44336' : '#4caf50' },
+            { text: ae.length > 0 || pain >= 7 ? 'Alert' : 'Stable', size: 1.2, fill: ae.length > 0 || pain >= 7 ? '#f44336' : '#4caf50', bold: true }
+        ], 2.4);
+    }
+
+    // --- COMORBIDITIES ---
+    function renderGridComorbidities() {
+        var c = centroids.comorbidities;
+        var pa = S.preopAssessments[0];
+        var bmi = pa && pa.bmi ? Math.round(pa.bmi * 10) / 10 : '--';
+        addSvgTextBlock(c.x, c.y - 2, [
+            { text: 'COMORBIDITIES', size: 1.6, fill: '#00e5ff', font: 'Orbitron, sans-serif' },
+            { text: pa ? icons.ok + ' ASA: ' + (pa.asa_class || '--') : icons.pending + ' ASA: --', size: 1.5, fill: pa ? '#4caf50' : 'rgba(255,255,255,0.4)' },
+            { text: pa ? icons.ok + ' BMI: ' + bmi : icons.pending + ' BMI: --', size: 1.5, fill: pa ? '#4caf50' : 'rgba(255,255,255,0.4)' }
+        ], 2.4);
+    }
+
+    // --- ENGAGEMENT ---
+    function renderGridEngagement() {
+        var c = centroids.engagement;
+        var notes = S.nursingNotes;
+        var famOk = notes.some(function(n) { return (n.note_type||'').match(/family|communication|update/i); });
+        var dischOk = notes.some(function(n) { return (n.note_type||'').match(/discharge/i) || (n.note_text||'').match(/discharge/i); });
+        addSvgTextBlock(c.x, c.y - 2, [
+            { text: 'ENGAGEMENT', size: 1.6, fill: '#00e5ff', font: 'Orbitron, sans-serif' },
+            { text: (famOk ? icons.ok : icons.pending) + ' Family Update', size: 1.5, fill: famOk ? '#4caf50' : 'rgba(255,255,255,0.4)' },
+            { text: (dischOk ? icons.ok : icons.pending) + ' Discharge Plan', size: 1.5, fill: dischOk ? '#4caf50' : 'rgba(255,255,255,0.4)' }
+        ], 2.4);
+    }
+
+    // --- PT ---
+    function renderGridPT() {
+        var c = centroids.pt;
+        var lc = S.checkins[0];
+        var ptOk = lc && lc.pt_exercises;
+        var ptNote = S.nursingNotes.some(function(n) { return (n.note_type||'').match(/pt|therapy|physical/i); });
+        addSvgTextBlock(c.x, c.y - 2, [
+            { text: 'PT', size: 1.6, fill: '#00e5ff', font: 'Orbitron, sans-serif' },
+            { text: (ptNote ? icons.ok : icons.pending) + ' PT Eval', size: 1.5, fill: ptNote ? '#4caf50' : 'rgba(255,255,255,0.4)' },
+            { text: (ptOk ? icons.ok : icons.warning) + ' Exercise Plan', size: 1.5, fill: ptOk ? '#4caf50' : '#ffab00' },
+            { text: ptOk ? 'Active' : 'Needs Attention', size: 1.2, fill: ptOk ? '#4caf50' : '#ffab00' }
+        ], 2.4);
+    }
+
+    // ═══════════════════════════════════════════
+    // DETAIL PANEL (slide-in with real data)
+    // ═══════════════════════════════════════════
+    function openDetail(html) {
+        document.getElementById('detail-content').innerHTML = html;
+        document.getElementById('detail-panel').classList.add('open');
+    }
+    function closeDetail() { document.getElementById('detail-panel').classList.remove('open'); }
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeDetail(); });
+
+    function dRow(label, val) {
+        return '<div class="detail-item"><span><strong>' + label + ':</strong> ' + val + '</span></div>';
+    }
+
+    function openPatientDetail() {
+        if (!S.patient) {
+            openDetail('<h2>Patient</h2><div class="detail-item" style="color:#ffab00">No patient loaded</div>');
+            return;
+        }
+        var p = S.patient;
+        var age = p.date_of_birth ? Math.floor((Date.now() - new Date(p.date_of_birth).getTime()) / (365.25*24*60*60*1000)) : 'N/A';
+        var html = '<h2>' + (p.first_name||'') + ' ' + (p.last_name||'') + '</h2>';
+        html += dRow('MRN', p.mrn || 'N/A');
+        html += dRow('DOB', p.date_of_birth || 'N/A');
+        html += dRow('Age', age);
+        html += dRow('Email', p.email || 'N/A');
+        html += dRow('Phone', p.phone || 'N/A');
+
+        html += '<div class="detail-section"><h3>Episode</h3>';
+        html += dRow('Surgery', p.surgery_type || 'N/A');
+        html += dRow('Surgery Date', p.surgery_date ? shortDate(new Date(p.surgery_date)) : 'Not scheduled');
+        html += dRow('Surgeon', p.surgeon_last_name ? 'Dr. ' + p.surgeon_first_name + ' ' + p.surgeon_last_name : 'N/A');
+        html += dRow('Stage', S.stageData ? S.stageData.current_stage : 'N/A');
+        html += dRow('Status', p.episode_status || 'N/A');
+        html += '</div>';
+
+        html += '<div class="detail-section"><h3>Recent Check-ins</h3>';
+        var recent = S.checkins.slice(0, 5);
+        if (!recent.length) html += '<div class="detail-item" style="color:rgba(255,255,255,0.3)">No check-ins</div>';
+        recent.forEach(function(c) {
+            var pc = c.pain_level <= 3 ? 'status-ok' : c.pain_level <= 6 ? 'status-warning' : 'status-alert';
+            html += '<div class="detail-item"><span class="' + pc + '">' + (c.pain_level != null ? c.pain_level + '/10' : '--') + '</span><span>' + (c.checkin_date || '--') + (c.concerns ? ' — ' + c.concerns : '') + '</span></div>';
+        });
+        html += '</div>';
+
+        if (S.adverseEvents.length) {
+            html += '<div class="detail-section"><h3>Adverse Events</h3>';
+            S.adverseEvents.forEach(function(ae) {
+                html += '<div class="detail-item"><span class="status-alert">' + icons.alert + '</span><span><strong>' + (ae.event_type||'') + '</strong> ' + (ae.event_date||'') + '<br>' + (ae.reason||ae.notes||'') + '</span></div>';
+            });
+            html += '</div>';
+        }
+
+        html += '<a class="detail-action-btn" href="/episode-timeline.html?patient=' + patientId + '">Open Timeline \u2192</a> ';
+        html += '<a class="detail-action-btn" href="/dashboard.html">Dashboard \u2192</a>';
+        openDetail(html);
+    }
+
+    function openStageDetail(stageId) {
+        var handlers = {
+            conservative: function() {
+                var html = '<h2>Conservative Treatment</h2>';
+                html += dRow('Status', S.stageData ? S.stageData.current_stage : 'N/A');
+                if (S.stageData && S.stageData.stages) {
+                    html += '<div class="detail-section"><h3>Episode Stages</h3>';
+                    S.stageData.stages.forEach(function(st) {
+                        var ico, color, label;
+                        if (st.status === 'completed') { ico = '\u2713'; color = '#4caf50'; label = st.completed_at ? 'Completed ' + st.completed_at.substring(0,10) : 'Completed'; }
+                        else if (st.status === 'current') { ico = '\u2192'; color = '#00e5ff'; label = 'Current'; }
+                        else { ico = '\u25CB'; color = 'rgba(255,255,255,0.3)'; label = 'Upcoming'; }
+                        html += '<div class="detail-item" style="border-color:rgba(0,229,255,0.05)"><span style="color:'+color+';font-size:16px;min-width:20px;">'+ico+'</span><span><strong style="color:'+color+'">'+st.label+'</strong> \u2014 <span style="color:rgba(255,255,255,0.5)">'+label+'</span></span></div>';
+                    });
+                    html += '</div>';
+                }
+                html += '<a class="detail-action-btn" href="/nonop-plan.html?patient='+patientId+'">Open Non-Op Plan \u2192</a>';
+                return html;
+            },
+            previoustreatment: function() {
+                var html = '<h2>Previous Treatment</h2>';
+                var ptSessions = S.checkins.filter(function(c){return c.pt_exercises;}).length;
+                html += dRow('PT Sessions', ptSessions);
+                html += dRow('Injections', '0');
+                html += '<a class="detail-action-btn" href="/nonop-plan.html?patient='+patientId+'">Open Non-Op Plan \u2192</a>';
+                return html;
+            },
+            outcomes: function() {
+                var html = '<h2>Outcomes</h2>';
+                var lc = S.checkins[0];
+                html += dRow('Pain', lc ? lc.pain_level + '/10' : '--');
+                html += dRow('Adverse Events', S.adverseEvents.length);
+                if (S.proAssessments.length) {
+                    S.proAssessments.forEach(function(a) {
+                        html += dRow(a.assessment_type || 'PRO', a.score != null ? a.score : '--');
+                    });
+                }
+                html += '<a class="detail-action-btn" href="/analytics.html?patient='+patientId+'">Open Analytics \u2192</a>';
+                return html;
+            },
+            comorbidities: function() {
+                var pa = S.preopAssessments[0];
+                var html = '<h2>Comorbidities</h2>';
+                if (pa) {
+                    html += dRow('ASA Class', pa.asa_class || 'N/A');
+                    html += dRow('BMI', pa.bmi ? Math.round(pa.bmi*10)/10 : 'N/A');
+                    var cList = [];
+                    try { cList = JSON.parse(pa.comorbidities || '[]'); } catch(e) {}
+                    if (cList.length) html += dRow('Conditions', cList.join(', '));
+                } else {
+                    html += '<div class="detail-item" style="color:#ffab00">No assessment data</div>';
+                }
+                html += '<a class="detail-action-btn" href="/preop.html?patient='+patientId+'&tab=2">Open Comorbidities \u2192</a>';
+                return html;
+            },
+            preop: function() {
+                var sp = S.surgicalPrep[0];
+                var pa = S.preopAssessments[0];
+                var html = '<h2>Pre-Op Preparation</h2>';
+                html += dRow('Consent Signed', sp && sp.consent_signed_at ? shortDate(new Date(sp.consent_signed_at)) : 'Not signed');
+                html += dRow('Contract Signed', sp && sp.contract_signed_at ? shortDate(new Date(sp.contract_signed_at)) : 'Not signed');
+                html += dRow('Labs/Clearance', pa && (pa.status==='complete'||pa.status==='cleared') ? 'Complete' : 'Pending');
+                html += '<a class="detail-action-btn" href="/surgical-prep.html?patient=' + patientId + '">Surgical Prep \u2192</a>';
+                return html;
+            },
+            surgery: function() {
+                var p = S.patient, sp = S.surgicalPrep[0];
+                var html = '<h2>Surgery</h2>';
+                html += dRow('Procedure', p.surgery_type || 'N/A');
+                html += dRow('Date', p.surgery_date ? shortDate(new Date(p.surgery_date)) : 'Not scheduled');
+                html += dRow('OR Prepped', sp && sp.history_data ? 'Yes' : 'No');
+                html += dRow('Implants', sp && sp.prosthesis_data ? 'Ordered' : 'Pending');
+                if (p.surgeon_last_name) html += dRow('Surgeon', 'Dr. ' + p.surgeon_first_name + ' ' + p.surgeon_last_name);
+                return html;
+            },
+            billing: function() {
+                var sp = S.surgicalPrep[0];
+                var html = '<h2>Billing & Insurance</h2>';
+                var insData = null;
+                if (sp && sp.insurance_data) { try { insData = JSON.parse(sp.insurance_data); } catch(e) {} }
+                if (insData) {
+                    Object.keys(insData).forEach(function(k) { html += dRow(k.replace(/_/g,' '), String(insData[k])); });
+                } else {
+                    html += '<div class="detail-item" style="color:#ffab00">No insurance data</div>';
+                }
+                html += '<a class="detail-action-btn" href="/surgical-prep.html?patient=' + patientId + '">Surgical Prep \u2192</a>';
+                return html;
+            },
+            postop: function() {
+                var html = '<h2>Post-Op Recovery</h2>';
+                var recent = S.checkins.slice(0, 10);
+                if (!recent.length) { html += '<div class="detail-item" style="color:rgba(255,255,255,0.3)">No check-in data</div>'; }
+                else {
+                    html += '<div class="detail-section"><h3>Pain Trend</h3>';
+                    recent.forEach(function(c) {
+                        var pc = c.pain_level<=3?'status-ok':c.pain_level<=6?'status-warning':'status-alert';
+                        html += '<div class="detail-item"><span class="'+pc+'" style="min-width:50px">'+(c.pain_level!=null?c.pain_level+'/10':'--')+'</span><span>'+(c.checkin_date||'--')+'</span></div>';
+                    });
+                    html += '</div>';
+                }
+                if (S.adverseEvents.length) {
+                    html += '<div class="detail-section"><h3>Adverse Events</h3>';
+                    S.adverseEvents.forEach(function(ae) {
+                        html += '<div class="detail-item"><span class="status-alert">'+icons.alert+'</span><span><strong>'+(ae.event_type||'')+'</strong> '+(ae.event_date||'')+'<br>'+(ae.reason||ae.notes||'')+(ae.resolved?' <span class="status-ok">(Resolved)</span>':'')+'</span></div>';
+                    });
+                    html += '</div>';
+                }
+                html += '<a class="detail-action-btn" href="/episode-timeline.html?patient='+patientId+'">Timeline \u2192</a>';
+                return html;
+            },
+            engagement: function() {
+                var html = '<h2>Patient Engagement</h2>';
+                var notes = S.nursingNotes;
+                if (!notes.length) { html += '<div class="detail-item" style="color:rgba(255,255,255,0.3)">No nursing notes</div>'; }
+                else {
+                    notes.slice(0,15).forEach(function(n) {
+                        html += '<div class="detail-item"><span style="color:#00e5ff">'+icons.warning+'</span><span><strong>'+(n.note_type||'Note')+'</strong><br>'+(n.note_text||'')+'<br><small style="color:rgba(255,255,255,0.3)">'+(n.created_at||'')+' — '+(n.author_first||'')+' '+(n.author_last||'')+'</small></span></div>';
+                    });
+                }
+                return html;
+            },
+            pt: function() {
+                var html = '<h2>Physical Therapy</h2>';
+                var ptDays = S.checkins.filter(function(c){return c.pt_exercises;}).length;
+                var total = S.checkins.length;
+                html += dRow('Exercise Days', ptDays + '/' + total);
+                html += dRow('Compliance', total > 0 ? Math.round(ptDays/total*100)+'%' : 'N/A');
+                html += '<div class="detail-section"><h3>Recent</h3>';
+                S.checkins.slice(0,10).forEach(function(c) {
+                    html += '<div class="detail-item"><span class="'+(c.pt_exercises?'status-ok':'status-warning')+'">'+(c.pt_exercises?icons.ok:icons.warning)+'</span><span>'+(c.checkin_date||'--')+' PT:'+(c.pt_exercises?'Yes':'No')+' Pain:'+(c.pain_level!=null?c.pain_level:'--')+'</span></div>';
+                });
+                html += '</div>';
+                return html;
+            },
+            proms: function() {
+                var html = '<h2>PROMs Schedule</h2>';
+                if (!S.promSchedule.length) { html += '<div class="detail-item" style="color:rgba(255,255,255,0.3)">No PROMs scheduled</div>'; }
+                else {
+                    S.promSchedule.forEach(function(p) {
+                        var sc = p.status==='completed'?'status-ok':p.status==='overdue'?'status-alert':p.status==='skipped'?'status-warning':'status-pending';
+                        html += '<div class="detail-item"><span class="'+sc+'">'+icons[p.status==='completed'?'ok':p.status==='overdue'?'alert':p.status==='skipped'?'warning':'pending']+'</span><span><strong>'+(p.assessment_type||'')+'</strong> '+(p.window_name||'')+'<br>Due: '+(p.due_date||'N/A')+(p.completed_date?' | Done: '+p.completed_date:'')+'</span></div>';
+                    });
+                }
+                if (S.proAssessments.length) {
+                    html += '<div class="detail-section"><h3>Scores</h3>';
+                    S.proAssessments.forEach(function(a) {
+                        html += '<div class="detail-item"><span class="status-ok">'+icons.ok+'</span><span><strong>'+(a.assessment_type||'')+'</strong>: '+(a.score!=null?a.score:'--')+' — '+(a.assessment_date||'')+'</span></div>';
+                    });
+                    html += '</div>';
+                }
+                return html;
+            },
+            nonopcare: function() {
+                var html = '<h2>Non-Op Care</h2>';
+                html += dRow('Conservative Plan', 'Active');
+                html += '<a class="detail-action-btn" href="/nonop-plan.html?patient='+patientId+'">Open Non-Op Plan \u2192</a>';
+                return html;
+            },
+            preoptests: function() {
+                var html = '<h2>Pre-Op Tests</h2>';
+                var pa = S.preopAssessments[0];
+                html += dRow('Labs', pa ? 'On file' : 'Pending');
+                html += dRow('Clearance', pa && (pa.status==='complete'||pa.status==='cleared') ? 'Cleared' : 'Pending');
+                html += '<a class="detail-action-btn" href="/preop.html?patient='+patientId+'">Open PreOp \u2192</a>';
+                return html;
+            },
+            remotemonitoring: function() {
+                var html = '<h2>Remote Monitoring</h2>';
+                html += dRow('Check-ins', S.checkins.length + ' total');
+                var last7 = S.checkins.filter(function(c) { return (Date.now()-new Date(c.checkin_date||c.created_at).getTime()) < 7*24*60*60*1000; });
+                html += dRow('Last 7 Days', last7.length);
+                html += '<a class="detail-action-btn" href="/rpm-report.html">RPM Report \u2192</a>';
+                return html;
+            }
+        };
+
+        var handler = handlers[stageId];
+        if (handler) {
+            var html = handler();
+            var navUrl = pageMap[stageId];
+            if (navUrl) {
+                html = '<a class="detail-action-btn" href="' + navUrl + '" style="margin-bottom:12px;display:inline-block;">OPEN FULL PAGE \u2192</a>' + html;
+            }
+            openDetail(html);
+        } else if (stageId === 'dashboard') {
+            window.location.href = '/dashboard.html';
+        } else {
+            openDetail('<h2>' + stageId + '</h2><div class="detail-item" style="color:rgba(255,255,255,0.3)">Coming soon...</div>');
+        }
+    }
+
+    // ═══════════════════════════════════════════
+    // UTILITIES
+    // ═══════════════════════════════════════════
+    function shortDate(d) {
+        var m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        return m[d.getMonth()] + ' ' + d.getDate();
+    }
+
+    function updateTimestamp() {
+        document.getElementById('last-updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+    }
+
+    function startAutoRefresh() {
+        setInterval(async function() {
+            try {
+                var results = await Promise.all([
+                    safeFetch('/api/checkins?patient_id=' + patientId),
+                    safeFetch('/api/adverse-events?patient_id=' + patientId),
+                    safeFetch('/api/nursing-notes?patient_id=' + patientId)
+                ]);
+                if (Array.isArray(results[0])) S.checkins = results[0];
+                if (Array.isArray(results[1])) S.adverseEvents = results[1];
+                if (Array.isArray(results[2])) S.nursingNotes = results[2];
+                renderAllOverlays();
+                updateTimestamp();
+            } catch(e) {}
+        }, 60000);
+    }
+    </script>
+    <script src="/js/cockpit-themes.js"></script>
+    <script src="/js/cockpit-switcher.js"></script>
+    <script>
+    // Apply saved theme — try theme-specific grid image with fallback
+    (function() {
+        var saved = getCockpitTheme();
+        var th = COCKPIT_THEMES[saved] || COCKPIT_THEMES.bluesteel;
+        if (th.gridImgBg) {
+            var bgImg = document.getElementById('cockpit-bg');
+            var testImg = new Image();
+            testImg.onload = function() { bgImg.src = th.gridImgBg; sizeFrame(); };
+            testImg.onerror = function() { bgImg.src = '/cockpit/grid_bluesteel_bg.png'; sizeFrame(); };
+            testImg.src = th.gridImgBg;
+        }
+        if (th.bodyBgImage) {
+            document.body.style.backgroundImage = 'url(' + th.bodyBgImage + ')';
+            document.body.style.backgroundSize = 'cover';
+            document.body.style.backgroundPosition = 'center';
+        }
+    })();
+    </script>
+</body>
+</html>

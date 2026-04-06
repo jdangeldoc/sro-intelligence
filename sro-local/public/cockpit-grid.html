@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SRO Cockpit — Grid</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600&family=Rajdhani:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0a1628; overflow: hidden; font-family: 'Rajdhani', sans-serif; }
+
+        #cockpit-wrapper {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0a1628;
+        }
+
+        #image-frame { position: relative; width: 90vw; height: 85vh; max-width: 800px; max-height: 580px; }
+        #image-frame svg {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+        }
+        #image-frame svg .grid-cell {
+            pointer-events: auto;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        #image-frame svg .grid-cell:hover {
+            stroke: rgba(100,160,220,0.5);
+            stroke-width: 0.5;
+            filter: drop-shadow(0 0 2px rgba(100,160,220,0.2));
+        }
+
+        #back-btn {
+            position: fixed; top: 12px; left: 16px; z-index: 60;
+            color: #00e5ff; font-size: 14px; text-decoration: none;
+            background: rgba(10,22,40,0.8); padding: 6px 14px;
+            border-radius: 4px; border: 1px solid rgba(0,229,255,0.2);
+            transition: all 0.15s ease; font-family: 'Rajdhani', sans-serif;
+        }
+        #back-btn:hover { background: rgba(10,22,40,0.95); border-color: rgba(0,229,255,0.5); color: #00ffff; }
+
+        #detail-panel {
+            position: fixed; right: 0; top: 0; width: 420px; height: 100%;
+            background: rgba(10,18,35,0.97); border-left: 2px solid rgba(0,229,255,0.3);
+            transform: translateX(100%); transition: transform 0.3s ease;
+            z-index: 100; overflow-y: auto; padding: 24px;
+        }
+        #detail-panel.open { transform: translateX(0); }
+        #detail-panel::-webkit-scrollbar { width: 6px; }
+        #detail-panel::-webkit-scrollbar-thumb { background: rgba(0,229,255,0.15); border-radius: 3px; }
+
+        #close-btn {
+            position: absolute; top: 12px; right: 16px;
+            background: none; border: none; color: #00e5ff; font-size: 24px; cursor: pointer;
+        }
+        #detail-content h2 {
+            font-family: 'Orbitron', monospace; color: #00e5ff;
+            font-size: 18px; margin: 0 0 16px 0; padding-top: 24px;
+        }
+        .detail-item {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 10px 0; border-bottom: 1px solid rgba(0,229,255,0.08);
+            font-size: 15px; color: #ccc;
+        }
+        .detail-item strong { color: rgba(0,229,255,0.7); }
+        .detail-section { margin-top: 16px; padding-top: 10px; border-top: 1px solid rgba(0,229,255,0.1); }
+        .detail-section h3 {
+            font-family: 'Orbitron', monospace; font-size: 13px;
+            color: rgba(0,229,255,0.6); margin-bottom: 8px; letter-spacing: 1px;
+        }
+        .detail-action-btn {
+            display: inline-block; margin-top: 14px; padding: 8px 18px;
+            font-family: 'Orbitron', monospace; font-size: 11px; color: #00e5ff;
+            border: 1px solid rgba(0,229,255,0.3); border-radius: 6px;
+            background: rgba(0,229,255,0.05); cursor: pointer; text-decoration: none;
+            text-transform: uppercase; letter-spacing: 1px; transition: all 0.2s;
+        }
+        .detail-action-btn:hover { background: rgba(0,229,255,0.12); border-color: rgba(0,229,255,0.5); }
+
+        .status-ok { color: #4caf50; }
+        .status-alert { color: #f44336; }
+        .status-warning { color: #ffab00; }
+        .status-pending { color: rgba(255,255,255,0.3); }
+
+        #last-updated {
+            position: fixed; bottom: 8px; right: 12px; z-index: 50;
+            font-size: 11px; color: rgba(255,255,255,0.2); letter-spacing: 1px;
+        }
+
+        .corner-nav {
+            position: fixed;
+            z-index: 60;
+            font-family: 'Orbitron', monospace;
+            font-size: 11px;
+            letter-spacing: 2px;
+            color: #00e5ff;
+            padding: 10px 20px;
+            border: 1px solid rgba(0,229,255,0.25);
+            border-radius: 4px;
+            background: rgba(10,22,40,0.85);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+        }
+        .corner-nav:hover {
+            background: rgba(0,229,255,0.12);
+            border-color: rgba(0,229,255,0.6);
+            box-shadow: 0 0 15px rgba(0,229,255,0.15);
+            color: #00ffff;
+        }
+    </style>
+</head>
+<body>
+    <div id="cockpit-wrapper">
+        <div id="image-frame">
+            <svg id="cockpit-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <!-- GRID BACKGROUND — blue ring borders matching circular cockpit -->
+                <rect x="4.5" y="2.5" width="91" height="95" rx="2.5" fill="none" stroke="rgba(60,110,170,0.3)" stroke-width="0.4"/>
+                <rect x="5" y="3" width="90" height="94" rx="2" fill="none" stroke="rgba(60,110,170,0.5)" stroke-width="0.5"/>
+
+                <!-- Row 1: Conservative(gold), Preop(gold), Surgery(gold) -->
+                <rect x="6" y="4" width="27" height="29" rx="1.5" fill="rgba(210,155,60,0.92)" stroke="rgba(60,110,170,0.4)" stroke-width="0.3" class="grid-cell" onclick="openStageDetail('conservative')"/>
+                <rect x="34" y="4" width="32" height="29" rx="1.5" fill="rgba(210,155,60,0.92)" stroke="rgba(60,110,170,0.4)" stroke-width="0.3" class="grid-cell" onclick="openStageDetail('preop')"/>
+                <rect x="67" y="4" width="27" height="29" rx="1.5" fill="rgba(210,155,60,0.92)" stroke="rgba(60,110,170,0.4)" stroke-width="0.3" class="grid-cell" onclick="openStageDetail('surgery')"/>
+
+                <!-- Row 2: PreviousTx(gold), Center(slate), Outcomes(teal) -->
+                <rect x="6" y="34" width="27" height="32" rx="1.5" fill="rgba(210,155,60,0.92)" stroke="rgba(60,110,170,0.4)" stroke-width="0.3" class="grid-cell" onclick="openStageDetail('previoustreatment')"/>
+                <polygon points="42,38 58,38 66,50 58,62 42,62 34,50" fill="rgba(40,55,80,0.92)" stroke="rgba(60,110,170,0.5)" stroke-width="0.4" class="grid-cell" onclick="openPatientDetail()"/>
+                <rect x="67" y="34" width="27" height="32" rx="1.5" fill="rgba(30,60,70,0.92)" stroke="rgba(60,110,170,0.4)" stroke-width="0.3" class="grid-cell" onclick="openStageDetail('outcomes')"/>
+
+                <!-- Row 3: Comorbidities(gold), Engagement(gold), PT(teal) -->
+                <rect x="6" y="67" width="27" height="29" rx="1.5" fill="rgba(210,155,60,0.92)" stroke="rgba(60,110,170,0.4)" stroke-width="0.3" class="grid-cell" onclick="openStageDetail('comorbidities')"/>
+                <rect x="34" y="67" width="32" height="29" rx="1.5" fill="rgba(210,155,60,0.92)" stroke="rgba(60,110,170,0.4)" stroke-width="0.3" class="grid-cell" onclick="openStageDetail('engagement')"/>
+                <rect x="67" y="67" width="27" height="29" rx="1.5" fill="rgba(30,60,70,0.92)" stroke="rgba(60,110,170,0.4)" stroke-width="0.3" class="grid-cell" onclick="openStageDetail('pt')"/>
+
+                <!-- DATA TEXT OVERLAYS (rendered by JS) -->
+                <g id="svg-text-layer" pointer-events="none"></g>
+            </svg>
+        </div>
+    </div>
+
+    <a id="back-btn" href="/dashboard.html">&larr; Back to Dashboard</a>
+
+    <div id="corner-nav-tl" class="corner-nav" style="top:60px;left:20px;">DASHBOARD</div>
+    <div id="corner-nav-tr" class="corner-nav" style="top:60px;right:20px;">IMPLANT/EQUIPMENT</div>
+    <div id="corner-nav-bl" class="corner-nav" style="bottom:40px;left:20px;">ANALYTICS</div>
+    <div id="corner-nav-br" class="corner-nav" style="bottom:40px;right:20px;">REMOTE MONITORING</div>
+
+    <div id="detail-panel">
+        <button id="close-btn" onclick="closeDetail()">&times;</button>
+        <div id="detail-content"></div>
+    </div>
+
+    <div id="last-updated">Last updated: --:--:--</div>
+
+    <script>
+    // Theme placeholder (shared cockpit-themes.js loaded at bottom)
+    var T = { accent: '#00e5ff', ok: '#4caf50', alert: '#f44336', warning: '#ffab00' };
+
+    // ═══════════════════════════════════════════
+    // STATE (copied from cockpit-view.html)
+    // ═══════════════════════════════════════════
+    var patientId = new URLSearchParams(window.location.search).get('patient');
+    var returnTo = new URLSearchParams(window.location.search).get('returnTo');
+    var returnDate = new URLSearchParams(window.location.search).get('date');
+    var backBtn = document.getElementById('back-btn');
+    if (returnTo === 'worklist') {
+        backBtn.href = '/clinic-worklist.html' + (returnDate ? '?date=' + returnDate : '');
+        backBtn.textContent = '\u2190 Back to Worklist';
+    }
+
+    // Corner nav click handlers
+    document.getElementById('corner-nav-tl').onclick = function() { window.location.href = '/dashboard.html'; };
+    document.getElementById('corner-nav-tr').onclick = function() { window.location.href = '/surgical-prep.html?patient=' + patientId; };
+    document.getElementById('corner-nav-bl').onclick = function() { window.location.href = '/analytics.html?patient=' + patientId; };
+    document.getElementById('corner-nav-br').onclick = function() { window.location.href = '/analytics.html?patient=' + patientId; };
+
+    // Page navigation map for sectors
+    var pageMap = {
+        conservative: '/nonop-plan.html?patient=' + patientId,
+        preop: '/preop.html?patient=' + patientId,
+        surgery: '/surgical-prep.html?patient=' + patientId,
+        previoustreatment: '/nonop-plan.html?patient=' + patientId,
+        outcomes: '/analytics.html?patient=' + patientId,
+        comorbidities: '/preop.html?patient=' + patientId + '&tab=2',
+        engagement: '/patient-comm.html?patient=' + patientId,
+        pt: '/episode-timeline.html?patient=' + patientId,
+        postop: '/episode-timeline.html?patient=' + patientId,
+        proms: '/analytics.html?patient=' + patientId,
+        billing: '/surgical-prep.html?patient=' + patientId,
+        nonopcare: '/nonop-plan.html?patient=' + patientId,
+        preoptests: '/preop.html?patient=' + patientId,
+        remotemonitoring: '/analytics.html?patient=' + patientId
+    };
+
+    var S = {
+        patient: null, stageData: null, checkins: [], proAssessments: [],
+        preopAssessments: [], surgicalPrep: [], nursingNotes: [],
+        adverseEvents: [], promSchedule: [], episodeId: null
+    };
+    var icons = { ok: '\u2713', alert: '\u26A0', warning: '\u25C6', pending: '\u25CB' };
+
+    // Grid centroids
+    var centroids = {
+        conservative:      { x: 19.5, y: 18.5 },
+        preop:             { x: 50, y: 18.5 },
+        surgery:           { x: 80.5, y: 18.5 },
+        previoustreatment: { x: 19.5, y: 50 },
+        patient:           { x: 50, y: 50 },
+        outcomes:          { x: 80.5, y: 50 },
+        comorbidities:     { x: 19.5, y: 81.5 },
+        engagement:        { x: 50, y: 81.5 },
+        pt:                { x: 80.5, y: 81.5 }
+    };
+
+    // ═══════════════════════════════════════════
+    // DATA LOADING (copied from cockpit-view.html)
+    // ═══════════════════════════════════════════
+    document.addEventListener('DOMContentLoaded', function() {
+        ensureTextLayer();
+        if (!patientId) {
+            showLoadingText('NO PATIENT ID', 50, 50);
+        } else {
+            showLoadingText('LOADING...', 50, 50);
+            loadAllData();
+        }
+    });
+
+    function safeFetch(url) {
+        return fetch(url).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
+    }
+
+    async function loadAllData() {
+        try {
+            var pRes = await fetch('/api/patients/' + patientId);
+            if (!pRes.ok) throw new Error('not found');
+            S.patient = await pRes.json();
+            if (!S.patient || !S.patient.id) throw new Error('not found');
+            S.episodeId = S.patient.episode_id;
+
+            var fetches = [
+                safeFetch('/api/checkins?patient_id=' + patientId),
+                safeFetch('/api/pro-assessments?patient_id=' + patientId),
+                safeFetch('/api/preop-assessments?patient_id=' + patientId),
+                safeFetch('/api/nursing-notes?patient_id=' + patientId),
+                safeFetch('/api/adverse-events?patient_id=' + patientId),
+                safeFetch('/api/prom-schedule?patient_id=' + patientId),
+                S.episodeId ? safeFetch('/api/episodes/' + S.episodeId + '/stage') : Promise.resolve(null),
+                S.episodeId ? safeFetch('/api/surgical-prep?patient_id=' + patientId) : Promise.resolve([])
+            ];
+            var results = await Promise.all(fetches);
+            S.checkins = Array.isArray(results[0]) ? results[0] : [];
+            S.proAssessments = Array.isArray(results[1]) ? results[1] : [];
+            S.preopAssessments = Array.isArray(results[2]) ? results[2] : [];
+            S.nursingNotes = Array.isArray(results[3]) ? results[3] : [];
+            S.adverseEvents = Array.isArray(results[4]) ? results[4] : [];
+            S.promSchedule = Array.isArray(results[5]) ? results[5] : [];
+            S.stageData = results[6];
+            S.surgicalPrep = Array.isArray(results[7]) ? results[7] : [];
+
+            renderAllOverlays();
+            updateTimestamp();
+            startAutoRefresh();
+        } catch (e) {
+            clearTextLayer();
+            showLoadingText('PATIENT NOT FOUND', 50, 48);
+            addSvgText(50, 52, 'Return to Dashboard', 1.68, 'rgba(0,229,255,0.6)');
+        }
+    }
+
+    // ═══════════════════════════════════════════
+    // SVG TEXT RENDERING HELPERS (IDENTICAL copy from cockpit-view.html)
+    // ═══════════════════════════════════════════
+    var NS = 'http://www.w3.org/2000/svg';
+    var textLayer = null;
+
+    function ensureTextLayer() {
+        if (!textLayer) {
+            textLayer = document.getElementById('svg-text-layer');
+            if (!textLayer) {
+                var svg = document.getElementById('cockpit-svg');
+                if (svg) {
+                    textLayer = document.createElementNS(NS, 'g');
+                    textLayer.setAttribute('id', 'svg-text-layer');
+                    textLayer.setAttribute('pointer-events', 'none');
+                    svg.appendChild(textLayer);
+                }
+            }
+        }
+        return textLayer;
+    }
+
+    function clearTextLayer() {
+        var tl = ensureTextLayer();
+        if (tl) tl.innerHTML = '';
+    }
+
+    function showLoadingText(msg, x, y) {
+        clearTextLayer();
+        addSvgText(x, y, msg, 2.64, '#00e5ff', 'Orbitron, sans-serif');
+    }
+
+    function addSvgText(x, y, content, size, fill, fontFamily, anchor, bold) {
+        var shadow = document.createElementNS(NS, 'text');
+        shadow.setAttribute('x', parseFloat(x) + 0.1);
+        shadow.setAttribute('y', parseFloat(y) + 0.1);
+        shadow.setAttribute('font-size', size || 1.6);
+        shadow.setAttribute('fill', 'rgba(0,0,0,0.7)');
+        shadow.setAttribute('font-family', fontFamily || 'Rajdhani, sans-serif');
+        shadow.setAttribute('text-anchor', anchor || 'middle');
+        shadow.setAttribute('pointer-events', 'none');
+        if (bold) shadow.setAttribute('font-weight', 'bold');
+        shadow.textContent = content;
+        var tl = ensureTextLayer();
+        if (tl) tl.appendChild(shadow);
+
+        var t = document.createElementNS(NS, 'text');
+        t.setAttribute('x', x);
+        t.setAttribute('y', y);
+        t.setAttribute('font-size', size || 1.6);
+        t.setAttribute('fill', fill || '#ffffff');
+        t.setAttribute('font-family', fontFamily || 'Rajdhani, sans-serif');
+        t.setAttribute('text-anchor', anchor || 'middle');
+        t.setAttribute('pointer-events', 'none');
+        if (bold) t.setAttribute('font-weight', 'bold');
+        t.textContent = content;
+        if (tl) tl.appendChild(t);
+        return t;
+    }
+
+    function addSvgTextBlock(x, startY, lines, lineHeight) {
+        var cy = startY;
+        var lh = lineHeight || 2.88;
+        lines.forEach(function(l) {
+            addSvgText(x, cy, l.text, l.size || 1.5, l.fill || '#ccc', l.font || 'Rajdhani, sans-serif', 'middle', l.bold);
+            cy += lh;
+        });
+    }
+
+    // ═══════════════════════════════════════════
+    // RENDER ALL TEXT OVERLAYS
+    // ═══════════════════════════════════════════
+    function renderAllOverlays() {
+        clearTextLayer();
+        renderPatientHub();
+        renderConservative();
+        renderPreop();
+        renderSurgery();
+        renderPreviousTreatment();
+        renderOutcomes();
+        renderComorbidities();
+        renderEngagement();
+        renderPT();
+    }
+
+    // --- CENTER HUB: Patient (same as cockpit-view.html) ---
+    function renderPatientHub() {
+        var p = S.patient;
+        if (!p) return;
+        var c = centroids.patient;
+        var fn = p.first_name || '', ln = p.last_name || '';
+        var name = (ln + ', ' + fn).toUpperCase();
+        var age = '--';
+        if (p.date_of_birth) {
+            age = Math.floor((Date.now() - new Date(p.date_of_birth).getTime()) / (365.25*24*60*60*1000));
+        }
+        var pain = '--';
+        var painColor = '#00e5ff';
+        if (S.checkins[0] && S.checkins[0].pain_level != null) {
+            var pl = S.checkins[0].pain_level;
+            pain = pl;
+            painColor = pl <= 3 ? '#4caf50' : pl <= 6 ? '#ffab00' : '#f44336';
+        }
+
+        addSvgText(c.x, c.y - 5.5, name, 1.76, '#ffffff', 'Orbitron, sans-serif', 'middle', true);
+        addSvgText(c.x, c.y - 3.0, age + '/M', 1.92, 'rgba(255,255,255,0.6)');
+        addSvgText(c.x, c.y - 0.8, 'MRN: ' + (p.mrn || '----'), 1.56, '#00e5ff');
+        addSvgText(c.x, c.y + 1.6, 'HR --  BP --/--', 1.44, 'rgba(255,255,255,0.5)');
+        if (pain !== '--') {
+            addSvgText(c.x, c.y + 3.6, 'Pain: ' + pain + '/10', 1.56, painColor);
+        }
+        if (p.surgeon_last_name) {
+            addSvgText(c.x, c.y + 5.5, 'Dr. ' + p.surgeon_last_name, 1.44, 'rgba(255,255,255,0.3)');
+        }
+    }
+
+    // Gold card text color from surgeon-cockpit3: #1a2744
+    // Gold card summary: ok=#2e7d32, alert=#c62828, warn=#c77800
+    // Teal card text: #ffffff, status colors: #4caf50/#f44336/#ffab00
+    var GTC = '#1a2744'; // gold text color
+
+    // --- CONSERVATIVE TREATMENT (gold card) ---
+    function renderConservative() {
+        var c = centroids.conservative;
+        var stages = S.stageData ? S.stageData.stages : [];
+        var completed = 0, inProgress = 0, upcoming = 0;
+        stages.forEach(function(s) {
+            if (s.status === 'completed') completed++;
+            else if (s.status === 'current') inProgress++;
+            else upcoming++;
+        });
+        addSvgTextBlock(c.x, c.y - 5, [
+            { text: 'CONSERVATIVE', size: 1.92, fill: GTC, font: 'Orbitron, sans-serif', bold: true },
+            { text: 'TREATMENT', size: 1.92, fill: GTC, font: 'Orbitron, sans-serif', bold: true },
+            { text: icons.ok + ' Completed: ' + completed, size: 1.8, fill: GTC },
+            { text: icons.warning + ' In Progress: ' + inProgress, size: 1.8, fill: GTC },
+            { text: icons.pending + ' Upcoming: ' + upcoming, size: 1.8, fill: GTC }
+        ], 2.88);
+    }
+
+    // --- PREOP (gold card) ---
+    function renderPreop() {
+        var c = centroids.preop;
+        var sp = S.surgicalPrep[0];
+        var pa = S.preopAssessments[0];
+        var consentOk = sp && sp.consent_signed_at;
+        var labsOk = pa && (pa.status === 'complete' || pa.status === 'cleared');
+        var stage = S.stageData ? S.stageData.current_stage : '';
+        var npoOk = ['surgery','postop'].indexOf(stage) >= 0;
+        var allOk = consentOk && labsOk && npoOk;
+
+        addSvgTextBlock(c.x, c.y - 3, [
+            { text: 'PRE-OP', size: 1.92, fill: GTC, font: 'Orbitron, sans-serif', bold: true },
+            { text: (npoOk ? icons.ok : icons.pending) + ' NPO Confirmed', size: 1.8, fill: GTC },
+            { text: (consentOk ? icons.ok : icons.pending) + ' Consent Signed', size: 1.8, fill: GTC },
+            { text: allOk ? 'All Set' : 'In Progress', size: 1.44, fill: allOk ? '#2e7d32' : '#c77800', bold: true }
+        ]);
+    }
+
+    // --- SURGERY (gold card) ---
+    function renderSurgery() {
+        var c = centroids.surgery;
+        var sp = S.surgicalPrep[0];
+        var p = S.patient;
+        var orOk = sp && sp.history_data;
+        var implOk = sp && sp.prosthesis_data;
+        var surgInfo = p.surgery_type || 'TKA';
+        var summaryText = 'Not Scheduled';
+        var summaryColor = GTC;
+        if (p.surgery_date) {
+            var sd = new Date(p.surgery_date);
+            if (sd < new Date()) { summaryText = 'Completed'; summaryColor = '#2e7d32'; }
+            else { summaryText = shortDate(sd); summaryColor = '#2e7d32'; }
+        }
+
+        addSvgTextBlock(c.x, c.y - 3, [
+            { text: 'SURGERY', size: 1.92, fill: GTC, font: 'Orbitron, sans-serif', bold: true },
+            { text: (orOk ? icons.ok : icons.pending) + ' OR Prepped', size: 1.8, fill: GTC },
+            { text: (implOk ? icons.ok : icons.pending) + ' Implants Set', size: 1.8, fill: GTC },
+            { text: summaryText + ' \u2022 ' + surgInfo, size: 1.44, fill: summaryColor, bold: true }
+        ]);
+    }
+
+    // --- PREVIOUS TREATMENT (gold card) ---
+    function renderPreviousTreatment() {
+        var c = centroids.previoustreatment;
+        var ccDone = S.stageData && S.stageData.stages && S.stageData.stages.some(function(s) { return s.key === 'conservative_care' && s.status === 'completed'; });
+        var ptSessions = S.checkins.filter(function(ck) { return ck.pt_exercises; }).length;
+        var injections = S.nursingNotes.filter(function(n) { return (n.note_type||'').match(/injection/i) || (n.note_text||'').match(/injection/i); }).length;
+        addSvgTextBlock(c.x, c.y - 4, [
+            { text: 'PREVIOUS', size: 1.92, fill: GTC, font: 'Orbitron, sans-serif', bold: true },
+            { text: 'TREATMENT', size: 1.92, fill: GTC, font: 'Orbitron, sans-serif', bold: true },
+            { text: (ccDone ? icons.ok : icons.pending) + ' Conservative Care', size: 1.8, fill: GTC },
+            { text: icons.pending + ' PT Sessions: ' + ptSessions, size: 1.8, fill: GTC },
+            { text: icons.pending + ' Injections: ' + injections, size: 1.8, fill: GTC }
+        ], 2.88);
+    }
+
+    // --- OUTCOMES (teal card) ---
+    function renderOutcomes() {
+        var c = centroids.outcomes;
+        var lc = S.checkins[0];
+        var pain = lc ? lc.pain_level : null;
+        var ae = S.adverseEvents;
+        var painStr = pain != null ? pain + '/10' : '--';
+        var painColor = pain == null ? '#8899aa' : pain <= 3 ? '#4caf50' : pain <= 6 ? '#ffab00' : '#f44336';
+        var aeColor = ae.length > 0 ? '#f44336' : '#ffffff';
+        var summary, sumColor;
+        if (pain >= 7 || ae.length > 0) { summary = 'Alert'; sumColor = '#f44336'; }
+        else if (pain != null && pain >= 4) { summary = 'Monitoring'; sumColor = '#ffab00'; }
+        else { summary = 'Stable'; sumColor = '#4caf50'; }
+
+        addSvgTextBlock(c.x, c.y - 3, [
+            { text: 'OUTCOMES', size: 1.92, fill: '#ffffff', font: 'Orbitron, sans-serif', bold: true },
+            { text: icons.warning + ' Pain: ' + painStr, size: 1.8, fill: painColor },
+            { text: ae.length > 0 ? icons.alert + ' Adverse Events: ' + ae.length : icons.ok + ' No Events', size: 1.8, fill: aeColor },
+            { text: summary, size: 1.44, fill: sumColor, bold: true }
+        ]);
+    }
+
+    // --- COMORBIDITIES (gold card) ---
+    function renderComorbidities() {
+        var c = centroids.comorbidities;
+        var pa = S.preopAssessments[0];
+        if (!pa) {
+            addSvgTextBlock(c.x, c.y - 3, [
+                { text: 'COMORBIDITIES', size: 1.92, fill: GTC, font: 'Orbitron, sans-serif', bold: true },
+                { text: icons.pending + ' No Assessment', size: 1.8, fill: GTC }
+            ]);
+            return;
+        }
+        var bmi = pa.bmi ? Math.round(pa.bmi * 10) / 10 : '--';
+        var cList = []; try { cList = JSON.parse(pa.comorbidities || '[]'); } catch(e) {}
+        var lines = [
+            { text: 'COMORBIDITIES', size: 1.92, fill: GTC, font: 'Orbitron, sans-serif', bold: true },
+            { text: icons.ok + ' ASA ' + (pa.asa_class || '?'), size: 1.8, fill: GTC },
+            { text: icons.ok + ' BMI: ' + bmi, size: 1.8, fill: GTC }
+        ];
+        if (Array.isArray(cList)) { cList.slice(0,3).forEach(function(cm) { lines.push({ text: icons.ok + ' ' + cm, size: 1.5, fill: GTC }); }); }
+        addSvgTextBlock(c.x, c.y - 3, lines, 2.4);
+    }
+
+    // --- ENGAGEMENT (gold card) ---
+    function renderEngagement() {
+        var c = centroids.engagement;
+        var notes = S.nursingNotes;
+        var famOk = notes.some(function(n) { return (n.note_type||'').match(/family|communication|update/i); });
+        var dischOk = notes.some(function(n) { return (n.note_type||'').match(/discharge/i) || (n.note_text||'').match(/discharge/i); });
+
+        addSvgTextBlock(c.x, c.y - 3, [
+            { text: 'ENGAGEMENT', size: 1.8, fill: GTC, font: 'Orbitron, sans-serif', bold: true },
+            { text: (famOk ? icons.ok : icons.pending) + ' Family Update', size: 1.8, fill: GTC },
+            { text: (dischOk ? icons.ok : icons.pending) + ' Discharge Plan', size: 1.8, fill: GTC }
+        ]);
+    }
+
+    // --- PT (teal card) ---
+    function renderPT() {
+        var c = centroids.pt;
+        var lc = S.checkins[0];
+        var ptOk = lc && lc.pt_exercises;
+        var ptNote = S.nursingNotes.some(function(n) { return (n.note_type||'').match(/pt|therapy|physical/i); });
+
+        addSvgTextBlock(c.x, c.y - 3, [
+            { text: 'PT', size: 1.92, fill: '#ffffff', font: 'Orbitron, sans-serif', bold: true },
+            { text: (ptNote ? icons.ok : icons.pending) + ' PT Eval', size: 1.8, fill: '#ffffff' },
+            { text: (ptOk ? icons.ok : icons.warning) + ' Exercise Plan', size: 1.8, fill: ptOk ? '#ffffff' : '#ffab00' },
+            { text: ptOk ? 'Active' : 'Needs Attention', size: 1.56, fill: ptOk ? '#4caf50' : '#ffab00' }
+        ]);
+    }
+
+    // ═══════════════════════════════════════════
+    // DETAIL PANEL (copied verbatim from cockpit-view.html)
+    // ═══════════════════════════════════════════
+    function openDetail(html) {
+        document.getElementById('detail-content').innerHTML = html;
+        document.getElementById('detail-panel').classList.add('open');
+    }
+    function closeDetail() { document.getElementById('detail-panel').classList.remove('open'); }
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeDetail(); });
+
+    function dRow(label, val) {
+        return '<div class="detail-item"><span><strong>' + label + ':</strong> ' + val + '</span></div>';
+    }
+
+    function openPatientDetail() {
+        if (!S.patient) {
+            openDetail('<h2>Patient</h2><div class="detail-item" style="color:#ffab00">No patient loaded</div>');
+            return;
+        }
+        var p = S.patient;
+        var age = p.date_of_birth ? Math.floor((Date.now() - new Date(p.date_of_birth).getTime()) / (365.25*24*60*60*1000)) : 'N/A';
+        var html = '<h2>' + (p.first_name||'') + ' ' + (p.last_name||'') + '</h2>';
+        html += dRow('MRN', p.mrn || 'N/A');
+        html += dRow('DOB', p.date_of_birth || 'N/A');
+        html += dRow('Age', age);
+        html += dRow('Email', p.email || 'N/A');
+        html += dRow('Phone', p.phone || 'N/A');
+
+        html += '<div class="detail-section"><h3>Episode</h3>';
+        html += dRow('Surgery', p.surgery_type || 'N/A');
+        html += dRow('Surgery Date', p.surgery_date ? shortDate(new Date(p.surgery_date)) : 'Not scheduled');
+        html += dRow('Surgeon', p.surgeon_last_name ? 'Dr. ' + p.surgeon_first_name + ' ' + p.surgeon_last_name : 'N/A');
+        html += dRow('Stage', S.stageData ? S.stageData.current_stage : 'N/A');
+        html += dRow('Status', p.episode_status || 'N/A');
+        html += '</div>';
+
+        html += '<div class="detail-section"><h3>Recent Check-ins</h3>';
+        var recent = S.checkins.slice(0, 5);
+        if (!recent.length) html += '<div class="detail-item" style="color:rgba(255,255,255,0.3)">No check-ins</div>';
+        recent.forEach(function(c) {
+            var pc = c.pain_level <= 3 ? 'status-ok' : c.pain_level <= 6 ? 'status-warning' : 'status-alert';
+            html += '<div class="detail-item"><span class="' + pc + '">' + (c.pain_level != null ? c.pain_level + '/10' : '--') + '</span><span>' + (c.checkin_date || '--') + (c.concerns ? ' \u2014 ' + c.concerns : '') + '</span></div>';
+        });
+        html += '</div>';
+
+        if (S.adverseEvents.length) {
+            html += '<div class="detail-section"><h3>Adverse Events</h3>';
+            S.adverseEvents.forEach(function(ae) {
+                html += '<div class="detail-item"><span class="status-alert">' + icons.alert + '</span><span><strong>' + (ae.event_type||'') + '</strong> ' + (ae.event_date||'') + '<br>' + (ae.reason||ae.notes||'') + '</span></div>';
+            });
+            html += '</div>';
+        }
+
+        html += '<a class="detail-action-btn" href="/episode-timeline.html?patient=' + patientId + '">Open Timeline \u2192</a> ';
+        html += '<a class="detail-action-btn" href="/dashboard.html">Dashboard \u2192</a>';
+        openDetail(html);
+    }
+
+    function openStageDetail(stageId) {
+        var handlers = {
+            conservative: function() {
+                var html = '<h2>Conservative Treatment</h2>';
+                html += '<div class="detail-section"><h3>Episode Stages</h3>';
+                if (S.stageData && S.stageData.stages) {
+                    S.stageData.stages.forEach(function(st) {
+                        var ico, color, label;
+                        if (st.status === 'completed') { ico = '\u2713'; color = '#4caf50'; label = st.completed_at ? 'Completed ' + st.completed_at.substring(0,10) : 'Completed'; }
+                        else if (st.status === 'current') { ico = '\u2192'; color = '#00e5ff'; label = 'Current'; }
+                        else { ico = '\u25CB'; color = 'rgba(255,255,255,0.3)'; label = 'Upcoming'; }
+                        html += '<div class="detail-item" style="border-color:rgba(0,229,255,0.05)"><span style="color:'+color+';font-size:16px;min-width:20px;">'+ico+'</span><span><strong style="color:'+color+'">'+st.label+'</strong> \u2014 <span style="color:rgba(255,255,255,0.5)">'+label+'</span></span></div>';
+                    });
+                } else { html += '<div class="detail-item" style="color:rgba(255,255,255,0.3)">No episode data</div>'; }
+                html += '</div>';
+                return html;
+            },
+            preop: function() {
+                var sp = S.surgicalPrep[0];
+                var pa = S.preopAssessments[0];
+                var html = '<h2>Pre-Op Preparation</h2>';
+                html += dRow('Consent Signed', sp && sp.consent_signed_at ? shortDate(new Date(sp.consent_signed_at)) : 'Not signed');
+                html += dRow('Contract Signed', sp && sp.contract_signed_at ? shortDate(new Date(sp.contract_signed_at)) : 'Not signed');
+                html += dRow('Labs/Clearance', pa && (pa.status==='complete'||pa.status==='cleared') ? 'Complete' : 'Pending');
+                html += '<a class="detail-action-btn" href="/surgical-prep.html?patient=' + patientId + '">Surgical Prep \u2192</a>';
+                return html;
+            },
+            surgery: function() {
+                var p = S.patient, sp = S.surgicalPrep[0];
+                var html = '<h2>Surgery</h2>';
+                html += dRow('Procedure', p.surgery_type || 'N/A');
+                html += dRow('Date', p.surgery_date ? shortDate(new Date(p.surgery_date)) : 'Not scheduled');
+                html += dRow('OR Prepped', sp && sp.history_data ? 'Yes' : 'No');
+                html += dRow('Implants', sp && sp.prosthesis_data ? 'Ordered' : 'Pending');
+                if (p.surgeon_last_name) html += dRow('Surgeon', 'Dr. ' + p.surgeon_first_name + ' ' + p.surgeon_last_name);
+                return html;
+            },
+            previoustreatment: function() {
+                var html = '<h2>Previous Treatment</h2>';
+                if (S.stageData && S.stageData.stages) {
+                    var conserv = S.stageData.stages.filter(function(st) { return st.label && st.label.match(/conservative|intake|non.?op/i); });
+                    if (conserv.length) {
+                        html += '<div class="detail-section"><h3>Conservative Care</h3>';
+                        conserv.forEach(function(st) {
+                            var color = st.status==='completed' ? '#4caf50' : st.status==='current' ? '#00e5ff' : 'rgba(255,255,255,0.3)';
+                            html += '<div class="detail-item"><span style="color:'+color+'">'+(st.status==='completed'?'\u2713':st.status==='current'?'\u2192':'\u25CB')+'</span><span>'+st.label+' \u2014 '+st.status+'</span></div>';
+                        });
+                        html += '</div>';
+                    }
+                }
+                var ptSessions = S.checkins.filter(function(c){return c.pt_exercises;}).length;
+                html += dRow('PT Sessions', ptSessions);
+                return html;
+            },
+            outcomes: function() {
+                var html = '<h2>Outcomes</h2>';
+                var recent = S.checkins.slice(0, 10);
+                if (!recent.length) { html += '<div class="detail-item" style="color:rgba(255,255,255,0.3)">No check-in data</div>'; }
+                else {
+                    html += '<div class="detail-section"><h3>Pain Trend</h3>';
+                    recent.forEach(function(c) {
+                        var pc = c.pain_level<=3?'status-ok':c.pain_level<=6?'status-warning':'status-alert';
+                        html += '<div class="detail-item"><span class="'+pc+'" style="min-width:50px">'+(c.pain_level!=null?c.pain_level+'/10':'--')+'</span><span>'+(c.checkin_date||'--')+'</span></div>';
+                    });
+                    html += '</div>';
+                }
+                if (S.adverseEvents.length) {
+                    html += '<div class="detail-section"><h3>Adverse Events</h3>';
+                    S.adverseEvents.forEach(function(ae) {
+                        html += '<div class="detail-item"><span class="status-alert">'+icons.alert+'</span><span><strong>'+(ae.event_type||'')+'</strong> '+(ae.event_date||'')+'<br>'+(ae.reason||ae.notes||'')+(ae.resolved?' <span class="status-ok">(Resolved)</span>':'')+'</span></div>';
+                    });
+                    html += '</div>';
+                }
+                return html;
+            },
+            comorbidities: function() {
+                var pa = S.preopAssessments[0];
+                var html = '<h2>Comorbidities</h2>';
+                if (!pa) { html += '<div class="detail-item" style="color:#ffab00">No pre-op assessment recorded</div>'; }
+                else {
+                    html += dRow('ASA Class', pa.asa_class || 'N/A');
+                    html += dRow('BMI', pa.bmi ? Math.round(pa.bmi*10)/10 : 'N/A');
+                    html += dRow('Risk Tier', pa.risk_tier || 'N/A');
+                    html += dRow('Clearance', pa.status === 'complete' || pa.status === 'cleared' ? '<span style="color:#4caf50">Cleared</span>' : '<span style="color:#ffab00">Pending</span>');
+                    var cList = []; try { cList = JSON.parse(pa.comorbidities || '[]'); } catch(e) {}
+                    if (Array.isArray(cList) && cList.length) html += dRow('Comorbidities', cList.join(', '));
+                }
+                return html;
+            },
+            engagement: function() {
+                var html = '<h2>Patient Engagement</h2>';
+                var notes = S.nursingNotes;
+                if (!notes.length) { html += '<div class="detail-item" style="color:rgba(255,255,255,0.3)">No nursing notes</div>'; }
+                else {
+                    notes.slice(0,15).forEach(function(n) {
+                        html += '<div class="detail-item"><span style="color:#00e5ff">'+icons.warning+'</span><span><strong>'+(n.note_type||'Note')+'</strong><br>'+(n.note_text||'')+'<br><small style="color:rgba(255,255,255,0.3)">'+(n.created_at||'')+' \u2014 '+(n.author_first||'')+' '+(n.author_last||'')+'</small></span></div>';
+                    });
+                }
+                return html;
+            },
+            pt: function() {
+                var html = '<h2>Physical Therapy</h2>';
+                var ptDays = S.checkins.filter(function(c){return c.pt_exercises;}).length;
+                var total = S.checkins.length;
+                html += dRow('Exercise Days', ptDays + '/' + total);
+                html += dRow('Compliance', total > 0 ? Math.round(ptDays/total*100)+'%' : 'N/A');
+                html += '<div class="detail-section"><h3>Recent</h3>';
+                S.checkins.slice(0,10).forEach(function(c) {
+                    html += '<div class="detail-item"><span class="'+(c.pt_exercises?'status-ok':'status-warning')+'">'+(c.pt_exercises?icons.ok:icons.warning)+'</span><span>'+(c.checkin_date||'--')+' PT:'+(c.pt_exercises?'Yes':'No')+' Pain:'+(c.pain_level!=null?c.pain_level:'--')+'</span></div>';
+                });
+                html += '</div>';
+                return html;
+            },
+            billing: function() {
+                var sp = S.surgicalPrep[0];
+                var html = '<h2>Billing & Insurance</h2>';
+                var insData = null;
+                if (sp && sp.insurance_data) { try { insData = JSON.parse(sp.insurance_data); } catch(e) {} }
+                if (insData) {
+                    Object.keys(insData).forEach(function(k) { html += dRow(k.replace(/_/g,' '), String(insData[k])); });
+                } else {
+                    html += '<div class="detail-item" style="color:#ffab00">No insurance data</div>';
+                }
+                html += '<a class="detail-action-btn" href="/surgical-prep.html?patient=' + patientId + '">Surgical Prep \u2192</a>';
+                return html;
+            },
+            postop: function() {
+                var html = '<h2>Post-Op Recovery</h2>';
+                var recent = S.checkins.slice(0, 10);
+                if (!recent.length) { html += '<div class="detail-item" style="color:rgba(255,255,255,0.3)">No check-in data</div>'; }
+                else {
+                    html += '<div class="detail-section"><h3>Pain Trend</h3>';
+                    recent.forEach(function(c) {
+                        var pc = c.pain_level<=3?'status-ok':c.pain_level<=6?'status-warning':'status-alert';
+                        html += '<div class="detail-item"><span class="'+pc+'" style="min-width:50px">'+(c.pain_level!=null?c.pain_level+'/10':'--')+'</span><span>'+(c.checkin_date||'--')+'</span></div>';
+                    });
+                    html += '</div>';
+                }
+                if (S.adverseEvents.length) {
+                    html += '<div class="detail-section"><h3>Adverse Events</h3>';
+                    S.adverseEvents.forEach(function(ae) {
+                        html += '<div class="detail-item"><span class="status-alert">'+icons.alert+'</span><span><strong>'+(ae.event_type||'')+'</strong> '+(ae.event_date||'')+'<br>'+(ae.reason||ae.notes||'')+(ae.resolved?' <span class="status-ok">(Resolved)</span>':'')+'</span></div>';
+                    });
+                    html += '</div>';
+                }
+                html += '<a class="detail-action-btn" href="/episode-timeline.html?patient='+patientId+'">Timeline \u2192</a>';
+                return html;
+            },
+            proms: function() {
+                var html = '<h2>PROMs Schedule</h2>';
+                if (!S.promSchedule.length) { html += '<div class="detail-item" style="color:rgba(255,255,255,0.3)">No PROMs scheduled</div>'; }
+                else {
+                    S.promSchedule.forEach(function(p) {
+                        var sc = p.status==='completed'?'status-ok':p.status==='overdue'?'status-alert':p.status==='skipped'?'status-warning':'status-pending';
+                        html += '<div class="detail-item"><span class="'+sc+'">'+icons[p.status==='completed'?'ok':p.status==='overdue'?'alert':p.status==='skipped'?'warning':'pending']+'</span><span><strong>'+(p.assessment_type||'')+'</strong> '+(p.window_name||'')+'<br>Due: '+(p.due_date||'N/A')+(p.completed_date?' | Done: '+p.completed_date:'')+'</span></div>';
+                    });
+                }
+                if (S.proAssessments.length) {
+                    html += '<div class="detail-section"><h3>Scores</h3>';
+                    S.proAssessments.forEach(function(a) {
+                        html += '<div class="detail-item"><span class="status-ok">'+icons.ok+'</span><span><strong>'+(a.assessment_type||'')+'</strong>: '+(a.score!=null?a.score:'--')+' \u2014 '+(a.assessment_date||'')+'</span></div>';
+                    });
+                    html += '</div>';
+                }
+                return html;
+            },
+            nonopcare: function() {
+                var html = '<h2>Non-Op Care</h2>';
+                html += dRow('Conservative Plan', 'Active');
+                html += '<a class="detail-action-btn" href="/nonop-plan.html?patient='+patientId+'">Open Non-Op Plan \u2192</a>';
+                return html;
+            },
+            preoptests: function() {
+                var html = '<h2>Pre-Op Tests</h2>';
+                var pa = S.preopAssessments[0];
+                html += dRow('Labs', pa ? 'On file' : 'Pending');
+                html += dRow('Clearance', pa && (pa.status==='complete'||pa.status==='cleared') ? 'Cleared' : 'Pending');
+                html += '<a class="detail-action-btn" href="/preop.html?patient='+patientId+'">Open PreOp \u2192</a>';
+                return html;
+            },
+            remotemonitoring: function() {
+                var html = '<h2>Remote Monitoring</h2>';
+                html += dRow('Check-ins', S.checkins.length + ' total');
+                var last7 = S.checkins.filter(function(c) { return (Date.now()-new Date(c.checkin_date||c.created_at).getTime()) < 7*24*60*60*1000; });
+                html += dRow('Last 7 Days', last7.length);
+                html += '<a class="detail-action-btn" href="/analytics.html?patient='+patientId+'">Analytics \u2192</a>';
+                return html;
+            }
+        };
+
+        var handler = handlers[stageId];
+        if (handler) {
+            var html = handler();
+            var navUrl = pageMap[stageId];
+            if (navUrl) {
+                html = '<a class="detail-action-btn" href="' + navUrl + '" style="margin-bottom:12px;display:inline-block;">OPEN FULL PAGE \u2192</a>' + html;
+            }
+            openDetail(html);
+        } else if (stageId === 'dashboard') {
+            window.location.href = '/dashboard.html';
+        } else {
+            openDetail('<h2>' + stageId + '</h2><div class="detail-item" style="color:rgba(255,255,255,0.3)">Coming soon...</div>');
+        }
+    }
+
+    // ═══════════════════════════════════════════
+    // UTILITIES (copied from cockpit-view.html)
+    // ═══════════════════════════════════════════
+    function shortDate(d) {
+        var m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        return m[d.getMonth()] + ' ' + d.getDate();
+    }
+
+    function updateTimestamp() {
+        document.getElementById('last-updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+    }
+
+    function startAutoRefresh() {
+        setInterval(async function() {
+            try {
+                var results = await Promise.all([
+                    safeFetch('/api/checkins?patient_id=' + patientId),
+                    safeFetch('/api/adverse-events?patient_id=' + patientId),
+                    safeFetch('/api/nursing-notes?patient_id=' + patientId)
+                ]);
+                if (Array.isArray(results[0])) S.checkins = results[0];
+                if (Array.isArray(results[1])) S.adverseEvents = results[1];
+                if (Array.isArray(results[2])) S.nursingNotes = results[2];
+                renderAllOverlays();
+                updateTimestamp();
+            } catch(e) {}
+        }, 60000);
+    }
+    </script>
+    <script src="/js/cockpit-themes.js"></script>
+    <script src="/js/cockpit-switcher.js"></script>
+</body>
+</html>

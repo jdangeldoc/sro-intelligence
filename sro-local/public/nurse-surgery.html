@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surgery Support | SRO Intelligence</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        /* Mode Toggle */
+        .mode-toggle {
+            display: flex;
+            justify-content: center;
+            gap: 0;
+            margin-bottom: 20px;
+            background: var(--sro-gray-100, #f3f4f6);
+            border-radius: 12px;
+            padding: 4px;
+            width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .mode-btn {
+            padding: 10px 28px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        .mode-btn.active {
+            background: #0d9488;
+            color: white;
+            box-shadow: 0 2px 8px rgba(13, 148, 136, 0.3);
+        }
+        .mode-btn:not(.active) {
+            background: transparent;
+            color: var(--sro-gray-500, #6b7280);
+        }
+        .mode-btn:not(.active):hover {
+            background: var(--sro-gray-200, #e5e7eb);
+            color: var(--sro-gray-700, #374151);
+        }
+
+        /* Page Layout */
+        .surgery-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        .surgery-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .surgery-header h1 {
+            font-size: 1.8rem;
+            color: #0d9488;
+            margin: 0 0 8px 0;
+        }
+        .surgery-header .subtitle {
+            font-size: 1rem;
+            color: var(--sro-gray-600);
+        }
+
+        /* Patient Selector */
+        .patient-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 16px 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .patient-bar label {
+            font-weight: 600;
+            color: var(--sro-gray-700);
+        }
+        .patient-bar select {
+            padding: 10px 16px;
+            border: 2px solid var(--sro-gray-200);
+            border-radius: 8px;
+            font-size: 1rem;
+            min-width: 300px;
+        }
+        .patient-bar select:focus {
+            border-color: #0d9488;
+            outline: none;
+        }
+        .patient-info {
+            flex: 1;
+            display: flex;
+            gap: 20px;
+            font-size: 0.9rem;
+        }
+        .patient-info-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--sro-gray-600);
+        }
+        .patient-info-item strong {
+            color: var(--sro-gray-800);
+        }
+
+        /* Tabs */
+        .surgery-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid var(--sro-gray-200);
+            margin-bottom: 24px;
+        }
+        .surgery-tab {
+            padding: 12px 24px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: none;
+            background: none;
+            cursor: pointer;
+            color: var(--sro-gray-500);
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+        }
+        .surgery-tab.active {
+            color: #0d9488;
+            border-bottom-color: #0d9488;
+        }
+        .surgery-tab:hover:not(.active) {
+            color: var(--sro-gray-700);
+            background: var(--sro-gray-50);
+        }
+        .surgery-tab .badge {
+            background: #dc2626;
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 6px;
+        }
+
+        /* Panels */
+        .surgery-panel {
+            display: none;
+        }
+        .surgery-panel.active {
+            display: block;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .card h2 {
+            font-size: 1.2rem;
+            margin: 0 0 16px 0;
+            color: var(--sro-gray-800);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Checklist Grid */
+        .checklist-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 16px;
+        }
+        .checklist-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 16px;
+            background: var(--sro-gray-50);
+            border-radius: 8px;
+            border: 1px solid var(--sro-gray-200);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .checklist-item:hover {
+            border-color: #0d9488;
+        }
+        .checklist-item input[type="checkbox"] {
+            width: 22px;
+            height: 22px;
+            accent-color: #16a34a;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .checklist-content {
+            flex: 1;
+        }
+        .checklist-title {
+            font-weight: 600;
+            color: var(--sro-gray-800);
+            margin-bottom: 4px;
+        }
+        .checklist-desc {
+            font-size: 0.85rem;
+            color: var(--sro-gray-500);
+        }
+        .checklist-item.completed {
+            background: #f0fdf4;
+            border-color: #86efac;
+        }
+        .checklist-item.completed .checklist-title {
+            color: #166534;
+        }
+        .checklist-item.issue {
+            background: #fef2f2;
+            border-color: #fca5a5;
+        }
+        .checklist-item.issue .checklist-title {
+            color: #991b1b;
+        }
+
+        /* Social Needs Form */
+        .needs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .needs-card {
+            background: var(--sro-gray-50);
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid var(--sro-gray-200);
+        }
+        .needs-card h3 {
+            font-size: 1rem;
+            margin: 0 0 12px 0;
+            color: var(--sro-gray-700);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .needs-card .status {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: auto;
+        }
+        .needs-card .status.confirmed { background: #dcfce7; color: #166534; }
+        .needs-card .status.pending { background: #fef3c7; color: #92400e; }
+        .needs-card .status.issue { background: #fee2e2; color: #991b1b; }
+        
+        .needs-field {
+            margin-bottom: 12px;
+        }
+        .needs-field label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--sro-gray-600);
+            margin-bottom: 4px;
+        }
+        .needs-field input, .needs-field select, .needs-field textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--sro-gray-300);
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        .needs-field input:focus, .needs-field select:focus, .needs-field textarea:focus {
+            border-color: #0d9488;
+            outline: none;
+        }
+
+        /* Today's Schedule */
+        .schedule-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .schedule-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--sro-gray-100);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .schedule-item:hover {
+            background: var(--sro-gray-50);
+        }
+        .schedule-item:last-child {
+            border-bottom: none;
+        }
+        .schedule-time {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #0d9488;
+            width: 70px;
+        }
+        .schedule-patient {
+            flex: 1;
+        }
+        .schedule-patient-name {
+            font-weight: 600;
+            color: var(--sro-gray-800);
+        }
+        .schedule-patient-procedure {
+            font-size: 0.85rem;
+            color: var(--sro-gray-500);
+        }
+        .schedule-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .schedule-status.preop { background: #f3e8ff; color: #6b21a8; }
+        .schedule-status.inor { background: #fef3c7; color: #92400e; }
+        .schedule-status.pacu { background: #dbeafe; color: #1e40af; }
+        .schedule-status.discharged { background: #dcfce7; color: #166534; }
+
+        /* Action Bar */
+        .action-bar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--sro-gray-200);
+        }
+        .btn-action {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #0d9488;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0f766e;
+        }
+        .btn-secondary {
+            background: var(--sro-gray-100);
+            color: var(--sro-gray-700);
+        }
+        .btn-secondary:hover {
+            background: var(--sro-gray-200);
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            height: 8px;
+            background: var(--sro-gray-200);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #16a34a;
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+        .progress-text {
+            font-size: 0.85rem;
+            color: var(--sro-gray-600);
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="logo-icon">SRO</span>
+            <span class="nav-title">SRO Intelligence</span>
+        </div>
+        <div class="nav-links">
+            <a href="/dashboard.html" class="nav-link">Dashboard</a>
+            <a href="/preop.html" class="nav-link">Pre-Op</a>
+            <a href="/surgical-prep.html" class="nav-link">Surg Prep</a>
+            <a href="/nonop-plan.html" class="nav-link">Non-Op Plan</a>
+            <a href="/analytics.html" class="nav-link">Analytics</a>
+        </div>
+        <div class="nav-user">
+            <span id="userName">Sarah Johnson</span>
+            <span style="background:#16a34a;color:white;padding:4px 10px;border-radius:4px;font-size:0.8rem;font-weight:600;">Nurse</span>
+            <button class="btn btn-sm" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <main class="main-content" style="padding-top: 16px;">
+        <!-- Mode Toggle -->
+        <div class="mode-toggle">
+            <a href="/patient-comm.html" class="mode-btn">💬 Patient Comm</a>
+            <a href="/dashboard.html" class="mode-btn">📋 Care Coordination</a>
+            <button class="mode-btn active">🏥 Surgery Support</button>
+        </div>
+
+        <div class="surgery-container">
+            <div class="surgery-header">
+                <h1>🏥 Surgery Day Support</h1>
+                <div class="subtitle">Pre-op checklist, social needs, and discharge planning</div>
+            </div>
+
+            <!-- Patient Selector -->
+            <div class="patient-bar">
+                <label>Patient:</label>
+                <select id="patientSelect" onchange="selectPatient()">
+                    <option value="">Select today's surgery patient...</option>
+                    <option value="p1">Davis, Linda — THA (Left) — 7:30 AM</option>
+                    <option value="p2">Thompson, Robert — TKA (Right) — 9:15 AM</option>
+                    <option value="p3">Martinez, Jose — THA (Right) — 11:00 AM</option>
+                </select>
+                <div class="patient-info" id="patientInfo" style="display:none;">
+                    <div class="patient-info-item">📍 <strong>Status:</strong> <span id="infoStatus">-</span></div>
+                    <div class="patient-info-item">🏥 <strong>Room:</strong> <span id="infoRoom">-</span></div>
+                    <div class="patient-info-item">👨‍⚕️ <strong>Surgeon:</strong> <span id="infoSurgeon">-</span></div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="surgery-tabs">
+                <button class="surgery-tab active" onclick="switchTab('schedule')">📅 Today's Schedule</button>
+                <button class="surgery-tab" onclick="switchTab('preop')">✅ Pre-Op Checklist <span class="badge">2</span></button>
+                <button class="surgery-tab" onclick="switchTab('social')">🏠 Social Needs</button>
+                <button class="surgery-tab" onclick="switchTab('postop')">🚑 Post-Op / Discharge</button>
+            </div>
+
+            <!-- Today's Schedule Panel -->
+            <div id="panelSchedule" class="surgery-panel active">
+                <div class="card">
+                    <h2>📅 Today's Surgical Schedule</h2>
+                    <ul class="schedule-list">
+                        <li class="schedule-item" onclick="document.getElementById('patientSelect').value='p1';selectPatient();">
+                            <div class="schedule-time">7:30 AM</div>
+                            <div class="schedule-patient">
+                                <div class="schedule-patient-name">Davis, Linda</div>
+                                <div class="schedule-patient-procedure">THA (Left) — Dr. Jones</div>
+                            </div>
+                            <span class="schedule-status pacu">In PACU</span>
+                        </li>
+                        <li class="schedule-item" onclick="document.getElementById('patientSelect').value='p2';selectPatient();">
+                            <div class="schedule-time">9:15 AM</div>
+                            <div class="schedule-patient">
+                                <div class="schedule-patient-name">Thompson, Robert</div>
+                                <div class="schedule-patient-procedure">TKA (Right) — Dr. Jones</div>
+                            </div>
+                            <span class="schedule-status inor">In OR</span>
+                        </li>
+                        <li class="schedule-item" onclick="document.getElementById('patientSelect').value='p3';selectPatient();">
+                            <div class="schedule-time">11:00 AM</div>
+                            <div class="schedule-patient">
+                                <div class="schedule-patient-name">Martinez, Jose</div>
+                                <div class="schedule-patient-procedure">THA (Right) — Dr. Jones</div>
+                            </div>
+                            <span class="schedule-status preop">Pre-Op</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Pre-Op Checklist Panel -->
+            <div id="panelPreop" class="surgery-panel">
+                <div class="card">
+                    <h2>✅ Pre-Op Checklist</h2>
+                    <div style="margin-bottom:16px;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="preopProgress" style="width:60%;"></div>
+                        </div>
+                        <div class="progress-text">6 of 10 items complete</div>
+                    </div>
+
+                    <div class="checklist-grid">
+                        <div class="checklist-item completed" onclick="toggleCheck(this)">
+                            <input type="checkbox" checked>
+                            <div class="checklist-content">
+                                <div class="checklist-title">Identity Verified</div>
+                                <div class="checklist-desc">Name, DOB, MRN confirmed</div>
+                            </div>
+                        </div>
+                        <div class="checklist-item completed" onclick="toggleCheck(this)">
+                            <input type="checkbox" checked>
+                            <div class="checklist-content">
+                                <div class="checklist-title">Consent Signed</div>
+                                <div class="checklist-desc">Surgical consent on file</div>
+                            </div>
+                        </div>
+                        <div class="checklist-item completed" onclick="toggleCheck(this)">
+                            <input type="checkbox" checked>
+                            <div class="checklist-content">
+                                <div class="checklist-title">H&P Current</div>
+                                <div class="checklist-desc">Within 30 days</div>
+                            </div>
+                        </div>
+                        <div class="checklist-item completed" onclick="toggleCheck(this)">
+                            <input type="checkbox" checked>
+                            <div class="checklist-content">
+                                <div class="checklist-title">Labs Reviewed</div>
+                                <div class="checklist-desc">CBC, BMP, PT/INR within range</div>
+                            </div>
+                        </div>
+                        <div class="checklist-item completed" onclick="toggleCheck(this)">
+                            <input type="checkbox" checked>
+                            <div class="checklist-content">
+                                <div class="checklist-title">NPO Status Confirmed</div>
+                                <div class="checklist-desc">Nothing by mouth since midnight</div>
+                            </div>
+                        </div>
+                        <div class="checklist-item completed" onclick="toggleCheck(this)">
+                            <input type="checkbox" checked>
+                            <div class="checklist-content">
+                                <div class="checklist-title">Allergies Verified</div>
+                                <div class="checklist-desc">NKDA confirmed with patient</div>
+                            </div>
+                        </div>
+                        <div class="checklist-item" onclick="toggleCheck(this)">
+                            <input type="checkbox">
+                            <div class="checklist-content">
+                                <div class="checklist-title">Site Marked</div>
+                                <div class="checklist-desc">Surgical site marked by surgeon</div>
+                            </div>
+                        </div>
+                        <div class="checklist-item issue" onclick="toggleCheck(this)">
+                            <input type="checkbox">
+                            <div class="checklist-content">
+                                <div class="checklist-title">⚠️ Blood Products</div>
+                                <div class="checklist-desc">Type & screen pending — call blood bank</div>
+                            </div>
+                        </div>
+                        <div class="checklist-item" onclick="toggleCheck(this)">
+                            <input type="checkbox">
+                            <div class="checklist-content">
+                                <div class="checklist-title">IV Access</div>
+                                <div class="checklist-desc">Two large bore IVs placed</div>
+                            </div>
+                        </div>
+                        <div class="checklist-item" onclick="toggleCheck(this)">
+                            <input type="checkbox">
+                            <div class="checklist-content">
+                                <div class="checklist-title">Pre-Op Medications</div>
+                                <div class="checklist-desc">Antibiotics given within 1 hour</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="action-bar">
+                        <button class="btn-action btn-secondary">🖨️ Print Checklist</button>
+                        <button class="btn-action btn-primary">✅ Mark All Complete</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Social Needs Panel -->
+            <div id="panelSocial" class="surgery-panel">
+                <div class="card">
+                    <h2>🏠 Social Needs Assessment</h2>
+                    <div class="needs-grid">
+                        <div class="needs-card">
+                            <h3>🚗 Transportation <span class="status confirmed">Confirmed</span></h3>
+                            <div class="needs-field">
+                                <label>Ride Home</label>
+                                <select>
+                                    <option value="family" selected>Family member</option>
+                                    <option value="friend">Friend</option>
+                                    <option value="taxi">Taxi/Rideshare</option>
+                                    <option value="medical">Medical transport</option>
+                                    <option value="none">Not arranged</option>
+                                </select>
+                            </div>
+                            <div class="needs-field">
+                                <label>Contact Person</label>
+                                <input type="text" value="John Davis (Husband)" placeholder="Name">
+                            </div>
+                            <div class="needs-field">
+                                <label>Phone</label>
+                                <input type="text" value="(501) 555-0124" placeholder="Phone number">
+                            </div>
+                        </div>
+
+                        <div class="needs-card">
+                            <h3>🏠 Home Support <span class="status confirmed">Confirmed</span></h3>
+                            <div class="needs-field">
+                                <label>Lives With</label>
+                                <select>
+                                    <option value="spouse" selected>Spouse/Partner</option>
+                                    <option value="family">Family members</option>
+                                    <option value="alone">Lives alone</option>
+                                    <option value="facility">Care facility</option>
+                                </select>
+                            </div>
+                            <div class="needs-field">
+                                <label>Caregiver Available</label>
+                                <select>
+                                    <option value="yes" selected>Yes, full-time for 2+ weeks</option>
+                                    <option value="partial">Yes, part-time</option>
+                                    <option value="no">No caregiver available</option>
+                                </select>
+                            </div>
+                            <div class="needs-field">
+                                <label>Notes</label>
+                                <textarea rows="2" placeholder="Any concerns...">Husband will be primary caregiver. Daughter available on weekends.</textarea>
+                            </div>
+                        </div>
+
+                        <div class="needs-card">
+                            <h3>🛏️ Home Environment <span class="status pending">Needs Review</span></h3>
+                            <div class="needs-field">
+                                <label>Home Type</label>
+                                <select>
+                                    <option value="house">Single-story house</option>
+                                    <option value="house2" selected>Multi-story house</option>
+                                    <option value="apt">Apartment</option>
+                                    <option value="condo">Condo</option>
+                                </select>
+                            </div>
+                            <div class="needs-field">
+                                <label>Stairs to Enter</label>
+                                <select>
+                                    <option value="0">No stairs</option>
+                                    <option value="few" selected>1-3 steps</option>
+                                    <option value="many">4+ stairs</option>
+                                </select>
+                            </div>
+                            <div class="needs-field">
+                                <label>Bedroom Location</label>
+                                <select>
+                                    <option value="main">Main floor</option>
+                                    <option value="upper" selected>Upper floor</option>
+                                    <option value="basement">Basement</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="needs-card">
+                            <h3>🦽 DME / Equipment <span class="status confirmed">Ordered</span></h3>
+                            <div class="needs-field">
+                                <label>Equipment Needed</label>
+                                <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
+                                    <label style="font-weight:normal;display:flex;align-items:center;gap:8px;">
+                                        <input type="checkbox" checked> Walker
+                                    </label>
+                                    <label style="font-weight:normal;display:flex;align-items:center;gap:8px;">
+                                        <input type="checkbox" checked> Raised toilet seat
+                                    </label>
+                                    <label style="font-weight:normal;display:flex;align-items:center;gap:8px;">
+                                        <input type="checkbox" checked> Shower chair
+                                    </label>
+                                    <label style="font-weight:normal;display:flex;align-items:center;gap:8px;">
+                                        <input type="checkbox"> Hospital bed
+                                    </label>
+                                    <label style="font-weight:normal;display:flex;align-items:center;gap:8px;">
+                                        <input type="checkbox" checked> Reacher/grabber
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="needs-field">
+                                <label>Delivery Status</label>
+                                <input type="text" value="Delivered 3/12/2026" readonly style="background:#f0fdf4;border-color:#86efac;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="action-bar">
+                        <button class="btn-action btn-secondary">🖨️ Print Assessment</button>
+                        <button class="btn-action btn-primary">💾 Save Changes</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Post-Op / Discharge Panel -->
+            <div id="panelPostop" class="surgery-panel">
+                <div class="card">
+                    <h2>🚑 Post-Op Orders & Discharge Planning</h2>
+                    
+                    <div style="margin-bottom:24px;">
+                        <h3 style="font-size:1rem;color:var(--sro-gray-700);margin-bottom:12px;">📋 Discharge Checklist</h3>
+                        <div class="checklist-grid">
+                            <div class="checklist-item" onclick="toggleCheck(this)">
+                                <input type="checkbox">
+                                <div class="checklist-content">
+                                    <div class="checklist-title">Pain Controlled</div>
+                                    <div class="checklist-desc">Pain level ≤4 on oral meds</div>
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheck(this)">
+                                <input type="checkbox">
+                                <div class="checklist-content">
+                                    <div class="checklist-title">PT Cleared</div>
+                                    <div class="checklist-desc">Physical therapy goals met</div>
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheck(this)">
+                                <input type="checkbox">
+                                <div class="checklist-content">
+                                    <div class="checklist-title">Voiding Independently</div>
+                                    <div class="checklist-desc">Urinary function restored</div>
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheck(this)">
+                                <input type="checkbox">
+                                <div class="checklist-content">
+                                    <div class="checklist-title">Tolerating Diet</div>
+                                    <div class="checklist-desc">No nausea, eating regular food</div>
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheck(this)">
+                                <input type="checkbox">
+                                <div class="checklist-content">
+                                    <div class="checklist-title">Rx Sent to Pharmacy</div>
+                                    <div class="checklist-desc">Pain meds, DVT prophylaxis, etc.</div>
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheck(this)">
+                                <input type="checkbox">
+                                <div class="checklist-content">
+                                    <div class="checklist-title">Follow-up Scheduled</div>
+                                    <div class="checklist-desc">2-week post-op appointment</div>
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheck(this)">
+                                <input type="checkbox">
+                                <div class="checklist-content">
+                                    <div class="checklist-title">Instructions Reviewed</div>
+                                    <div class="checklist-desc">Written discharge instructions given</div>
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheck(this)">
+                                <input type="checkbox">
+                                <div class="checklist-content">
+                                    <div class="checklist-title">Ride Confirmed</div>
+                                    <div class="checklist-desc">Transportation ready</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom:24px;">
+                        <h3 style="font-size:1rem;color:var(--sro-gray-700);margin-bottom:12px;">📅 Follow-Up Appointments</h3>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(250px, 1fr));gap:12px;">
+                            <div style="background:var(--sro-gray-50);padding:14px;border-radius:8px;border:1px solid var(--sro-gray-200);">
+                                <div style="font-weight:600;color:var(--sro-gray-800);">🩺 Post-Op Visit</div>
+                                <div style="font-size:0.9rem;color:var(--sro-gray-600);">2 weeks — March 28, 2026 @ 10:00 AM</div>
+                                <button style="margin-top:8px;padding:6px 12px;border-radius:4px;border:1px solid var(--sro-gray-300);background:white;font-size:0.8rem;cursor:pointer;">📅 Reschedule</button>
+                            </div>
+                            <div style="background:var(--sro-gray-50);padding:14px;border-radius:8px;border:1px solid var(--sro-gray-200);">
+                                <div style="font-weight:600;color:var(--sro-gray-800);">🏃 Physical Therapy</div>
+                                <div style="font-size:0.9rem;color:var(--sro-gray-600);">Starts March 18 — WRH Outpatient PT</div>
+                                <button style="margin-top:8px;padding:6px 12px;border-radius:4px;border:1px solid var(--sro-gray-300);background:white;font-size:0.8rem;cursor:pointer;">📞 Call PT</button>
+                            </div>
+                            <div style="background:var(--sro-gray-50);padding:14px;border-radius:8px;border:1px solid var(--sro-gray-200);">
+                                <div style="font-weight:600;color:var(--sro-gray-800);">🩸 Labs</div>
+                                <div style="font-size:0.9rem;color:var(--sro-gray-600);">INR check in 5 days if on Coumadin</div>
+                                <button style="margin-top:8px;padding:6px 12px;border-radius:4px;border:1px solid var(--sro-gray-300);background:white;font-size:0.8rem;cursor:pointer;">📋 View Orders</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="action-bar">
+                        <button class="btn-action btn-secondary">🖨️ Print Discharge Summary</button>
+                        <button class="btn-action btn-primary">✅ Complete Discharge</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function switchTab(tab) {
+            document.querySelectorAll('.surgery-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.surgery-panel').forEach(p => p.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById('panel' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+        }
+
+        function selectPatient() {
+            const select = document.getElementById('patientSelect');
+            const info = document.getElementById('patientInfo');
+            
+            if (select.value) {
+                info.style.display = 'flex';
+                if (select.value === 'p1') {
+                    document.getElementById('infoStatus').textContent = 'In PACU';
+                    document.getElementById('infoRoom').textContent = 'PACU Bay 3';
+                    document.getElementById('infoSurgeon').textContent = 'Dr. Jones';
+                } else if (select.value === 'p2') {
+                    document.getElementById('infoStatus').textContent = 'In OR';
+                    document.getElementById('infoRoom').textContent = 'OR 2';
+                    document.getElementById('infoSurgeon').textContent = 'Dr. Jones';
+                } else if (select.value === 'p3') {
+                    document.getElementById('infoStatus').textContent = 'Pre-Op';
+                    document.getElementById('infoRoom').textContent = 'Pre-Op Bay 1';
+                    document.getElementById('infoSurgeon').textContent = 'Dr. Jones';
+                }
+            } else {
+                info.style.display = 'none';
+            }
+        }
+
+        function toggleCheck(el) {
+            const checkbox = el.querySelector('input[type="checkbox"]');
+            checkbox.checked = !checkbox.checked;
+            
+            if (el.classList.contains('issue')) {
+                el.classList.remove('issue');
+            }
+            el.classList.toggle('completed', checkbox.checked);
+            
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const items = document.querySelectorAll('#panelPreop .checklist-item');
+            const completed = document.querySelectorAll('#panelPreop .checklist-item.completed').length;
+            const pct = Math.round((completed / items.length) * 100);
+            document.getElementById('preopProgress').style.width = pct + '%';
+            document.querySelector('#panelPreop .progress-text').textContent = completed + ' of ' + items.length + ' items complete';
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = '/index.html';
+        }
+    </script>
+</body>
+</html>

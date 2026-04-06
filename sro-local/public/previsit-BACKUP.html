@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pre-Visit Health Questionnaire | SRO Intelligence</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; color: #1e293b; overflow: hidden; height: 100dvh; }
+
+/* Loading / Error screens */
+.screen { display: none; position: fixed; inset: 0; z-index: 100; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+.screen.active { display: flex; }
+
+#loadingScreen { background: #f8fafc; }
+#loadingScreen .spinner { width: 48px; height: 48px; border: 4px solid #e2e8f0; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#loadingScreen p { margin-top: 16px; font-size: 1.1rem; color: #64748b; }
+
+#errorScreen { background: #fef2f2; }
+#errorScreen .error-icon { font-size: 3rem; margin-bottom: 16px; }
+#errorScreen h2 { color: #dc2626; margin-bottom: 8px; }
+#errorScreen p { color: #7f1d1d; max-width: 400px; text-align: center; }
+
+/* Welcome screen */
+#welcomeScreen { background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; text-align: center; }
+#welcomeScreen .logo { font-size: 2.5rem; font-weight: 800; margin-bottom: 8px; letter-spacing: -1px; }
+#welcomeScreen .logo span { color: #93c5fd; }
+#welcomeScreen h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 12px; }
+#welcomeScreen p { font-size: 1rem; color: #bfdbfe; max-width: 480px; line-height: 1.6; margin-bottom: 8px; }
+#welcomeScreen .time-est { font-size: 0.85rem; color: #93c5fd; margin-top: 12px; margin-bottom: 24px; }
+.start-btn { background: white; color: #1e40af; font-size: 1.2rem; font-weight: 700; padding: 16px 48px; border: none; border-radius: 12px; cursor: pointer; transition: transform 0.15s; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+.start-btn:active { transform: scale(0.96); }
+#welcomeName { font-weight: 700; }
+.welcome-note { font-size: 0.8rem !important; color: #93c5fd !important; margin-top: 16px !important; max-width: 400px; }
+
+/* Thank you screen */
+#thankYouScreen { background: linear-gradient(135deg, #065f46 0%, #10b981 100%); color: white; text-align: center; }
+#thankYouScreen .check-icon { font-size: 4rem; margin-bottom: 16px; }
+#thankYouScreen h1 { font-size: 1.8rem; margin-bottom: 12px; }
+#thankYouScreen p { font-size: 1rem; color: #a7f3d0; max-width: 480px; line-height: 1.6; }
+#thankYouScreen .done-note { margin-top: 24px; font-size: 0.85rem; color: #6ee7b7; }
+
+/* Already submitted screen */
+#alreadyScreen { background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%); color: white; text-align: center; }
+#alreadyScreen h1 { font-size: 1.5rem; margin-bottom: 12px; }
+#alreadyScreen p { color: #ddd6fe; max-width: 440px; line-height: 1.6; }
+.retake-btn { background: rgba(255,255,255,0.2); color: white; font-size: 1rem; font-weight: 600; padding: 14px 36px; border: 2px solid rgba(255,255,255,0.4); border-radius: 12px; cursor: pointer; margin-top: 24px; }
+.retake-btn:active { background: rgba(255,255,255,0.3); }
+
+/* Question flow */
+#questionScreen { background: #f8fafc; flex-direction: column; padding: 0; }
+.q-header { width: 100%; padding: 12px 20px; background: white; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; }
+.q-progress { height: 5px; background: #e2e8f0; border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
+.q-progress-fill { height: 100%; background: linear-gradient(90deg, #2563eb, #3b82f6); transition: width 0.3s; border-radius: 3px; }
+.q-meta { display: flex; justify-content: space-between; align-items: center; }
+.q-section { font-size: 0.8rem; font-weight: 600; color: #2563eb; }
+.q-count { font-size: 0.75rem; color: #94a3b8; }
+
+.q-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; overflow-y: auto; width: 100%; max-width: 600px; margin: 0 auto; }
+.q-text { font-size: 1.35rem; font-weight: 700; text-align: center; margin-bottom: 28px; line-height: 1.4; color: #1e293b; }
+
+/* Choice buttons */
+.q-choices { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 440px; }
+.q-choice { background: white; border: 2px solid #e2e8f0; border-radius: 12px; padding: 16px 20px; font-size: 1.05rem; font-weight: 500; cursor: pointer; transition: all 0.15s; text-align: center; color: #334155; }
+.q-choice:hover { border-color: #93c5fd; background: #eff6ff; }
+.q-choice:active { transform: scale(0.97); }
+.q-choice.selected { border-color: #2563eb; background: #2563eb; color: white; }
+
+/* Slider */
+.q-slider-wrap { width: 100%; max-width: 440px; text-align: center; }
+.q-slider-val { font-size: 2.5rem; font-weight: 800; color: #2563eb; margin-bottom: 12px; }
+.q-slider-unit { font-size: 0.9rem; color: #64748b; margin-bottom: 8px; }
+.q-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 10px; background: #e2e8f0; border-radius: 5px; outline: none; }
+.q-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 36px; height: 36px; background: #2563eb; border-radius: 50%; cursor: pointer; box-shadow: 0 2px 8px rgba(37,99,235,0.4); }
+.q-slider-labels { display: flex; justify-content: space-between; font-size: 0.72rem; color: #94a3b8; margin-top: 6px; }
+.q-slider-next { background: #2563eb; color: white; border: none; border-radius: 10px; padding: 14px 40px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 20px; }
+.q-slider-next:active { background: #1d4ed8; }
+
+/* Text input */
+.q-textarea { width: 100%; max-width: 440px; min-height: 120px; border: 2px solid #e2e8f0; border-radius: 12px; padding: 14px; font-size: 1rem; font-family: inherit; resize: vertical; outline: none; }
+.q-textarea:focus { border-color: #2563eb; }
+.q-text-next { background: #2563eb; color: white; border: none; border-radius: 10px; padding: 14px 40px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 16px; }
+.q-text-skip { background: transparent; color: #64748b; border: none; font-size: 0.85rem; cursor: pointer; margin-top: 8px; text-decoration: underline; }
+
+/* Footer nav */
+.q-footer { width: 100%; padding: 12px 20px; background: white; border-top: 1px solid #e2e8f0; flex-shrink: 0; display: flex; justify-content: space-between; }
+.q-back { background: transparent; border: 1px solid #d1d5db; border-radius: 8px; padding: 10px 20px; font-size: 0.9rem; color: #64748b; cursor: pointer; }
+.q-back:disabled { opacity: 0.3; cursor: default; }
+
+/* Submitting overlay */
+#submittingOverlay { background: rgba(0,0,0,0.6); z-index: 200; }
+#submittingOverlay .spinner { width: 48px; height: 48px; border: 4px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
+#submittingOverlay p { color: white; font-size: 1.1rem; margin-top: 16px; }
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loadingScreen" class="screen active">
+    <div class="spinner"></div>
+    <p>Loading your questionnaire...</p>
+</div>
+
+<!-- Error -->
+<div id="errorScreen" class="screen">
+    <div class="error-icon">⚠️</div>
+    <h2>Link Error</h2>
+    <p id="errorMsg">This link may be expired or invalid. Please contact your doctor's office for a new link.</p>
+</div>
+
+<!-- Welcome -->
+<div id="welcomeScreen" class="screen">
+    <div class="logo">SRO<span>Intelligence</span></div>
+    <h1>Pre-Visit Health Questionnaire</h1>
+    <p>Welcome<span id="welcomeName"></span>! Your doctor's office has requested some health information before your upcoming visit.</p>
+    <p>Your answers help your care team prepare for your appointment and provide the best possible care.</p>
+    <div class="time-est">⏱️ Takes about 10–15 minutes</div>
+    <button class="start-btn" onclick="startIntake()">Begin Questionnaire →</button>
+    <p class="welcome-note">🔒 Your responses are sent securely. No personal information is stored online.</p>
+</div>
+
+<!-- Already submitted -->
+<div id="alreadyScreen" class="screen">
+    <div style="font-size:3rem;margin-bottom:16px;">✅</div>
+    <h1>You've Already Completed This</h1>
+    <p>Your health questionnaire was submitted on <strong id="alreadyDate"></strong>. Your care team has your responses.</p>
+    <p style="margin-top:12px;color:#ddd6fe;">Want to update your answers? You can retake the questionnaire below. Your newest responses will replace the previous ones.</p>
+    <button class="retake-btn" onclick="startIntake()">Retake Questionnaire →</button>
+</div>
+
+<!-- Question Flow -->
+<div id="questionScreen" class="screen">
+    <div class="q-header">
+        <div class="q-progress"><div class="q-progress-fill" id="qProgressFill"></div></div>
+        <div class="q-meta">
+            <span class="q-section" id="qSection"></span>
+            <span class="q-count" id="qCount"></span>
+        </div>
+    </div>
+    <div class="q-body" id="qBody"></div>
+    <div class="q-footer">
+        <button class="q-back" id="qBackBtn" onclick="goBack()">← Back</button>
+        <div></div>
+    </div>
+</div>
+
+<!-- Thank You -->
+<div id="thankYouScreen" class="screen">
+    <div class="check-icon">✅</div>
+    <h1>Thank You!</h1>
+    <p>Your health questionnaire has been received. Your care team will review your answers before your visit.</p>
+    <p style="margin-top:16px;color:#a7f3d0;">If you need to update anything, you can use this same link to retake the questionnaire.</p>
+    <div class="done-note">You can close this page now.</div>
+    <button onclick="window.location.href='/kiosk.html'" style="margin-top:24px;background:rgba(255,255,255,0.2);color:white;border:2px solid rgba(255,255,255,0.4);padding:14px 36px;border-radius:12px;font-size:1rem;font-weight:600;cursor:pointer;">Next Patient →</button>
+</div>
+
+<!-- Submitting overlay -->
+<div id="submittingOverlay" class="screen">
+    <div class="spinner"></div>
+    <p>Submitting your responses...</p>
+</div>
+
+<script>
+// ========== CONFIG ==========
+var TOKEN = null;
+var patientInfo = null; // { first_name, surgery_type, has_previsit, previsit_date }
+var responses = {};
+var questions = [];
+var currentIdx = 0;
+
+// ========== INIT ==========
+(function init() {
+    var params = new URLSearchParams(window.location.search);
+    TOKEN = params.get('t') || params.get('token');
+    if (!TOKEN) {
+        showScreen('errorScreen');
+        document.getElementById('errorMsg').textContent = 'No patient token found in the link. Please use the link provided by your doctor\'s office.';
+        return;
+    }
+    // Fetch patient info
+    fetch('/api/previsit-info/' + TOKEN)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.error) { showError(data.error); return; }
+            patientInfo = data;
+            questions = buildQuestions(data.surgery_type);
+            // Set welcome name
+            if (data.first_name) {
+                document.getElementById('welcomeName').textContent = ', ' + data.first_name;
+            }
+            // Show welcome or already-submitted
+            if (data.has_previsit && data.previsit_date) {
+                document.getElementById('alreadyDate').textContent = new Date(data.previsit_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                showScreen('alreadyScreen');
+            } else {
+                showScreen('welcomeScreen');
+            }
+        })
+        .catch(function(e) {
+            showError('Could not connect to the server. Please try again in a moment.');
+        });
+})();
+
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+    document.getElementById(id).classList.add('active');
+}
+
+function showError(msg) {
+    document.getElementById('errorMsg').textContent = msg;
+    showScreen('errorScreen');
+}
+
+// ========== QUESTIONS ==========
+function buildQuestions(surgeryType) {
+    var qs = [];
+    var joint = null;
+    if (surgeryType) {
+        var st = surgeryType.toUpperCase();
+        if (st.indexOf('KNEE') >= 0 || st === 'TKA' || st === 'UKA') joint = 'knee';
+        else if (st.indexOf('HIP') >= 0 || st === 'THA') joint = 'hip';
+    }
+
+    // === ABOUT YOU ===
+    qs.push({id:'age', section:'About You', text:'How old are you?', type:'slider', min:18, max:100, def:65, unit:'years old'});
+    qs.push({id:'gender', section:'About You', text:'What is your gender?', type:'choice', options:['Male','Female','Prefer not to say']});
+    qs.push({id:'height_ft', section:'About You', text:'Your height — feet?', type:'choice', options:['4 feet','5 feet','6 feet','7 feet']});
+    qs.push({id:'height_in', section:'About You', text:'Your height — inches?', type:'choice', options:['0 in','1 in','2 in','3 in','4 in','5 in','6 in','7 in','8 in','9 in','10 in','11 in']});
+    qs.push({id:'weight', section:'About You', text:'Your weight (in pounds)?', type:'slider', min:80, max:450, def:180, unit:'pounds'});
+
+    // === MEDICAL HISTORY ===
+    qs.push({id:'diabetes', section:'Medical History', text:'Do you have DIABETES?', type:'choice', options:['No','Yes — diet controlled','Yes — I take pills','Yes — I take insulin']});
+    qs.push({id:'cardiac', section:'Heart Health', text:'Do you have any HEART problems?', type:'choice', options:['No','Yes']});
+    qs.push({id:'cardiac_chf', section:'Heart Health', text:'Do you have heart failure (CHF)?', type:'choice', options:['No','Yes — mild','Yes — moderate or severe'], conditional:'cardiac:Yes'});
+    qs.push({id:'cardiac_cad', section:'Heart Health', text:'Blockage or coronary artery disease (CAD)?', type:'choice', options:['No','Yes'], conditional:'cardiac:Yes'});
+    qs.push({id:'cardiac_afib', section:'Heart Health', text:'Irregular heartbeat (Atrial Fibrillation)?', type:'choice', options:['No','Yes'], conditional:'cardiac:Yes'});
+    qs.push({id:'blood_pressure', section:'Medical History', text:'Are you TREATED for high blood pressure?', type:'choice', options:['No','Yes']});
+    qs.push({id:'ckd', section:'Medical History', text:'Do you have KIDNEY disease?', type:'choice', options:['No','Yes — mild','Yes — moderate or severe']});
+    qs.push({id:'copd', section:'Medical History', text:'Do you have LUNG or breathing problems (COPD, asthma)?', type:'choice', options:['No','Yes — mild (asthma)','Yes — moderate/severe (COPD)']});
+    qs.push({id:'smoker', section:'Medical History', text:'Do you SMOKE?', type:'choice', options:['Never smoked','Quit more than 1 year ago','Quit recently','Current smoker']});
+    qs.push({id:'sleep_apnea', section:'Medical History', text:'Do you have SLEEP APNEA?', type:'choice', options:['No','Yes — I use a CPAP','Yes — I don\'t use a CPAP']});
+    // STOP-BANG patient-reportable items
+    qs.push({id:'sb_snore', section:'Sleep Screening', text:'Do you SNORE loudly?', type:'choice', options:['No','Yes'], conditional:'sleep_apnea:No'});
+    qs.push({id:'sb_tired', section:'Sleep Screening', text:'Do you often feel TIRED or sleepy during the day?', type:'choice', options:['No','Yes'], conditional:'sleep_apnea:No'});
+    qs.push({id:'sb_observed', section:'Sleep Screening', text:'Has anyone OBSERVED you stop breathing while sleeping?', type:'choice', options:['No','Yes','Not sure'], conditional:'sleep_apnea:No'});
+    // Continue medical history
+    qs.push({id:'rheumatoid', section:'Medical History', text:'Do you have RHEUMATOID or inflammatory arthritis?', type:'choice', options:['No','Yes — Rheumatoid Arthritis','Yes — Psoriatic Arthritis','Yes — Other inflammatory']});
+    qs.push({id:'anticoagulant', section:'Medical History', text:'Do you take BLOOD THINNERS?', type:'choice', options:['No','Yes']});
+    qs.push({id:'anticoag_reason', section:'Medical History', text:'What are the blood thinners for?', type:'choice', options:['Heart condition','Blood clot (DVT) history','Stroke prevention','Other'], conditional:'anticoagulant:Yes'});
+    qs.push({id:'urinary', section:'Medical History', text:'Do you have URINARY problems (retention, urgency, incontinence)?', type:'choice', options:['No','Yes — mild','Yes — moderate or severe'], conditional_gender:'Male'});
+    qs.push({id:'chronic_uti', section:'Medical History', text:'Do you have a history of CHRONIC or recurrent UTI?', type:'choice', options:['No','Yes']});
+    qs.push({id:'dental', section:'Medical History', text:'Do you have any DENTAL problems?', type:'choice', options:['None','Mild','Severe — needs dental work']});
+    qs.push({id:'liver', section:'Medical History', text:'Do you have any LIVER problems?', type:'choice', options:['No','Yes']});
+    qs.push({id:'anemia', section:'Medical History', text:'Have you been told you have ANEMIA (low blood count)?', type:'choice', options:['No','Yes']});
+
+    // === PAIN & MEDICATIONS ===
+    qs.push({id:'opioid', section:'Pain Medicine', text:'Do you take OPIOID pain medicine (hydrocodone, oxycodone, tramadol, etc.)?', type:'choice', options:['No','Yes — less than 3 months','Yes — more than 3 months']});
+    qs.push({id:'cms_narcotics_90d', section:'Pain Medicine', text:'Have you used narcotic pain medicine for 90 or more DAYS?', type:'choice', options:['No','Yes'], conditional_opioid:true});
+    qs.push({id:'current_medications', section:'Medications', text:'List your CURRENT MEDICATIONS (or type "none"):', type:'text', placeholder:'Example:\nLisinopril 10mg daily\nMetformin 500mg twice daily\nAspirin 81mg daily'});
+    qs.push({id:'allergies', section:'Medications', text:'Do you have any ALLERGIES to medications, latex, or metals?', type:'text', placeholder:'Example:\nPenicillin — rash\nLatex — swelling\nOr type "No known allergies"'});
+
+    // === NUTRITION ===
+    qs.push({id:'nutrition_sweets', section:'Nutrition', text:'Is your diet mostly SWEETS or CARBS?', type:'choice', options:['No','Yes']});
+    qs.push({id:'diet_medication', section:'Nutrition', text:'Are you taking a WEIGHT LOSS medication?', type:'choice', options:['No','Yes']});
+    qs.push({id:'diet_glp1', section:'Nutrition', text:'Is it a GLP-1 medication (Ozempic, Wegovy, Mounjaro, etc.)?', type:'choice', options:['No','Yes'], conditional:'diet_medication:Yes'});
+    qs.push({id:'diet_weight_lost', section:'Nutrition', text:'How many POUNDS have you lost?', type:'slider', min:0, max:150, def:0, unit:'pounds', conditional:'diet_medication:Yes'});
+
+    // === JOINT-SPECIFIC PROM ===
+    if (joint === 'knee') {
+        var kqs = [
+            ['koos_1','How often does your KNEE bother you?','freq'],
+            ['koos_2','Have you changed your activities because of your knee?','amount'],
+            ['koos_3','How hard is it to TWIST or PIVOT on your knee?','diff'],
+            ['koos_4','How hard is it to STRAIGHTEN your knee fully?','diff'],
+            ['koos_5','How hard is it going UP or DOWN STAIRS?','diff'],
+            ['koos_6','How hard is it STANDING?','diff'],
+            ['koos_7','How hard is it GETTING UP from a chair?','diff']
+        ];
+        for (var i = 0; i < kqs.length; i++) {
+            var opts;
+            if (kqs[i][2] === 'freq') opts = ['Never','Monthly','Weekly','Daily','Always'];
+            else if (kqs[i][2] === 'amount') opts = ['Not at all','A little','Somewhat','A lot','Totally'];
+            else opts = ['No problem','A little hard','Somewhat hard','Very hard','Extremely hard'];
+            qs.push({id:kqs[i][0], section:'Knee Function (KOOS-JR)', text:kqs[i][1], type:'choice', options:opts, scoring:[0,1,2,3,4]});
+        }
+    } else if (joint === 'hip') {
+        var hqs = [
+            ['hoos_1','How hard is it going DOWN STAIRS?','diff'],
+            ['hoos_2','How hard is it getting IN or OUT of a car?','diff'],
+            ['hoos_3','How hard is WALKING on flat ground?','diff'],
+            ['hoos_4','How hard is it putting on SOCKS or SHOES?','diff'],
+            ['hoos_5','How hard is GETTING UP from a chair?','diff'],
+            ['hoos_6','How bad is your morning hip STIFFNESS?','sev']
+        ];
+        for (var i = 0; i < hqs.length; i++) {
+            var opts;
+            if (hqs[i][2] === 'sev') opts = ['None','Mild','Moderate','Severe','Extreme'];
+            else opts = ['No problem','A little hard','Somewhat hard','Very hard','Extremely hard'];
+            qs.push({id:hqs[i][0], section:'Hip Function (HOOS-JR)', text:hqs[i][1], type:'choice', options:opts, scoring:[0,1,2,3,4]});
+        }
+    }
+
+    // === PROMIS-10 ===
+    var pLabels = [
+        ['promis_1','In general, how would you rate your HEALTH?'],
+        ['promis_2','How would you rate your QUALITY OF LIFE?'],
+        ['promis_3','How would you rate your PHYSICAL health?'],
+        ['promis_4','How would you rate your MENTAL health?'],
+        ['promis_5','How satisfied are you with your SOCIAL life?']
+    ];
+    for (var i = 0; i < pLabels.length; i++) {
+        qs.push({id:pLabels[i][0], section:'General Health (PROMIS-10)', text:pLabels[i][1], type:'choice', options:['Excellent','Very Good','Good','Fair','Poor'], scoring:[5,4,3,2,1]});
+    }
+    qs.push({id:'promis_6', section:'General Health (PROMIS-10)', text:'How well can you do your DAILY activities?', type:'choice', options:['Completely','Mostly','Somewhat','A little','Not at all'], scoring:[5,4,3,2,1]});
+    qs.push({id:'promis_7', section:'General Health (PROMIS-10)', text:'What is your average PAIN level?', type:'choice', options:['No pain','Mild','Moderate','Severe','Worst pain'], scoring:[5,4,3,2,1]});
+    qs.push({id:'promis_8', section:'General Health (PROMIS-10)', text:'How is your FATIGUE level?', type:'choice', options:['Not tired','A little tired','Somewhat tired','Very tired','Exhausted'], scoring:[5,4,3,2,1]});
+    qs.push({id:'promis_9', section:'General Health (PROMIS-10)', text:'How often do you feel ANXIOUS or SAD?', type:'choice', options:['Never','Rarely','Sometimes','Often','Always'], scoring:[5,4,3,2,1]});
+    qs.push({id:'promis_10', section:'General Health (PROMIS-10)', text:'How well can you do your usual WORK and FAMILY activities?', type:'choice', options:['Completely','Mostly','Somewhat','A little','Not at all'], scoring:[5,4,3,2,1]});
+
+    // === MOOD SCREENING ===
+    qs.push({id:'phq_1', section:'Mood Screening (PHQ-2)', text:'Over the past 2 weeks, have you felt DOWN, depressed, or hopeless?', type:'choice', options:['Not at all','Several days','More than half the days','Nearly every day'], scoring:[0,1,2,3]});
+    qs.push({id:'phq_2', section:'Mood Screening (PHQ-2)', text:'Over the past 2 weeks, have you had LITTLE INTEREST or pleasure in doing things?', type:'choice', options:['Not at all','Several days','More than half the days','Nearly every day'], scoring:[0,1,2,3]});
+    qs.push({id:'gad_1', section:'Mood Screening (GAD-2)', text:'Over the past 2 weeks, have you felt NERVOUS, anxious, or on edge?', type:'choice', options:['Not at all','Several days','More than half the days','Nearly every day'], scoring:[0,1,2,3]});
+    qs.push({id:'gad_2', section:'Mood Screening (GAD-2)', text:'Over the past 2 weeks, have you been unable to STOP WORRYING?', type:'choice', options:['Not at all','Several days','More than half the days','Nearly every day'], scoring:[0,1,2,3]});
+
+    // === CMS RISK VARIABLES ===
+    qs.push({id:'cms_low_back_pain', section:'Additional Questions', text:'Have you had LOW BACK PAIN in the past month?', type:'choice', options:['No','Yes']});
+    qs.push({id:'cms_health_literacy', section:'Additional Questions', text:'How comfortable are you FILLING OUT medical forms by yourself?', type:'choice', options:['Extremely','Quite a bit','Somewhat','A little bit','Not at all'], scoring:[4,3,2,1,0]});
+    qs.push({id:'cms_other_joint_pain', section:'Additional Questions', text:'Do you have pain in any OTHER major joints (hip, knee, shoulder, ankle)?', type:'choice', options:['None','Mild','Moderate','Severe','Extreme'], scoring:[0,1,2,3,4]});
+
+    // === HOME SITUATION ===
+    qs.push({id:'living', section:'Home Situation', text:'What is your living situation?', type:'choice', options:['I live ALONE','With spouse or partner','With family','Nursing home or facility']});
+    qs.push({id:'help', section:'Home Situation', text:'Will you have HELP at home for 2 weeks after surgery?', type:'choice', options:['Yes','No','Not sure']});
+    qs.push({id:'transport', section:'Home Situation', text:'Do you have TRANSPORTATION to follow-up appointments?', type:'choice', options:['Yes','Need help','Not sure']});
+    qs.push({id:'stairs', section:'Home Situation', text:'Are there STAIRS in your home you must use daily?', type:'choice', options:['No stairs','A few steps','A full flight or more']});
+
+    // === OTHER ===
+    qs.push({id:'other_medical', section:'Almost Done', text:'Any OTHER medical problems not listed above?', type:'text', placeholder:'Type any other conditions, surgeries, or concerns here...\n\nOr leave blank if none.'});
+
+    return qs;
+}
+
+// ========== FLOW ==========
+function startIntake() {
+    responses = {};
+    currentIdx = 0;
+    showScreen('questionScreen');
+    showQuestion(0);
+}
+
+function showQuestion(idx) {
+    // Skip conditionals not met
+    while (idx < questions.length && idx >= 0) {
+        var q = questions[idx];
+        if (!shouldShow(q)) { idx++; continue; }
+        break;
+    }
+    if (idx >= questions.length) { submitResponses(); return; }
+    if (idx < 0) idx = 0;
+    currentIdx = idx;
+    var q = questions[idx];
+
+    // Count visible questions for accurate progress
+    var visibleCount = 0, visibleIdx = 0;
+    for (var i = 0; i < questions.length; i++) {
+        if (shouldShow(questions[i])) {
+            visibleCount++;
+            if (i < idx) visibleIdx++;
+        }
+    }
+
+    var pct = ((visibleIdx) / visibleCount * 100).toFixed(0);
+    document.getElementById('qProgressFill').style.width = pct + '%';
+    document.getElementById('qSection').textContent = q.section;
+    document.getElementById('qCount').textContent = (visibleIdx + 1) + ' of ~' + visibleCount;
+    document.getElementById('qBackBtn').disabled = (idx === 0);
+
+    var body = document.getElementById('qBody');
+    var html = '<div class="q-text">' + q.text + '</div>';
+
+    if (q.type === 'choice') {
+        html += '<div class="q-choices">';
+        var prev = responses[q.id] ? responses[q.id].answer : null;
+        for (var i = 0; i < q.options.length; i++) {
+            var sel = (prev === q.options[i]) ? ' selected' : '';
+            var score = q.scoring ? q.scoring[i] : null;
+            html += '<button class="q-choice' + sel + '" onclick="selectChoice(\'' + q.id + '\',' + i + ',' + (score !== null ? score : 'null') + ')">' + q.options[i] + '</button>';
+        }
+        html += '</div>';
+    } else if (q.type === 'slider') {
+        var val = responses[q.id] ? responses[q.id].answer : q.def;
+        html += '<div class="q-slider-wrap">';
+        html += '<div class="q-slider-val" id="sliderVal">' + val + '</div>';
+        html += '<div class="q-slider-unit">' + q.unit + '</div>';
+        html += '<input type="range" class="q-slider" id="sliderInput" min="' + q.min + '" max="' + q.max + '" value="' + val + '" oninput="document.getElementById(\'sliderVal\').textContent=this.value">';
+        html += '<div class="q-slider-labels"><span>' + q.min + '</span><span>' + q.max + '</span></div>';
+        html += '<button class="q-slider-next" onclick="selectSlider(\'' + q.id + '\')">Next →</button>';
+        html += '</div>';
+    } else if (q.type === 'text') {
+        var prev = responses[q.id] ? responses[q.id].answer : '';
+        html += '<textarea class="q-textarea" id="textInput" placeholder="' + (q.placeholder || '') + '">' + prev + '</textarea>';
+        html += '<button class="q-text-next" onclick="selectText(\'' + q.id + '\')">Next →</button>';
+        html += '<button class="q-text-skip" onclick="selectText(\'' + q.id + '\', true)">Skip</button>';
+    }
+
+    body.innerHTML = html;
+    // Scroll body to top
+    body.scrollTop = 0;
+}
+
+function shouldShow(q) {
+    if (q.conditional) {
+        var parts = q.conditional.split(':');
+        var parentAns = (responses[parts[0]] || {}).answer || '';
+        if (parentAns !== parts[1]) return false;
+    }
+    if (q.conditional_gender) {
+        var gender = (responses.gender || {}).answer || '';
+        if (gender !== q.conditional_gender) return false;
+    }
+    if (q.conditional_opioid) {
+        var opioidAns = (responses.opioid || {}).answer || '';
+        if (opioidAns.indexOf('Yes') < 0) return false;
+    }
+    return true;
+}
+
+function selectChoice(qId, optIdx, score) {
+    var q = questions[currentIdx];
+    responses[qId] = { answer: q.options[optIdx], score: score };
+    // Brief visual feedback then advance
+    var btns = document.querySelectorAll('.q-choice');
+    btns.forEach(function(b, i) { b.classList.toggle('selected', i === optIdx); });
+    setTimeout(function() { showQuestion(currentIdx + 1); }, 200);
+}
+
+function selectSlider(qId) {
+    var val = parseInt(document.getElementById('sliderInput').value);
+    responses[qId] = { answer: val, score: null };
+    showQuestion(currentIdx + 1);
+}
+
+function selectText(qId, skip) {
+    var val = skip ? '' : (document.getElementById('textInput').value || '').trim();
+    responses[qId] = { answer: val, score: null };
+    showQuestion(currentIdx + 1);
+}
+
+function goBack() {
+    var prevIdx = currentIdx - 1;
+    while (prevIdx >= 0) {
+        if (shouldShow(questions[prevIdx])) break;
+        prevIdx--;
+    }
+    if (prevIdx >= 0) showQuestion(prevIdx);
+}
+
+// ========== SCORING ==========
+var KOOS_JR_TABLE = {0:100,1:91.975,2:84.6,3:79.914,4:76.332,5:73.342,6:70.704,7:68.284,8:65.994,9:63.776,10:61.583,11:59.381,12:57.14,13:54.84,14:52.465,15:50.012,16:47.487,17:44.905,18:42.281,19:39.625,20:36.931,21:34.174,22:31.307,23:28.251,24:24.875,25:20.941,26:15.939,27:8.291,28:0};
+var HOOS_JR_TABLE = {0:100,1:92.34,2:85.257,3:80.55,4:76.776,5:73.472,6:70.426,7:67.516,8:64.664,9:61.815,10:58.93,11:55.985,12:52.965,13:49.858,14:46.652,15:43.335,16:39.902,17:36.363,18:32.735,19:29.009,20:25.103,21:20.805,22:15.633,23:8.104,24:0};
+
+function calculateScores() {
+    var scores = {};
+    // BMI
+    try {
+        var hf = parseInt((responses.height_ft || {}).answer);
+        var hi = parseInt((responses.height_in || {}).answer);
+        var wt = (responses.weight || {}).answer;
+        scores.bmi = (wt / Math.pow(hf * 12 + hi, 2)) * 703;
+    } catch(e) { scores.bmi = null; }
+
+    // Joint PROM
+    var koosKeys = Object.keys(responses).filter(function(k) { return k.startsWith('koos_'); });
+    var hoosKeys = Object.keys(responses).filter(function(k) { return k.startsWith('hoos_'); });
+    if (koosKeys.length > 0) {
+        var rawSum = koosKeys.reduce(function(sum, k) { return sum + (responses[k].score || 0); }, 0);
+        scores.joint_type = 'KOOS-JR';
+        scores.joint_raw = rawSum;
+        scores.joint_score = (rawSum in KOOS_JR_TABLE) ? Math.round(KOOS_JR_TABLE[rawSum] * 10) / 10 : null;
+    } else if (hoosKeys.length > 0) {
+        var rawSum = hoosKeys.reduce(function(sum, k) { return sum + (responses[k].score || 0); }, 0);
+        scores.joint_type = 'HOOS-JR';
+        scores.joint_raw = rawSum;
+        scores.joint_score = (rawSum in HOOS_JR_TABLE) ? Math.round(HOOS_JR_TABLE[rawSum] * 10) / 10 : null;
+    }
+
+    // PROMIS-10
+    var promisScores = [];
+    for (var i = 1; i <= 10; i++) {
+        var r = responses['promis_' + i];
+        promisScores.push(r ? r.score : 3);
+    }
+    scores.promis_physical = Math.min(Math.max(30 + promisScores.slice(0, 6).reduce(function(a, b) { return a + b; }, 0) * 1.5, 20), 80);
+    scores.promis_mental = Math.min(Math.max(30 + promisScores.slice(6).reduce(function(a, b) { return a + b; }, 0) * 2, 20), 80);
+
+    // PHQ-2
+    scores.phq2 = ((responses.phq_1 || {}).score || 0) + ((responses.phq_2 || {}).score || 0);
+    // GAD-2
+    scores.gad2 = ((responses.gad_1 || {}).score || 0) + ((responses.gad_2 || {}).score || 0);
+
+    // STOP-BANG (partial — patient-reportable items)
+    var sbScore = 0;
+    if ((responses.sleep_apnea || {}).answer && responses.sleep_apnea.answer !== 'No') {
+        sbScore = 5; // Known sleep apnea = high risk
+    } else {
+        if ((responses.sb_snore || {}).answer === 'Yes') sbScore++;
+        if ((responses.sb_tired || {}).answer === 'Yes') sbScore++;
+        if ((responses.sb_observed || {}).answer === 'Yes') sbScore++;
+        if ((responses.blood_pressure || {}).answer === 'Yes') sbScore++;
+        if (scores.bmi && scores.bmi > 35) sbScore++;
+        if ((responses.age || {}).answer > 50) sbScore++;
+        if ((responses.gender || {}).answer === 'Male') sbScore++;
+    }
+    scores.stop_bang = sbScore;
+
+    // CMS risk variables
+    scores.cms_low_back = ((responses.cms_low_back_pain || {}).answer || '') === 'Yes' ? 1 : 0;
+    scores.cms_health_literacy = (responses.cms_health_literacy || {}).score;
+    scores.cms_other_joint = (responses.cms_other_joint_pain || {}).score || 0;
+    scores.cms_narcotics_90d = ((responses.cms_narcotics_90d || {}).answer || '') === 'Yes' ? 1 : 0;
+
+    return scores;
+}
+
+// ========== SUBMIT ==========
+function submitResponses() {
+    showScreen('submittingOverlay');
+    var scores = calculateScores();
+    var payload = {
+        token: TOKEN,
+        responses: responses,
+        scores: scores,
+        completed_at: new Date().toISOString()
+    };
+
+    fetch('/api/previsit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.error) {
+            showError('Submission failed: ' + data.error);
+        } else {
+            showScreen('thankYouScreen');
+        }
+    })
+    .catch(function(e) {
+        showError('Could not submit. Please check your connection and try again.');
+    });
+}
+</script>
+</body>
+</html>

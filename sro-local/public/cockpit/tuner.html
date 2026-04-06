@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cockpit Tuner - SRO Intelligence</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600&family=Rajdhani:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Rajdhani', 'Segoe UI', sans-serif;
+            background: #0a0e17;
+            color: #e0e0e0;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* ===== MODE TOGGLE ===== */
+        #mode-toggle {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            z-index: 300;
+            background: rgba(10, 14, 23, 0.95);
+            border-radius: 6px;
+            border: 1px solid rgba(0, 229, 255, 0.2);
+            overflow: hidden;
+        }
+
+        .mode-btn {
+            padding: 8px 24px;
+            background: transparent;
+            border: none;
+            color: rgba(0, 229, 255, 0.5);
+            font-family: 'Orbitron', monospace;
+            font-size: 12px;
+            cursor: pointer;
+            letter-spacing: 2px;
+            transition: all 0.2s;
+            border-right: 1px solid rgba(0, 229, 255, 0.2);
+        }
+
+        .mode-btn:last-child { border-right: none; }
+
+        .mode-btn.active {
+            background: rgba(0, 229, 255, 0.15);
+            color: #00e5ff;
+            text-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+        }
+
+        .mode-btn:hover {
+            background: rgba(0, 229, 255, 0.1);
+            color: #00e5ff;
+        }
+
+        /* ===== HELP TEXT ===== */
+        #help-text {
+            position: fixed;
+            top: 55px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(0, 229, 255, 0.7);
+            font-size: 13px;
+            font-family: 'Rajdhani', sans-serif;
+            text-align: center;
+            background: rgba(10, 14, 23, 0.9);
+            padding: 8px 20px;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 229, 255, 0.15);
+            display: none;
+            z-index: 250;
+            pointer-events: none;
+            max-width: 90%;
+            letter-spacing: 0.5px;
+        }
+
+        #help-text.active { display: block; }
+
+        /* ===== WINDOW TUNER (placeholder) ===== */
+        #window-tuner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100vw;
+            height: 100vh;
+            background: #0a0e17;
+            font-size: 1.5rem;
+            color: rgba(0, 229, 255, 0.5);
+            font-family: 'Orbitron', monospace;
+        }
+
+        /* ===== MAPPER CONTAINER ===== */
+        #mapper-container {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        #mapper-container.active { display: flex; }
+
+        /* 
+         * The wrapper sizes itself to the image.
+         * The SVG overlay sits on top at the exact same size.
+         */
+        #mapper-wrapper {
+            position: relative;
+            display: inline-block;
+            max-width: 100vw;
+            max-height: 100vh;
+        }
+
+        #mapper-bg {
+            display: block;
+            max-width: 100vw;
+            max-height: 100vh;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            pointer-events: none;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+
+        /* SVG overlay matches the image exactly */
+        #mapper-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        /* ===== POLYGON STYLES ===== */
+        .cockpit-hotspot {
+            fill: rgba(0, 229, 255, 0.06);
+            cursor: pointer;
+            transition: all 0.15s;
+            stroke: rgba(0, 229, 255, 0.35);
+            stroke-width: 1.5;
+        }
+
+        .cockpit-hotspot:hover {
+            fill: rgba(0, 229, 255, 0.15);
+            stroke: rgba(0, 229, 255, 0.7);
+            stroke-width: 2;
+            filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.3));
+        }
+
+        .hotspot-vertex {
+            fill: #00e5ff;
+            stroke: #0a0e17;
+            stroke-width: 2;
+            pointer-events: none;
+        }
+
+        .hotspot-line {
+            stroke: rgba(0, 229, 255, 0.5);
+            stroke-width: 2;
+            stroke-dasharray: 6, 4;
+            fill: none;
+            pointer-events: none;
+        }
+
+        .hotspot-label {
+            fill: #00e5ff;
+            font-family: 'Orbitron', monospace;
+            font-size: 11px;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            pointer-events: none;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .hotspot-label-bg {
+            fill: rgba(10, 14, 23, 0.8);
+            pointer-events: none;
+        }
+
+        .delete-btn {
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .hotspot-group:hover .delete-btn { opacity: 1; }
+
+        .delete-circle {
+            fill: #f44336;
+            stroke: #0a0e17;
+            stroke-width: 1.5;
+        }
+
+        .delete-circle:hover { fill: #ff5252; }
+
+        .delete-x {
+            fill: white;
+            font-size: 14px;
+            font-weight: bold;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            pointer-events: none;
+        }
+
+        /* ===== POINT COUNT BADGE ===== */
+        #point-count {
+            position: fixed;
+            top: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffab00;
+            font-family: 'Orbitron', monospace;
+            font-size: 12px;
+            background: rgba(10, 14, 23, 0.9);
+            padding: 4px 14px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 171, 0, 0.2);
+            display: none;
+            z-index: 250;
+            pointer-events: none;
+        }
+
+        /* ===== TOOLBAR ===== */
+        .mapper-toolbar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            gap: 8px;
+            z-index: 200;
+            background: rgba(10, 14, 23, 0.92);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 229, 255, 0.2);
+            backdrop-filter: blur(10px);
+            align-items: center;
+        }
+
+        .mapper-toolbar.active { display: flex; }
+
+        .mapper-btn {
+            padding: 8px 16px;
+            background: rgba(0, 229, 255, 0.08);
+            border: 1px solid rgba(0, 229, 255, 0.25);
+            color: #00e5ff;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .mapper-btn:hover {
+            background: rgba(0, 229, 255, 0.18);
+            border-color: #00e5ff;
+        }
+
+        .mapper-btn.primary {
+            background: rgba(0, 229, 255, 0.18);
+            border-color: #00e5ff;
+        }
+
+        .mapper-btn.warn {
+            border-color: rgba(244, 67, 54, 0.4);
+            color: #f44336;
+        }
+
+        .mapper-btn.warn:hover {
+            background: rgba(244, 67, 54, 0.15);
+            border-color: #f44336;
+        }
+
+        .mapper-btn:disabled {
+            opacity: 0.25;
+            cursor: not-allowed;
+        }
+
+        .toolbar-divider {
+            width: 1px;
+            height: 28px;
+            background: rgba(0, 229, 255, 0.15);
+            margin: 0 4px;
+        }
+
+        #hotspot-count {
+            color: rgba(0, 229, 255, 0.5);
+            font-family: 'Orbitron', monospace;
+            font-size: 11px;
+            margin-left: 8px;
+            letter-spacing: 1px;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .mapper-toolbar {
+                flex-wrap: wrap;
+                justify-content: center;
+                width: 94%;
+                padding: 8px 10px;
+                gap: 6px;
+            }
+            .mapper-btn { padding: 6px 10px; font-size: 11px; }
+            .toolbar-divider { display: none; }
+            #hotspot-count { margin-left: 0; width: 100%; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Mode Toggle -->
+    <div id="mode-toggle">
+        <button class="mode-btn active" id="btn-tuner" onclick="setMode('tuner')">WINDOW TUNER</button>
+        <button class="mode-btn" id="btn-mapper" onclick="setMode('mapper')">HOTSPOT MAPPER</button>
+    </div>
+
+    <!-- Help Text -->
+    <div id="help-text">
+        CLICK to place vertices &bull; DOUBLE-CLICK or ENTER to close polygon &bull; ESC to cancel &bull; UNDO removes last point
+    </div>
+
+    <!-- Point Count (visible while drawing) -->
+    <div id="point-count"></div>
+
+    <!-- Window Tuner (placeholder) -->
+    <div id="window-tuner">WINDOW TUNER MODE (Coming Soon)</div>
+
+    <!-- Hotspot Mapper -->
+    <div id="mapper-container">
+        <div id="mapper-wrapper">
+            <img id="mapper-bg" src="/cockpit/cockpit_bg.png" alt="Cockpit Background"
+                 draggable="false"
+                 oncontextmenu="return false;">
+            <svg id="mapper-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+    </div>
+
+    <!-- Mapper Toolbar -->
+    <div class="mapper-toolbar" id="mapper-toolbar">
+        <select id="bg-selector" onchange="switchBackground(this.value)" style="background:rgba(10,14,23,0.95);color:#00e5ff;border:1px solid rgba(0,229,255,0.3);padding:6px 12px;border-radius:4px;font-family:Orbitron,monospace;font-size:10px;letter-spacing:1px;cursor:pointer;margin-right:8px;">
+            <option value="/cockpit/cockpit_bg.png">Surgeon Cockpit</option>
+            <option value="/cockpit/nurse_cockpit_bg.png">Nurse Cockpit</option>
+        </select>
+        <button class="mapper-btn" id="undo-btn" onclick="undoLastPoint()" disabled>UNDO</button>
+        <div class="toolbar-divider"></div>
+        <button class="mapper-btn" onclick="saveHotspots()">SAVE</button>
+        <button class="mapper-btn" onclick="loadHotspots(); renderAll();">LOAD</button>
+        <button class="mapper-btn primary" onclick="exportHotspots()">COPY SVG</button>
+        <div class="toolbar-divider"></div>
+        <button class="mapper-btn warn" onclick="clearAll()">CLEAR ALL</button>
+        <span id="hotspot-count">0 polygons</span>
+    </div>
+
+    <script>
+        // ===== STATE =====
+        let hotspots = [];
+        let currentPoints = [];
+        let currentMode = 'tuner';
+        let clickTimer = null;
+        const DBLCLICK_DELAY = 250; // ms to wait before treating click as single
+
+        // ===== DOM REFS =====
+        const svg = document.getElementById('mapper-svg');
+        const wrapper = document.getElementById('mapper-wrapper');
+        const bgImg = document.getElementById('mapper-bg');
+        const pointCountEl = document.getElementById('point-count');
+        const undoBtn = document.getElementById('undo-btn');
+
+        // ===== MODE TOGGLE =====
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('btn-tuner').classList.toggle('active', mode === 'tuner');
+            document.getElementById('btn-mapper').classList.toggle('active', mode === 'mapper');
+            document.getElementById('window-tuner').style.display = mode === 'tuner' ? 'flex' : 'none';
+            document.getElementById('mapper-container').classList.toggle('active', mode === 'mapper');
+            document.getElementById('mapper-toolbar').classList.toggle('active', mode === 'mapper');
+            document.getElementById('help-text').classList.toggle('active', mode === 'mapper');
+
+            if (mode === 'mapper') {
+                loadHotspots();
+                renderAll();
+            }
+        }
+
+        // ===== COORDINATE CONVERSION =====
+        // Convert mouse position to percentage of the SVG/image dimensions
+        function toPercent(clientX, clientY) {
+            const rect = svg.getBoundingClientRect();
+            return {
+                x: +((clientX - rect.left) / rect.width * 100).toFixed(2),
+                y: +((clientY - rect.top) / rect.height * 100).toFixed(2)
+            };
+        }
+
+        // ===== CLICK HANDLING =====
+        // We need to distinguish single click (place vertex) from double click (close polygon).
+        // Strategy: on click, wait DBLCLICK_DELAY ms. If a second click comes in that window,
+        // treat as double-click. Otherwise treat as single click.
+
+        svg.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (clickTimer !== null) {
+                // Second click within the delay window → double-click → close polygon
+                clearTimeout(clickTimer);
+                clickTimer = null;
+                handleDoubleClick(e);
+            } else {
+                // First click → wait to see if another follows
+                clickTimer = setTimeout(function() {
+                    clickTimer = null;
+                    handleSingleClick(e);
+                }, DBLCLICK_DELAY);
+            }
+        });
+
+        // Prevent the native dblclick from doing anything
+        svg.addEventListener('dblclick', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        function handleSingleClick(e) {
+            const coords = toPercent(e.clientX, e.clientY);
+            currentPoints.push(coords);
+            updatePointCount();
+            renderLive();
+            undoBtn.disabled = false;
+        }
+
+        function handleDoubleClick(e) {
+            closePolygon();
+        }
+
+        // ===== KEYBOARD HANDLING =====
+        document.addEventListener('keydown', function(e) {
+            if (currentMode !== 'mapper') return;
+
+            if (e.key === 'Enter' && currentPoints.length >= 3) {
+                e.preventDefault();
+                closePolygon();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                cancelDrawing();
+            } else if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                undoLastPoint();
+            }
+        });
+
+        // ===== POLYGON OPERATIONS =====
+        function closePolygon() {
+            if (currentPoints.length < 3) {
+                alert('Need at least 3 points to form a polygon.');
+                return;
+            }
+
+            const name = prompt('Name this hotspot:');
+            if (!name) {
+                cancelDrawing();
+                return;
+            }
+
+            const defaultFn = "openStageDetail('" + name.toLowerCase().replace(/[^a-z0-9]/g, '') + "')";
+            const onclick = prompt('Function? (JS to run):', defaultFn);
+            if (onclick === null) {
+                cancelDrawing();
+                return;
+            }
+
+            hotspots.push({
+                name: name,
+                points: JSON.parse(JSON.stringify(currentPoints)),
+                onclick: onclick || ''
+            });
+
+            currentPoints = [];
+            updatePointCount();
+            renderAll();
+            undoBtn.disabled = true;
+        }
+
+        function cancelDrawing() {
+            currentPoints = [];
+            updatePointCount();
+            renderLive();
+            undoBtn.disabled = true;
+        }
+
+        function switchBackground(src) {
+            var img = document.getElementById('mapper-bg');
+            if (img) img.src = src;
+        }
+
+        function undoLastPoint() {
+            if (currentPoints.length > 0) {
+                currentPoints.pop();
+                updatePointCount();
+                renderLive();
+                if (currentPoints.length === 0) {
+                    undoBtn.disabled = true;
+                }
+            }
+        }
+
+        function deleteHotspot(index) {
+            if (confirm('Delete "' + hotspots[index].name + '"?')) {
+                hotspots.splice(index, 1);
+                renderAll();
+            }
+        }
+
+        function clearAll() {
+            if (hotspots.length === 0 && currentPoints.length === 0) return;
+            if (confirm('Clear all ' + hotspots.length + ' polygon(s)?')) {
+                hotspots = [];
+                currentPoints = [];
+                updatePointCount();
+                renderAll();
+                undoBtn.disabled = true;
+            }
+        }
+
+        // ===== POINT COUNT DISPLAY =====
+        function updatePointCount() {
+            if (currentPoints.length > 0) {
+                pointCountEl.style.display = 'block';
+                pointCountEl.textContent = currentPoints.length + ' point' + (currentPoints.length !== 1 ? 's' : '') +
+                    (currentPoints.length >= 3 ? ' — double-click or Enter to close' : ' — need ' + (3 - currentPoints.length) + ' more');
+            } else {
+                pointCountEl.style.display = 'none';
+            }
+        }
+
+        // ===== RENDERING =====
+
+        // Render the polygon currently being drawn (vertices + connecting lines)
+        function renderLive() {
+            // Remove previous live elements
+            svg.querySelectorAll('.live-el').forEach(function(el) { el.remove(); });
+
+            if (currentPoints.length === 0) return;
+
+            // Draw lines between consecutive points
+            for (var i = 0; i < currentPoints.length - 1; i++) {
+                var p1 = currentPoints[i];
+                var p2 = currentPoints[i + 1];
+                var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', p1.x + '%');
+                line.setAttribute('y1', p1.y + '%');
+                line.setAttribute('x2', p2.x + '%');
+                line.setAttribute('y2', p2.y + '%');
+                line.setAttribute('class', 'hotspot-line live-el');
+                svg.appendChild(line);
+            }
+
+            // If 3+ points, draw a dashed closing line from last to first
+            if (currentPoints.length >= 3) {
+                var first = currentPoints[0];
+                var last = currentPoints[currentPoints.length - 1];
+                var closeLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                closeLine.setAttribute('x1', last.x + '%');
+                closeLine.setAttribute('y1', last.y + '%');
+                closeLine.setAttribute('x2', first.x + '%');
+                closeLine.setAttribute('y2', first.y + '%');
+                closeLine.setAttribute('class', 'hotspot-line live-el');
+                closeLine.setAttribute('stroke-opacity', '0.3');
+                svg.appendChild(closeLine);
+            }
+
+            // Draw vertex dots
+            currentPoints.forEach(function(p, idx) {
+                var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', p.x + '%');
+                circle.setAttribute('cy', p.y + '%');
+                circle.setAttribute('r', idx === 0 ? '7' : '5');
+                circle.setAttribute('class', 'hotspot-vertex live-el');
+                if (idx === 0 && currentPoints.length >= 3) {
+                    // Highlight first point (closing target)
+                    circle.setAttribute('stroke', '#ffab00');
+                    circle.setAttribute('stroke-width', '2');
+                }
+                svg.appendChild(circle);
+            });
+        }
+
+        // Render all completed hotspot polygons + the live polygon
+        function renderAll() {
+            // Clear everything from SVG
+            while (svg.firstChild) { svg.removeChild(svg.firstChild); }
+
+            // Draw completed hotspots
+            hotspots.forEach(function(hs, i) {
+                var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                g.setAttribute('class', 'hotspot-group');
+
+                // Polygon shape
+                var pointsStr = hs.points.map(function(p) { return p.x + ',' + p.y; }).join(' ');
+                var polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                polygon.setAttribute('points', pointsStr);
+                polygon.setAttribute('class', 'cockpit-hotspot');
+                polygon.setAttribute('data-name', hs.name);
+                g.appendChild(polygon);
+
+                // Calculate centroid for label placement
+                var cx = 0, cy = 0;
+                hs.points.forEach(function(p) { cx += p.x; cy += p.y; });
+                cx = cx / hs.points.length;
+                cy = cy / hs.points.length;
+
+                // Label background
+                var labelBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                var labelWidth = hs.name.length * 8 + 16;
+                labelBg.setAttribute('x', (cx - labelWidth / 200 * 100) + '%');
+                labelBg.setAttribute('y', (cy - 1.5) + '%');
+                labelBg.setAttribute('width', (labelWidth / 10) + '%');
+                labelBg.setAttribute('height', '3%');
+                labelBg.setAttribute('rx', '3');
+                labelBg.setAttribute('class', 'hotspot-label-bg');
+                g.appendChild(labelBg);
+
+                // Label text
+                var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', cx + '%');
+                text.setAttribute('y', cy + '%');
+                text.setAttribute('class', 'hotspot-label');
+                text.textContent = hs.name;
+                g.appendChild(text);
+
+                // Delete button (hidden until hover)
+                var delG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                delG.setAttribute('class', 'delete-btn');
+                delG.setAttribute('onclick', 'deleteHotspot(' + i + ')');
+
+                var delCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                delCircle.setAttribute('cx', cx + '%');
+                delCircle.setAttribute('cy', (cy - 4) + '%');
+                delCircle.setAttribute('r', '10');
+                delCircle.setAttribute('class', 'delete-circle');
+                delG.appendChild(delCircle);
+
+                var delText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                delText.setAttribute('x', cx + '%');
+                delText.setAttribute('y', (cy - 4) + '%');
+                delText.setAttribute('class', 'delete-x');
+                delText.textContent = '\u00d7';
+                delG.appendChild(delText);
+
+                g.appendChild(delG);
+                svg.appendChild(g);
+            });
+
+            // Re-render live polygon on top
+            renderLive();
+
+            // Update count
+            document.getElementById('hotspot-count').textContent =
+                hotspots.length + ' polygon' + (hotspots.length !== 1 ? 's' : '');
+        }
+
+        // ===== PERSISTENCE =====
+        function saveHotspots() {
+            localStorage.setItem('cockpit-hotspots-v2', JSON.stringify(hotspots));
+            alert('Saved ' + hotspots.length + ' polygon(s) to browser storage.');
+        }
+
+        function loadHotspots() {
+            var saved = localStorage.getItem('cockpit-hotspots-v2');
+            if (saved) {
+                try {
+                    hotspots = JSON.parse(saved);
+                } catch (e) {
+                    hotspots = [];
+                }
+            }
+        }
+
+        // ===== EXPORT =====
+        function exportHotspots() {
+            if (hotspots.length === 0) {
+                alert('No polygons to export. Draw some first.');
+                return;
+            }
+
+            var lines = [];
+            lines.push('<svg class="cockpit-hotspots" style="position:absolute;inset:0;width:100%;height:100%;z-index:50;">');
+
+            hotspots.forEach(function(hs) {
+                var pointsStr = hs.points.map(function(p) { return p.x + ',' + p.y; }).join(' ');
+                lines.push('  <!-- HOTSPOT: ' + hs.name + ' -->');
+                lines.push('  <polygon points="' + pointsStr + '" class="cockpit-hotspot"');
+                lines.push('           onclick="' + hs.onclick.replace(/"/g, '&quot;') + '" data-name="' + hs.name + '"/>');
+            });
+
+            lines.push('</svg>');
+            lines.push('');
+            lines.push('<style>');
+            lines.push('.cockpit-hotspots { pointer-events: none; }');
+            lines.push('.cockpit-hotspots .cockpit-hotspot { pointer-events: auto; fill: transparent; cursor: pointer; transition: all 0.15s; }');
+            lines.push('.cockpit-hotspots .cockpit-hotspot:hover { fill: rgba(0,229,255,0.1); stroke: rgba(0,229,255,0.5); stroke-width: 2; }');
+            lines.push('</style>');
+
+            var output = lines.join('\n');
+
+            navigator.clipboard.writeText(output).then(function() {
+                alert('Copied ' + hotspots.length + ' polygon(s) as SVG.\n\nPaste into cockpit-view.html inside the #cockpit-wrapper div.');
+            }).catch(function() {
+                // Fallback: show in a textarea prompt
+                var ta = document.createElement('textarea');
+                ta.value = output;
+                ta.style.cssText = 'position:fixed;top:10%;left:10%;width:80%;height:80%;z-index:9999;background:#111;color:#0f0;font-family:monospace;font-size:12px;padding:16px;border:2px solid #00e5ff;';
+                document.body.appendChild(ta);
+                ta.select();
+                alert('Auto-copy failed. The SVG code is shown in the text box — select all and copy manually. Click anywhere to close.');
+                ta.addEventListener('blur', function() { ta.remove(); });
+            });
+        }
+
+        // ===== MOUSE TRACKING (visual feedback) =====
+        svg.addEventListener('mousemove', function(e) {
+            // If drawing, show a preview line from last point to cursor
+            svg.querySelectorAll('.preview-line').forEach(function(el) { el.remove(); });
+
+            if (currentPoints.length > 0) {
+                var last = currentPoints[currentPoints.length - 1];
+                var cur = toPercent(e.clientX, e.clientY);
+                var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', last.x + '%');
+                line.setAttribute('y1', last.y + '%');
+                line.setAttribute('x2', cur.x + '%');
+                line.setAttribute('y2', cur.y + '%');
+                line.setAttribute('class', 'hotspot-line preview-line');
+                line.setAttribute('stroke-opacity', '0.4');
+                svg.appendChild(line);
+            }
+        });
+    </script>
+</body>
+</html>

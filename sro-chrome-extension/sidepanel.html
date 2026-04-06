@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SRO Intelligence</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a1628;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Top bar */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 10px;
+      background: #0f2040;
+      border-bottom: 2px solid #1a5276;
+      flex-shrink: 0;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .topbar-logo {
+      width: 22px;
+      height: 22px;
+      background: linear-gradient(135deg, #1a5276, #2e86c1);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 700;
+      font-size: 11px;
+    }
+
+    .topbar-title {
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .topbar-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .topbar-btn {
+      background: none;
+      border: 1px solid #1a5276;
+      color: #85c1e9;
+      width: 26px;
+      height: 26px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: all 0.15s;
+    }
+
+    .topbar-btn:hover {
+      background: #1a5276;
+      color: #fff;
+    }
+
+    /* Quick nav */
+    .quicknav {
+      display: flex;
+      gap: 2px;
+      padding: 4px 6px;
+      background: #0d1b2a;
+      border-bottom: 1px solid #1a3a5c;
+      flex-shrink: 0;
+    }
+
+    .quicknav a {
+      flex: 1;
+      text-align: center;
+      padding: 5px 4px;
+      color: #85c1e9;
+      text-decoration: none;
+      font-size: 11px;
+      font-weight: 500;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .quicknav a:hover, .quicknav a.active {
+      background: #1a5276;
+      color: #fff;
+    }
+
+    /* Main content area */
+    .content {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .content iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    /* Loading state */
+    .loading-screen {
+      position: absolute;
+      inset: 0;
+      background: #0a1628;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 10;
+    }
+
+    .loading-screen.hidden { display: none; }
+
+    .loading-logo {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, #1a5276, #2e86c1);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 700;
+      font-size: 22px;
+    }
+
+    .loading-text {
+      color: #85c1e9;
+      font-size: 13px;
+    }
+
+    .loading-spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid #1a3a5c;
+      border-top-color: #2e86c1;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Error state */
+    .error-screen {
+      position: absolute;
+      inset: 0;
+      background: #0a1628;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 20px;
+      z-index: 10;
+    }
+
+    .error-screen.visible { display: flex; }
+
+    .error-icon {
+      width: 48px;
+      height: 48px;
+      background: #922b21;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 24px;
+    }
+
+    .error-title {
+      color: #e74c3c;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .error-msg {
+      color: #85c1e9;
+      font-size: 12px;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .error-btn {
+      margin-top: 8px;
+      padding: 8px 20px;
+      background: #1a5276;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .error-btn:hover { background: #2e86c1; }
+
+    /* Status dot */
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #27ae60;
+      flex-shrink: 0;
+    }
+
+    .status-dot.offline { background: #e74c3c; }
+    .status-dot.loading { background: #f39c12; animation: pulse 1s ease-in-out infinite; }
+
+    @keyframes pulse { 50% { opacity: 0.4; } }
+  </style>
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">S</div>
+      <span class="topbar-title">SRO Intelligence</span>
+      <div class="status-dot loading" id="statusDot"></div>
+    </div>
+    <div class="topbar-actions">
+      <button class="topbar-btn" id="btnRefresh" title="Refresh">⟳</button>
+      <button class="topbar-btn" id="btnPopout" title="Open in full window">⤢</button>
+    </div>
+  </div>
+
+  <!-- Quick Nav -->
+  <div class="quicknav" id="quickNav">
+    <a href="#" data-page="dashboard.html" class="active">Dashboard</a>
+    <a href="#" data-page="preop.html">Pre-Op</a>
+    <a href="#" data-page="surgical-prep.html">Surg Prep</a>
+    <a href="#" data-page="analytics.html">Analytics</a>
+    <a href="#" data-page="rpm-report.html">RPM</a>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+    <div class="loading-screen" id="loadingScreen">
+      <div class="loading-logo">S</div>
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Connecting to SRO...</div>
+    </div>
+
+    <div class="error-screen" id="errorScreen">
+      <div class="error-icon">!</div>
+      <div class="error-title">Can't reach SRO server</div>
+      <div class="error-msg" id="errorMsg">
+        Make sure the NUC is running and you're on the clinic network.
+        <br><br>
+        Expected: <strong id="errorUrl"></strong>
+      </div>
+      <button class="error-btn" id="btnRetry">Retry Connection</button>
+      <button class="error-btn" id="btnSettings" style="background:#0d1b2a; border:1px solid #1a5276; margin-top:4px;">Change URL</button>
+    </div>
+
+    <iframe id="sroFrame" style="display:none;"></iframe>
+  </div>
+
+  <script>
+    const frame = document.getElementById('sroFrame');
+    const loadingScreen = document.getElementById('loadingScreen');
+    const errorScreen = document.getElementById('errorScreen');
+    const statusDot = document.getElementById('statusDot');
+    let baseUrl = 'http://localhost:3000';
+
+    // Load saved URL
+    async function init() {
+      try {
+        const result = await chrome.storage.local.get('sroUrl');
+        if (result.sroUrl) baseUrl = result.sroUrl;
+      } catch (e) {
+        // Use default
+      }
+      loadPage('dashboard.html');
+    }
+
+    // Load a page in the iframe
+    function loadPage(page) {
+      const url = baseUrl.replace(/\/$/, '') + '/' + page;
+
+      loadingScreen.classList.remove('hidden');
+      errorScreen.classList.remove('visible');
+      frame.style.display = 'none';
+      statusDot.className = 'status-dot loading';
+
+      frame.src = url;
+
+      // Timeout for connection failure
+      const timeout = setTimeout(() => {
+        showError(url);
+      }, 8000);
+
+      frame.onload = () => {
+        clearTimeout(timeout);
+        loadingScreen.classList.add('hidden');
+        frame.style.display = 'block';
+        statusDot.className = 'status-dot';
+
+        // Update active nav
+        document.querySelectorAll('.quicknav a').forEach(a => {
+          a.classList.toggle('active', a.dataset.page === page);
+        });
+      };
+
+      frame.onerror = () => {
+        clearTimeout(timeout);
+        showError(url);
+      };
+    }
+
+    function showError(url) {
+      loadingScreen.classList.add('hidden');
+      errorScreen.classList.add('visible');
+      frame.style.display = 'none';
+      statusDot.className = 'status-dot offline';
+      document.getElementById('errorUrl').textContent = url;
+    }
+
+    // Quick nav clicks
+    document.getElementById('quickNav').addEventListener('click', (e) => {
+      e.preventDefault();
+      const link = e.target.closest('a[data-page]');
+      if (link) loadPage(link.dataset.page);
+    });
+
+    // Refresh
+    document.getElementById('btnRefresh').addEventListener('click', () => {
+      const activePage = document.querySelector('.quicknav a.active');
+      loadPage(activePage ? activePage.dataset.page : 'dashboard.html');
+    });
+
+    // Pop out to full window
+    document.getElementById('btnPopout').addEventListener('click', () => {
+      window.open(baseUrl, '_blank');
+    });
+
+    // Retry
+    document.getElementById('btnRetry').addEventListener('click', () => {
+      const activePage = document.querySelector('.quicknav a.active');
+      loadPage(activePage ? activePage.dataset.page : 'dashboard.html');
+    });
+
+    // Open settings popup (change URL)
+    document.getElementById('btnSettings').addEventListener('click', () => {
+      const newUrl = prompt('Enter SRO server URL:', baseUrl);
+      if (newUrl && newUrl.trim()) {
+        baseUrl = newUrl.trim();
+        chrome.storage.local.set({ sroUrl: baseUrl });
+        loadPage('dashboard.html');
+      }
+    });
+
+    // Listen for URL changes from popup
+    chrome.storage.onChanged.addListener((changes) => {
+      if (changes.sroUrl) {
+        baseUrl = changes.sroUrl.newValue;
+        loadPage('dashboard.html');
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>

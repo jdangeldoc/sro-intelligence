@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Your Treatment Journey | My SRO</title>
+    <style>
+        /* ===== CSS VARIABLES (match portal.html) ===== */
+        :root {
+            --navy: #1a3a5c;
+            --navy-light: #2c5a8c;
+            --blue: #3b82f6;
+            --blue-light: #dbeafe;
+            --green: #16a34a;
+            --green-light: #dcfce7;
+            --green-bg: #f0fdf4;
+            --amber: #d97706;
+            --amber-light: #fef3c7;
+            --red: #dc2626;
+            --red-light: #fee2e2;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --white: #ffffff;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+            --radius: 16px;
+            --radius-sm: 10px;
+        }
+
+        /* ===== RESET & BASE ===== */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html {
+            font-size: 18px;
+            -webkit-text-size-adjust: 100%;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #f0f7ff 0%, #f9fafb 50%, #f0fdf4 100%);
+            color: var(--gray-800);
+            min-height: 100vh;
+            min-height: 100dvh;
+            line-height: 1.5;
+            overflow-x: hidden;
+        }
+
+        /* ===== LOADING SCREEN ===== */
+        #loading-screen {
+            position: fixed; inset: 0;
+            background: var(--white);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.4s ease;
+        }
+        #loading-screen.fade-out { opacity: 0; pointer-events: none; }
+
+        .loading-logo {
+            width: 80px; height: 80px;
+            background: var(--navy);
+            border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 20px;
+            animation: pulse-load 1.5s ease-in-out infinite;
+        }
+        .loading-logo span {
+            color: var(--white);
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        @keyframes pulse-load {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.85; }
+        }
+        .loading-text {
+            font-size: 1rem;
+            color: var(--gray-400);
+        }
+
+        /* ===== ERROR SCREEN ===== */
+        #error-screen {
+            display: none;
+            min-height: 100vh; min-height: 100dvh;
+            padding: 40px 24px;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .error-icon {
+            width: 64px; height: 64px;
+            background: var(--red-light);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+        #error-screen h2 {
+            font-size: 1.3rem;
+            color: var(--gray-800);
+            margin-bottom: 8px;
+        }
+        #error-screen p {
+            font-size: 0.95rem;
+            color: var(--gray-500);
+            max-width: 340px;
+        }
+
+        /* ===== MAIN APP ===== */
+        #app {
+            display: none;
+            min-height: 100vh; min-height: 100dvh;
+            flex-direction: column;
+        }
+        #app.active { display: flex; }
+
+        /* ===== TOP HEADER ===== */
+        .top-header {
+            background: var(--navy);
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+        .top-header .logo {
+            width: 36px; height: 36px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 13px; color: var(--white);
+            flex-shrink: 0;
+        }
+        .top-header .title {
+            color: var(--white);
+            font-size: 1.05rem;
+            font-weight: 600;
+        }
+        .top-header .back-link {
+            margin-left: auto;
+            color: rgba(255,255,255,0.7);
+            font-size: 0.85rem;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .top-header .back-link:hover { color: var(--white); }
+
+        /* ===== PROGRESS BAR ===== */
+        .progress-strip {
+            background: var(--white);
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--gray-100);
+            flex-shrink: 0;
+        }
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .progress-info .step-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--gray-500);
+        }
+        .progress-info .step-count {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--navy);
+        }
+        .progress-track {
+            height: 6px;
+            background: var(--gray-100);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--blue), var(--green));
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        /* ===== STEP CONTENT AREA ===== */
+        .step-viewport {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .step-content {
+            max-width: 520px;
+            margin: 0 auto;
+            padding: 28px 20px 120px;
+        }
+
+        /* Education block */
+        .edu-block {
+            background: var(--blue-light);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 28px;
+            border-left: 4px solid var(--blue);
+        }
+        .edu-block .edu-icon {
+            font-size: 1.6rem;
+            margin-bottom: 8px;
+        }
+        .edu-block h3 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin-bottom: 8px;
+        }
+        .edu-block p {
+            font-size: 0.92rem;
+            color: var(--gray-700);
+            line-height: 1.6;
+        }
+
+        /* Question sections */
+        .question-group {
+            margin-bottom: 24px;
+        }
+        .question-label {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        /* ===== FORM CONTROLS ===== */
+        /* Select / Dropdown */
+        .form-select {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 1rem;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius-sm);
+            background: var(--white);
+            color: var(--gray-800);
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            background-size: 16px;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-select:focus { border-color: var(--blue); }
+
+        /* Yes/No toggle buttons */
+        .yn-group {
+            display: flex;
+            gap: 12px;
+        }
+        .yn-btn {
+            flex: 1;
+            padding: 16px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius-sm);
+            background: var(--white);
+            color: var(--gray-600);
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+            min-height: 56px;
+        }
+        .yn-btn:active { transform: scale(0.97); }
+        .yn-btn.selected {
+            border-color: var(--blue);
+            background: var(--blue-light);
+            color: var(--blue);
+        }
+        .yn-btn.selected-green {
+            border-color: var(--green);
+            background: var(--green-light);
+            color: var(--green);
+        }
+
+        /* Number input */
+        .form-number {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 1rem;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius-sm);
+            background: var(--white);
+            color: var(--gray-800);
+            outline: none;
+            -webkit-appearance: none;
+            -moz-appearance: textfield;
+            transition: border-color 0.2s;
+        }
+        .form-number:focus { border-color: var(--blue); }
+
+        /* Response buttons (Improved / No Change / Worse) */
+        .response-group {
+            display: flex;
+            gap: 8px;
+        }
+        .response-btn {
+            flex: 1;
+            padding: 14px 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius-sm);
+            background: var(--white);
+            color: var(--gray-600);
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .response-btn:active { transform: scale(0.97); }
+        .response-btn.selected {
+            border-color: var(--blue);
+            background: var(--blue-light);
+            color: var(--blue);
+        }
+
+        /* Scale buttons (1-5) */
+        .scale-group {
+            display: flex;
+            gap: 8px;
+        }
+        .scale-btn {
+            flex: 1;
+            padding: 14px 4px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius-sm);
+            background: var(--white);
+            color: var(--gray-600);
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .scale-btn:active { transform: scale(0.97); }
+        .scale-btn.selected {
+            border-color: var(--blue);
+            background: var(--blue-light);
+            color: var(--blue);
+        }
+        .scale-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 6px;
+            font-size: 0.72rem;
+            color: var(--gray-400);
+        }
+
+        /* Month/year picker */
+        .month-year-row {
+            display: flex;
+            gap: 10px;
+        }
+        .month-year-row .form-select { flex: 1; }
+
+        /* Checkbox list */
+        .cb-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .cb-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius-sm);
+            background: var(--white);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            color: var(--gray-700);
+        }
+        .cb-item:active { transform: scale(0.98); }
+        .cb-item.checked {
+            border-color: var(--blue);
+            background: var(--blue-light);
+            color: var(--blue);
+        }
+        .cb-box {
+            width: 26px; height: 26px;
+            border-radius: 6px;
+            border: 2px solid var(--gray-300);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            font-size: 0.85rem;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+        .cb-item.checked .cb-box {
+            background: var(--blue);
+            border-color: var(--blue);
+            color: var(--white);
+        }
+
+        /* Conditional sub-fields */
+        .sub-fields {
+            margin-top: 16px;
+            padding: 16px;
+            background: var(--gray-50);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--gray-100);
+        }
+        .sub-fields .question-group:last-child { margin-bottom: 0; }
+
+        /* ===== BOTTOM NAV ===== */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: var(--white);
+            border-top: 1px solid var(--gray-100);
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 100;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        }
+        .btn-back {
+            padding: 14px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius-sm);
+            background: var(--white);
+            color: var(--gray-500);
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 52px;
+        }
+        .btn-back:disabled { opacity: 0.3; cursor: default; }
+        .btn-back:hover:not(:disabled) { border-color: var(--gray-300); }
+        .btn-next {
+            padding: 14px 32px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: var(--radius-sm);
+            background: var(--blue);
+            color: var(--white);
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 52px;
+        }
+        .btn-next:active { transform: scale(0.97); }
+        .btn-next:hover { background: #2563eb; }
+        .btn-submit {
+            padding: 14px 32px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: var(--radius-sm);
+            background: var(--green);
+            color: var(--white);
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 52px;
+        }
+        .btn-submit:active { transform: scale(0.97); }
+        .btn-submit:hover { background: #15803d; }
+        .btn-submit:disabled { opacity: 0.5; cursor: default; }
+
+        /* ===== SUMMARY SCREEN ===== */
+        .summary-section {
+            margin-bottom: 20px;
+        }
+        .summary-section h4 {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--gray-400);
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--gray-100);
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 8px 0;
+            gap: 12px;
+        }
+        .summary-row .s-label {
+            font-size: 0.88rem;
+            color: var(--gray-500);
+            flex-shrink: 0;
+        }
+        .summary-row .s-value {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--gray-800);
+            text-align: right;
+        }
+
+        /* ===== SUCCESS SCREEN ===== */
+        #success-screen {
+            display: none;
+            min-height: 100vh; min-height: 100dvh;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 24px;
+            text-align: center;
+        }
+        .success-icon {
+            width: 80px; height: 80px;
+            background: var(--green-light);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 40px;
+            margin-bottom: 24px;
+        }
+        #success-screen h2 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin-bottom: 10px;
+        }
+        #success-screen p {
+            font-size: 0.95rem;
+            color: var(--gray-500);
+            max-width: 340px;
+            margin-bottom: 28px;
+        }
+        .btn-portal {
+            padding: 16px 40px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            background: var(--navy);
+            color: var(--white);
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-portal:hover { background: var(--navy-light); }
+
+        /* ===== ANIMATIONS ===== */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeInUp 0.4s ease forwards; }
+
+        /* ===== RESPONSIVE ===== */
+        @media (min-width: 600px) {
+            .step-content { padding: 32px 32px 120px; }
+            .bottom-nav { padding: 16px 32px; }
+        }
+        @media (min-width: 768px) {
+            body { display: flex; flex-direction: column; align-items: center; }
+            #app { max-width: 540px; width: 100%; }
+            #success-screen { max-width: 540px; }
+        }
+
+        /* iOS safe area */
+        @supports (padding-top: env(safe-area-inset-top)) {
+            .top-header { padding-top: calc(16px + env(safe-area-inset-top)); }
+            .bottom-nav { padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- LOADING -->
+    <div id="loading-screen">
+        <div class="loading-logo"><span>SRO</span></div>
+        <div class="loading-text">Loading your treatment journey...</div>
+    </div>
+
+    <!-- ERROR -->
+    <div id="error-screen">
+        <div class="error-icon">&#9888;</div>
+        <h2>Link Not Found</h2>
+        <p id="error-message">This link may have expired or is invalid. Please return to your portal and try again.</p>
+    </div>
+
+    <!-- SUCCESS -->
+    <div id="success-screen">
+        <div class="success-icon">&#10003;</div>
+        <h2>Treatment Journey Complete</h2>
+        <p>Your treatment history has been submitted. Your care team will review this information before your next visit.</p>
+        <button class="btn-portal" onclick="goPortal()">Back to My SRO</button>
+    </div>
+
+    <!-- MAIN APP -->
+    <div id="app">
+        <!-- Header -->
+        <div class="top-header">
+            <div class="logo">SRO</div>
+            <div class="title">Your Treatment Journey</div>
+            <a class="back-link" onclick="goPortal()">&#8592; Portal</a>
+        </div>
+
+        <!-- Progress -->
+        <div class="progress-strip">
+            <div class="progress-info">
+                <span class="step-label" id="step-label">Step 1 of 6</span>
+                <span class="step-count" id="step-name">Understanding Your Joint</span>
+            </div>
+            <div class="progress-track">
+                <div class="progress-bar-fill" id="progress-fill" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Step Content -->
+        <div class="step-viewport">
+            <div class="step-content" id="step-container">
+                <!-- Rendered by JS -->
+            </div>
+        </div>
+
+        <!-- Bottom Nav -->
+        <div class="bottom-nav">
+            <button class="btn-back" id="btn-back" onclick="goBack()" disabled>&#8592; Back</button>
+            <button class="btn-next" id="btn-next" onclick="goNext()">Next &#8594;</button>
+        </div>
+    </div>
+
+<script>
+/* ============================================
+   TREATMENT JOURNEY — Conservative Care Engine
+   Lives on sro-cloud-relay (Render.com)
+   Token-based, zero PHI in transit
+   ============================================ */
+
+// ===== CONFIG =====
+var RELAY_BASE = window.location.origin;
+var TOKEN = null;
+var currentStep = 0;
+var TOTAL_STEPS = 7; // 6 content steps + 1 summary
+
+// Step names for progress bar
+var STEP_NAMES = [
+    'Understanding Your Joint',
+    'Weight Management',
+    'Medications (NSAIDs)',
+    'Physical Therapy',
+    'Injections',
+    'Bracing & Activity',
+    'Review & Submit'
+];
+
+// ===== ANSWERS =====
+var answers = {};
+
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', init);
+
+function init() {
+    var params = new URLSearchParams(window.location.search);
+    TOKEN = params.get('t') || params.get('token');
+
+    if (!TOKEN) {
+        showError('No portal link found. Please use the link from your My SRO portal.');
+        return;
+    }
+
+    // Load saved progress
+    loadProgress();
+
+    // Show the app
+    document.getElementById('loading-screen').classList.add('fade-out');
+    setTimeout(function() {
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('app').classList.add('active');
+        renderStep();
+    }, 400);
+}
+
+// ===== PROGRESS PERSISTENCE =====
+function saveProgress() {
+    try {
+        localStorage.setItem('sro_treatment_' + TOKEN, JSON.stringify({
+            step: currentStep,
+            answers: answers,
+            savedAt: new Date().toISOString()
+        }));
+    } catch(e) { /* localStorage unavailable */ }
+}
+
+function loadProgress() {
+    try {
+        var saved = localStorage.getItem('sro_treatment_' + TOKEN);
+        if (saved) {
+            var data = JSON.parse(saved);
+            answers = data.answers || {};
+            currentStep = data.step || 0;
+        }
+    } catch(e) { /* ignore */ }
+}
+
+function clearProgress() {
+    try { localStorage.removeItem('sro_treatment_' + TOKEN); } catch(e) {}
+}
+
+// ===== SCREEN MANAGEMENT =====
+function showError(msg) {
+    document.getElementById('error-message').textContent = msg;
+    document.getElementById('loading-screen').classList.add('fade-out');
+    setTimeout(function() {
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('error-screen').style.display = 'flex';
+    }, 400);
+}
+
+function goPortal() {
+    window.location.href = RELAY_BASE + '/portal.html?t=' + TOKEN;
+}
+
+// ===== NAVIGATION =====
+function goNext() {
+    captureCurrentInputs();
+    saveProgress();
+
+    if (currentStep === TOTAL_STEPS - 1) {
+        submitTreatment();
+        return;
+    }
+
+    currentStep++;
+    renderStep();
+    window.scrollTo(0, 0);
+    document.querySelector('.step-viewport').scrollTop = 0;
+}
+
+function goBack() {
+    if (currentStep === 0) return;
+    captureCurrentInputs();
+    saveProgress();
+    currentStep--;
+    renderStep();
+    window.scrollTo(0, 0);
+    document.querySelector('.step-viewport').scrollTop = 0;
+}
+
+// ===== RENDER =====
+function renderStep() {
+    updateProgress();
+    updateNav();
+
+    var container = document.getElementById('step-container');
+    var html = '';
+
+    switch(currentStep) {
+        case 0: html = renderStep1(); break;
+        case 1: html = renderStep2(); break;
+        case 2: html = renderStep3(); break;
+        case 3: html = renderStep4(); break;
+        case 4: html = renderStep5(); break;
+        case 5: html = renderStep6(); break;
+        case 6: html = renderSummary(); break;
+    }
+
+    container.innerHTML = '<div class="fade-in">' + html + '</div>';
+    restoreInputValues();
+}
+
+function updateProgress() {
+    var displayStep = Math.min(currentStep + 1, TOTAL_STEPS);
+    document.getElementById('step-label').textContent = 'Step ' + displayStep + ' of ' + TOTAL_STEPS;
+    document.getElementById('step-name').textContent = STEP_NAMES[currentStep] || '';
+    var pct = (currentStep / TOTAL_STEPS) * 100;
+    document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+function updateNav() {
+    var btnBack = document.getElementById('btn-back');
+    var btnNext = document.getElementById('btn-next');
+
+    btnBack.disabled = currentStep === 0;
+
+    if (currentStep === TOTAL_STEPS - 1) {
+        btnNext.outerHTML = '<button class="btn-submit" id="btn-next" onclick="goNext()">Submit &#10003;</button>';
+    } else {
+        var existing = document.getElementById('btn-next');
+        if (existing.className !== 'btn-next') {
+            existing.outerHTML = '<button class="btn-next" id="btn-next" onclick="goNext()">Next &#8594;</button>';
+        }
+    }
+}
+
+// ===== STEP 1: Understanding Your Joint =====
+function renderStep1() {
+    return '' +
+        '<div class="edu-block">' +
+            '<div class="edu-icon">&#129471;</div>' +
+            '<h3>Understanding Osteoarthritis</h3>' +
+            '<p>Osteoarthritis is the most common form of arthritis, caused by gradual wearing of the cartilage that cushions your joints. ' +
+            'As cartilage breaks down, bones can rub together causing pain, stiffness, and swelling. ' +
+            'Understanding what you\'ve already tried helps your surgeon recommend the best path forward.</p>' +
+        '</div>' +
+        '<div class="question-group">' +
+            '<div class="question-label">How long have you been experiencing joint symptoms?</div>' +
+            '<select class="form-select" id="symptom_duration" onchange="answers.symptom_duration=this.value; saveProgress()">' +
+                '<option value="">Select duration...</option>' +
+                '<option value="lt6mo">Less than 6 months</option>' +
+                '<option value="6to12mo">6 - 12 months</option>' +
+                '<option value="1to2yr">1 - 2 years</option>' +
+                '<option value="2to5yr">2 - 5 years</option>' +
+                '<option value="5plus">5+ years</option>' +
+            '</select>' +
+        '</div>';
+}
+
+// ===== STEP 2: Weight Management =====
+function renderStep2() {
+    var subFields = '';
+    if (answers.weight_loss_attempted === 'yes') {
+        subFields = '' +
+            '<div class="sub-fields" id="weight-sub">' +
+                '<div class="question-group">' +
+                    '<div class="question-label">How long did you follow the program?</div>' +
+                    '<select class="form-select" id="weight_duration" onchange="answers.weight_duration=this.value; saveProgress()">' +
+                        '<option value="">Select duration...</option>' +
+                        '<option value="1-4">1 - 4 weeks</option>' +
+                        '<option value="5-8">5 - 8 weeks</option>' +
+                        '<option value="9-12">9 - 12 weeks</option>' +
+                        '<option value="13-24">13 - 24 weeks</option>' +
+                        '<option value="25+">25+ weeks</option>' +
+                    '</select>' +
+                '</div>' +
+                '<div class="question-group">' +
+                    '<div class="question-label">What method did you use?</div>' +
+                    '<select class="form-select" id="weight_method" onchange="answers.weight_method=this.value; saveProgress()">' +
+                        '<option value="">Select method...</option>' +
+                        '<option value="diet">Diet changes</option>' +
+                        '<option value="exercise">Exercise program</option>' +
+                        '<option value="medication">Weight loss medication</option>' +
+                        '<option value="surgery">Bariatric surgery</option>' +
+                        '<option value="combination">Combination approach</option>' +
+                    '</select>' +
+                '</div>' +
+                '<div class="question-group">' +
+                    '<div class="question-label">Approximate pounds lost</div>' +
+                    '<input type="number" class="form-number" id="weight_lbs_lost" placeholder="e.g. 15" min="0" max="500" inputmode="numeric" onchange="answers.weight_lbs_lost=this.value; saveProgress()">' +
+                '</div>' +
+            '</div>';
+    }
+
+    return '' +
+        '<div class="edu-block">' +
+            '<div class="edu-icon">&#9878;</div>' +
+            '<h3>Weight Management & Joint Health</h3>' +
+            '<p>Every extra pound of body weight puts approximately 4 pounds of additional stress on your knees. ' +
+            'Even modest weight loss of 10-15 pounds can significantly reduce joint pain and improve function. ' +
+            'Insurance companies often require evidence of weight management efforts before approving surgical procedures.</p>' +
+        '</div>' +
+        '<div class="question-group">' +
+            '<div class="question-label">Have you attempted structured weight loss for joint health?</div>' +
+            '<div class="yn-group">' +
+                '<button class="yn-btn' + (answers.weight_loss_attempted === 'yes' ? ' selected' : '') + '" onclick="setYN(\'weight_loss_attempted\',\'yes\',this)">Yes</button>' +
+                '<button class="yn-btn' + (answers.weight_loss_attempted === 'no' ? ' selected' : '') + '" onclick="setYN(\'weight_loss_attempted\',\'no\',this)">No</button>' +
+            '</div>' +
+        '</div>' +
+        subFields;
+}
+
+// ===== STEP 3: Medications (NSAIDs) =====
+function renderStep3() {
+    var subFields = '';
+    if (answers.nsaids_tried === 'yes') {
+        subFields = '' +
+            '<div class="sub-fields" id="nsaid-sub">' +
+                '<div class="question-group">' +
+                    '<div class="question-label">Which NSAID did you primarily use?</div>' +
+                    '<select class="form-select" id="nsaid_type" onchange="answers.nsaid_type=this.value; saveProgress()">' +
+                        '<option value="">Select medication...</option>' +
+                        '<option value="ibuprofen">Ibuprofen (Advil, Motrin)</option>' +
+                        '<option value="naproxen">Naproxen (Aleve)</option>' +
+                        '<option value="meloxicam">Meloxicam (Mobic)</option>' +
+                        '<option value="celecoxib">Celecoxib (Celebrex)</option>' +
+                        '<option value="diclofenac">Diclofenac (Voltaren)</option>' +
+                        '<option value="other">Other</option>' +
+                    '</select>' +
+                '</div>' +
+                '<div class="question-group">' +
+                    '<div class="question-label">How long did you take it?</div>' +
+                    '<select class="form-select" id="nsaid_duration" onchange="answers.nsaid_duration=this.value; saveProgress()">' +
+                        '<option value="">Select duration...</option>' +
+                        '<option value="1-2">1 - 2 weeks</option>' +
+                        '<option value="3-4">3 - 4 weeks</option>' +
+                        '<option value="5-8">5 - 8 weeks</option>' +
+                        '<option value="9-12">9 - 12 weeks</option>' +
+                        '<option value="12+">12+ weeks</option>' +
+                    '</select>' +
+                '</div>' +
+                '<div class="question-group">' +
+                    '<div class="question-label">How did you respond?</div>' +
+                    '<div class="response-group">' +
+                        '<button class="response-btn' + (answers.nsaid_response === 'improved' ? ' selected' : '') + '" onclick="setResponse(\'nsaid_response\',\'improved\',this)">Improved</button>' +
+                        '<button class="response-btn' + (answers.nsaid_response === 'no_change' ? ' selected' : '') + '" onclick="setResponse(\'nsaid_response\',\'no_change\',this)">No Change</button>' +
+                        '<button class="response-btn' + (answers.nsaid_response === 'worse' ? ' selected' : '') + '" onclick="setResponse(\'nsaid_response\',\'worse\',this)">Worse</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+    }
+
+    return '' +
+        '<div class="edu-block">' +
+            '<div class="edu-icon">&#128138;</div>' +
+            '<h3>Anti-Inflammatory Medications</h3>' +
+            '<p>NSAIDs (non-steroidal anti-inflammatory drugs) like ibuprofen and naproxen reduce inflammation and pain in arthritic joints. ' +
+            'They are typically one of the first treatments recommended. ' +
+            'Some patients cannot take NSAIDs due to allergies, stomach issues, or kidney concerns &mdash; this is important for your care team to know.</p>' +
+        '</div>' +
+        '<div class="question-group">' +
+            '<div class="question-label">Have you tried NSAIDs for your joint pain?</div>' +
+            '<div class="yn-group">' +
+                '<button class="yn-btn' + (answers.nsaids_tried === 'yes' ? ' selected' : '') + '" onclick="setYN(\'nsaids_tried\',\'yes\',this)">Yes</button>' +
+                '<button class="yn-btn' + (answers.nsaids_tried === 'no' ? ' selected' : '') + '" onclick="setYN(\'nsaids_tried\',\'no\',this)">No</button>' +
+            '</div>' +
+        '</div>' +
+        subFields +
+        '<div class="question-group" style="margin-top:24px">' +
+            '<div class="question-label">Are you unable to take NSAIDs due to allergy or intolerance?</div>' +
+            '<div class="yn-group">' +
+                '<button class="yn-btn' + (answers.nsaid_intolerance === 'yes' ? ' selected' : '') + '" onclick="setYN(\'nsaid_intolerance\',\'yes\',this)">Yes</button>' +
+                '<button class="yn-btn' + (answers.nsaid_intolerance === 'no' ? ' selected' : '') + '" onclick="setYN(\'nsaid_intolerance\',\'no\',this)">No</button>' +
+            '</div>' +
+        '</div>';
+}
+
+// ===== STEP 4: Physical Therapy =====
+function renderStep4() {
+    var subFields = '';
+    if (answers.pt_done === 'yes') {
+        subFields = '' +
+            '<div class="sub-fields" id="pt-sub">' +
+                '<div class="question-group">' +
+                    '<div class="question-label">How many weeks of supervised PT?</div>' +
+                    '<select class="form-select" id="pt_duration" onchange="answers.pt_duration=this.value; saveProgress()">' +
+                        '<option value="">Select duration...</option>' +
+                        '<option value="1-2">1 - 2 weeks</option>' +
+                        '<option value="3-4">3 - 4 weeks</option>' +
+                        '<option value="5-6">5 - 6 weeks</option>' +
+                        '<option value="7-8">7 - 8 weeks</option>' +
+                        '<option value="9-12">9 - 12 weeks</option>' +
+                        '<option value="12+">12+ weeks</option>' +
+                    '</select>' +
+                '</div>' +
+                '<div class="question-group">' +
+                    '<div class="question-label">Were you given a home exercise program?</div>' +
+                    '<div class="yn-group">' +
+                        '<button class="yn-btn' + (answers.pt_hep === 'yes' ? ' selected' : '') + '" onclick="setYN(\'pt_hep\',\'yes\',this)">Yes</button>' +
+                        '<button class="yn-btn' + (answers.pt_hep === 'no' ? ' selected' : '') + '" onclick="setYN(\'pt_hep\',\'no\',this)">No</button>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="question-group">' +
+                    '<div class="question-label">How consistently did you follow the exercises?</div>' +
+                    '<div class="scale-group">' +
+                        '<button class="scale-btn' + (answers.pt_adherence === '1' ? ' selected' : '') + '" onclick="setScale(\'pt_adherence\',\'1\',this)">1</button>' +
+                        '<button class="scale-btn' + (answers.pt_adherence === '2' ? ' selected' : '') + '" onclick="setScale(\'pt_adherence\',\'2\',this)">2</button>' +
+                        '<button class="scale-btn' + (answers.pt_adherence === '3' ? ' selected' : '') + '" onclick="setScale(\'pt_adherence\',\'3\',this)">3</button>' +
+                        '<button class="scale-btn' + (answers.pt_adherence === '4' ? ' selected' : '') + '" onclick="setScale(\'pt_adherence\',\'4\',this)">4</button>' +
+                        '<button class="scale-btn' + (answers.pt_adherence === '5' ? ' selected' : '') + '" onclick="setScale(\'pt_adherence\',\'5\',this)">5</button>' +
+                    '</div>' +
+                    '<div class="scale-labels"><span>Rarely</span><span>Always</span></div>' +
+                '</div>' +
+                '<div class="question-group">' +
+                    '<div class="question-label">How did you respond to PT?</div>' +
+                    '<div class="response-group">' +
+                        '<button class="response-btn' + (answers.pt_response === 'improved' ? ' selected' : '') + '" onclick="setResponse(\'pt_response\',\'improved\',this)">Improved</button>' +
+                        '<button class="response-btn' + (answers.pt_response === 'no_change' ? ' selected' : '') + '" onclick="setResponse(\'pt_response\',\'no_change\',this)">No Change</button>' +
+                        '<button class="response-btn' + (answers.pt_response === 'worse' ? ' selected' : '') + '" onclick="setResponse(\'pt_response\',\'worse\',this)">Worse</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+    }
+
+    return '' +
+        '<div class="edu-block">' +
+            '<div class="edu-icon">&#127947;</div>' +
+            '<h3>Physical Therapy</h3>' +
+            '<p>Physical therapy strengthens the muscles around your joint, improves flexibility, and can reduce pain without surgery. ' +
+            'A supervised program with a licensed therapist, combined with home exercises, typically shows results within 6-8 weeks. ' +
+            'Insurance companies generally require documentation of a PT trial before approving joint surgery.</p>' +
+        '</div>' +
+        '<div class="question-group">' +
+            '<div class="question-label">Have you done supervised physical therapy for this joint?</div>' +
+            '<div class="yn-group">' +
+                '<button class="yn-btn' + (answers.pt_done === 'yes' ? ' selected' : '') + '" onclick="setYN(\'pt_done\',\'yes\',this)">Yes</button>' +
+                '<button class="yn-btn' + (answers.pt_done === 'no' ? ' selected' : '') + '" onclick="setYN(\'pt_done\',\'no\',this)">No</button>' +
+            '</div>' +
+        '</div>' +
+        subFields;
+}
+
+// ===== STEP 5: Injections =====
+function renderStep5() {
+    // Cortisone sub-fields
+    var cortisoneSub = '';
+    if (answers.cortisone_done === 'yes') {
+        cortisoneSub = '' +
+            '<div class="sub-fields">' +
+                '<div class="question-group">' +
+                    '<div class="question-label">Approximate date of last cortisone injection</div>' +
+                    '<div class="month-year-row">' +
+                        '<select class="form-select" id="cortisone_month" onchange="answers.cortisone_month=this.value; saveProgress()">' +
+                            '<option value="">Month...</option>' +
+                            '<option value="1">January</option><option value="2">February</option>' +
+                            '<option value="3">March</option><option value="4">April</option>' +
+                            '<option value="5">May</option><option value="6">June</option>' +
+                            '<option value="7">July</option><option value="8">August</option>' +
+                            '<option value="9">September</option><option value="10">October</option>' +
+                            '<option value="11">November</option><option value="12">December</option>' +
+                        '</select>' +
+                        '<select class="form-select" id="cortisone_year" onchange="answers.cortisone_year=this.value; saveProgress()">' +
+                            '<option value="">Year...</option>' +
+                            buildYearOptions() +
+                        '</select>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="question-group">' +
+                    '<div class="question-label">How did you respond?</div>' +
+                    '<div class="response-group">' +
+                        '<button class="response-btn' + (answers.cortisone_response === 'improved' ? ' selected' : '') + '" onclick="setResponse(\'cortisone_response\',\'improved\',this)">Improved</button>' +
+                        '<button class="response-btn' + (answers.cortisone_response === 'no_change' ? ' selected' : '') + '" onclick="setResponse(\'cortisone_response\',\'no_change\',this)">No Change</button>' +
+                        '<button class="response-btn' + (answers.cortisone_response === 'worse' ? ' selected' : '') + '" onclick="setResponse(\'cortisone_response\',\'worse\',this)">Worse</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+    }
+
+    // Hyaluronic acid sub-fields
+    var haSub = '';
+    if (answers.ha_done === 'yes') {
+        haSub = '' +
+            '<div class="sub-fields">' +
+                '<div class="question-group">' +
+                    '<div class="question-label">How did you respond?</div>' +
+                    '<div class="response-group">' +
+                        '<button class="response-btn' + (answers.ha_response === 'improved' ? ' selected' : '') + '" onclick="setResponse(\'ha_response\',\'improved\',this)">Improved</button>' +
+                        '<button class="response-btn' + (answers.ha_response === 'no_change' ? ' selected' : '') + '" onclick="setResponse(\'ha_response\',\'no_change\',this)">No Change</button>' +
+                        '<button class="response-btn' + (answers.ha_response === 'worse' ? ' selected' : '') + '" onclick="setResponse(\'ha_response\',\'worse\',this)">Worse</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+    }
+
+    return '' +
+        '<div class="edu-block">' +
+            '<div class="edu-icon">&#128137;</div>' +
+            '<h3>Joint Injections</h3>' +
+            '<p>Cortisone (steroid) injections reduce inflammation and can provide weeks to months of relief. ' +
+            'Hyaluronic acid (gel) injections lubricate the joint. PRP uses your own blood to promote healing. ' +
+            'Note: If surgery is being considered, a cortisone injection within the past 90 days may require a waiting period for safety.</p>' +
+        '</div>' +
+        '<div class="question-group">' +
+            '<div class="question-label">Have you had a cortisone/steroid injection in this joint?</div>' +
+            '<div class="yn-group">' +
+                '<button class="yn-btn' + (answers.cortisone_done === 'yes' ? ' selected' : '') + '" onclick="setYN(\'cortisone_done\',\'yes\',this)">Yes</button>' +
+                '<button class="yn-btn' + (answers.cortisone_done === 'no' ? ' selected' : '') + '" onclick="setYN(\'cortisone_done\',\'no\',this)">No</button>' +
+            '</div>' +
+        '</div>' +
+        cortisoneSub +
+        '<div class="question-group" style="margin-top:24px">' +
+            '<div class="question-label">Have you had a hyaluronic acid (gel) injection?</div>' +
+            '<div class="yn-group">' +
+                '<button class="yn-btn' + (answers.ha_done === 'yes' ? ' selected' : '') + '" onclick="setYN(\'ha_done\',\'yes\',this)">Yes</button>' +
+                '<button class="yn-btn' + (answers.ha_done === 'no' ? ' selected' : '') + '" onclick="setYN(\'ha_done\',\'no\',this)">No</button>' +
+            '</div>' +
+        '</div>' +
+        haSub +
+        '<div class="question-group" style="margin-top:24px">' +
+            '<div class="question-label">Have you had a PRP (platelet-rich plasma) injection?</div>' +
+            '<div class="yn-group">' +
+                '<button class="yn-btn' + (answers.prp_done === 'yes' ? ' selected' : '') + '" onclick="setYN(\'prp_done\',\'yes\',this)">Yes</button>' +
+                '<button class="yn-btn' + (answers.prp_done === 'no' ? ' selected' : '') + '" onclick="setYN(\'prp_done\',\'no\',this)">No</button>' +
+            '</div>' +
+        '</div>';
+}
+
+function buildYearOptions() {
+    var now = new Date().getFullYear();
+    var html = '';
+    for (var y = now; y >= now - 10; y--) {
+        html += '<option value="' + y + '">' + y + '</option>';
+    }
+    return html;
+}
+
+// ===== STEP 6: Bracing & Activity Modification =====
+function renderStep6() {
+    var activitiesSub = '';
+    if (answers.activity_modified === 'yes') {
+        var activities = [
+            {id: 'walking', label: 'Walking'},
+            {id: 'stairs', label: 'Stairs'},
+            {id: 'sports', label: 'Sports / Recreation'},
+            {id: 'work', label: 'Work duties'},
+            {id: 'housework', label: 'Housework'},
+            {id: 'driving', label: 'Driving'},
+            {id: 'sleeping', label: 'Sleeping'}
+        ];
+        var selected = answers.activities_affected || [];
+
+        activitiesSub = '<div class="sub-fields"><div class="question-group">' +
+            '<div class="question-label">Which activities have been affected?</div>' +
+            '<div class="cb-list">';
+
+        for (var i = 0; i < activities.length; i++) {
+            var a = activities[i];
+            var isChecked = selected.indexOf(a.id) !== -1;
+            activitiesSub += '<div class="cb-item' + (isChecked ? ' checked' : '') + '" onclick="toggleActivity(\'' + a.id + '\',this)">' +
+                '<div class="cb-box">' + (isChecked ? '&#10003;' : '') + '</div>' +
+                a.label +
+            '</div>';
+        }
+
+        activitiesSub += '</div></div></div>';
+    }
+
+    return '' +
+        '<div class="edu-block">' +
+            '<div class="edu-icon">&#129520;</div>' +
+            '<h3>Bracing & Activity Modification</h3>' +
+            '<p>Knee or hip braces can provide stability and reduce pain during daily activities. ' +
+            'Activity modification &mdash; adjusting how you move, limiting high-impact activities, or using assistive devices &mdash; is another common approach. ' +
+            'Understanding which activities are affected helps your care team assess how your joint condition impacts your daily life.</p>' +
+        '</div>' +
+        '<div class="question-group">' +
+            '<div class="question-label">Have you used a brace for this joint?</div>' +
+            '<div class="yn-group">' +
+                '<button class="yn-btn' + (answers.brace_used === 'yes' ? ' selected' : '') + '" onclick="setYN(\'brace_used\',\'yes\',this)">Yes</button>' +
+                '<button class="yn-btn' + (answers.brace_used === 'no' ? ' selected' : '') + '" onclick="setYN(\'brace_used\',\'no\',this)">No</button>' +
+            '</div>' +
+        '</div>' +
+        '<div class="question-group" style="margin-top:24px">' +
+            '<div class="question-label">Have you had to modify or stop activities due to joint pain?</div>' +
+            '<div class="yn-group">' +
+                '<button class="yn-btn' + (answers.activity_modified === 'yes' ? ' selected' : '') + '" onclick="setYN(\'activity_modified\',\'yes\',this)">Yes</button>' +
+                '<button class="yn-btn' + (answers.activity_modified === 'no' ? ' selected' : '') + '" onclick="setYN(\'activity_modified\',\'no\',this)">No</button>' +
+            '</div>' +
+        '</div>' +
+        activitiesSub;
+}
+
+// ===== SUMMARY =====
+function renderSummary() {
+    var html = '<div class="edu-block" style="border-left-color: var(--green); background: var(--green-light);">' +
+        '<div class="edu-icon">&#128203;</div>' +
+        '<h3>Review Your Answers</h3>' +
+        '<p>Please review your treatment history below. If everything looks correct, tap Submit to send this to your care team.</p>' +
+    '</div>';
+
+    // Step 1
+    html += '<div class="summary-section"><h4>Joint Symptoms</h4>';
+    html += summaryRow('Symptom Duration', formatDuration(answers.symptom_duration));
+    html += '</div>';
+
+    // Step 2
+    html += '<div class="summary-section"><h4>Weight Management</h4>';
+    html += summaryRow('Attempted Weight Loss', formatYN(answers.weight_loss_attempted));
+    if (answers.weight_loss_attempted === 'yes') {
+        html += summaryRow('Duration', formatWeeks(answers.weight_duration));
+        html += summaryRow('Method', formatMethod(answers.weight_method));
+        html += summaryRow('Pounds Lost', answers.weight_lbs_lost ? answers.weight_lbs_lost + ' lbs' : '--');
+    }
+    html += '</div>';
+
+    // Step 3
+    html += '<div class="summary-section"><h4>Medications</h4>';
+    html += summaryRow('Tried NSAIDs', formatYN(answers.nsaids_tried));
+    if (answers.nsaids_tried === 'yes') {
+        html += summaryRow('NSAID Type', formatNSAID(answers.nsaid_type));
+        html += summaryRow('Duration', formatWeeks(answers.nsaid_duration));
+        html += summaryRow('Response', formatResponse(answers.nsaid_response));
+    }
+    html += summaryRow('NSAID Intolerance', formatYN(answers.nsaid_intolerance));
+    html += '</div>';
+
+    // Step 4
+    html += '<div class="summary-section"><h4>Physical Therapy</h4>';
+    html += summaryRow('Completed PT', formatYN(answers.pt_done));
+    if (answers.pt_done === 'yes') {
+        html += summaryRow('Duration', formatWeeks(answers.pt_duration));
+        html += summaryRow('Home Exercises', formatYN(answers.pt_hep));
+        html += summaryRow('Adherence', answers.pt_adherence ? answers.pt_adherence + '/5' : '--');
+        html += summaryRow('Response', formatResponse(answers.pt_response));
+    }
+    html += '</div>';
+
+    // Step 5
+    html += '<div class="summary-section"><h4>Injections</h4>';
+    html += summaryRow('Cortisone Injection', formatYN(answers.cortisone_done));
+    if (answers.cortisone_done === 'yes') {
+        html += summaryRow('Last Injection', formatMonthYear(answers.cortisone_month, answers.cortisone_year));
+        html += summaryRow('Response', formatResponse(answers.cortisone_response));
+    }
+    html += summaryRow('Hyaluronic Acid', formatYN(answers.ha_done));
+    if (answers.ha_done === 'yes') {
+        html += summaryRow('Response', formatResponse(answers.ha_response));
+    }
+    html += summaryRow('PRP Injection', formatYN(answers.prp_done));
+    html += '</div>';
+
+    // Step 6
+    html += '<div class="summary-section"><h4>Bracing & Activity</h4>';
+    html += summaryRow('Used Brace', formatYN(answers.brace_used));
+    html += summaryRow('Modified Activities', formatYN(answers.activity_modified));
+    if (answers.activity_modified === 'yes' && answers.activities_affected && answers.activities_affected.length > 0) {
+        html += summaryRow('Affected Activities', answers.activities_affected.join(', '));
+    }
+    html += '</div>';
+
+    return html;
+}
+
+function summaryRow(label, value) {
+    return '<div class="summary-row"><span class="s-label">' + label + '</span><span class="s-value">' + (value || '--') + '</span></div>';
+}
+
+// ===== FORMATTERS =====
+function formatDuration(v) {
+    var map = { 'lt6mo': 'Less than 6 months', '6to12mo': '6-12 months', '1to2yr': '1-2 years', '2to5yr': '2-5 years', '5plus': '5+ years' };
+    return map[v] || '--';
+}
+function formatYN(v) { return v === 'yes' ? 'Yes' : v === 'no' ? 'No' : '--'; }
+function formatWeeks(v) {
+    if (!v) return '--';
+    return v + ' weeks';
+}
+function formatMethod(v) {
+    var map = { diet: 'Diet changes', exercise: 'Exercise', medication: 'Medication', surgery: 'Bariatric surgery', combination: 'Combination' };
+    return map[v] || '--';
+}
+function formatNSAID(v) {
+    var map = { ibuprofen: 'Ibuprofen', naproxen: 'Naproxen', meloxicam: 'Meloxicam', celecoxib: 'Celecoxib', diclofenac: 'Diclofenac', other: 'Other' };
+    return map[v] || '--';
+}
+function formatResponse(v) {
+    var map = { improved: 'Improved', no_change: 'No Change', worse: 'Worse' };
+    return map[v] || '--';
+}
+function formatMonthYear(m, y) {
+    if (!m || !y) return '--';
+    var months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[parseInt(m)] + ' ' + y;
+}
+
+// ===== INPUT HELPERS =====
+function setYN(key, val, el) {
+    answers[key] = val;
+    // Update button states
+    var siblings = el.parentElement.children;
+    for (var i = 0; i < siblings.length; i++) {
+        siblings[i].classList.remove('selected');
+    }
+    el.classList.add('selected');
+    saveProgress();
+    // Re-render to show/hide conditional fields
+    renderStep();
+}
+
+function setResponse(key, val, el) {
+    answers[key] = val;
+    var siblings = el.parentElement.children;
+    for (var i = 0; i < siblings.length; i++) {
+        siblings[i].classList.remove('selected');
+    }
+    el.classList.add('selected');
+    saveProgress();
+}
+
+function setScale(key, val, el) {
+    answers[key] = val;
+    var siblings = el.parentElement.children;
+    for (var i = 0; i < siblings.length; i++) {
+        siblings[i].classList.remove('selected');
+    }
+    el.classList.add('selected');
+    saveProgress();
+}
+
+function toggleActivity(id, el) {
+    if (!answers.activities_affected) answers.activities_affected = [];
+    var idx = answers.activities_affected.indexOf(id);
+    if (idx === -1) {
+        answers.activities_affected.push(id);
+        el.classList.add('checked');
+        el.querySelector('.cb-box').innerHTML = '&#10003;';
+    } else {
+        answers.activities_affected.splice(idx, 1);
+        el.classList.remove('checked');
+        el.querySelector('.cb-box').innerHTML = '';
+    }
+    saveProgress();
+}
+
+function captureCurrentInputs() {
+    // Capture values from any native inputs that might not have triggered onchange
+    var selects = document.querySelectorAll('.form-select');
+    selects.forEach(function(s) {
+        if (s.id && s.value) answers[s.id] = s.value;
+    });
+    var numbers = document.querySelectorAll('.form-number');
+    numbers.forEach(function(n) {
+        if (n.id && n.value) answers[n.id] = n.value;
+    });
+}
+
+function restoreInputValues() {
+    // Restore select and input values after re-render
+    setTimeout(function() {
+        var selects = document.querySelectorAll('.form-select');
+        selects.forEach(function(s) {
+            if (s.id && answers[s.id]) s.value = answers[s.id];
+        });
+        var numbers = document.querySelectorAll('.form-number');
+        numbers.forEach(function(n) {
+            if (n.id && answers[n.id]) n.value = answers[n.id];
+        });
+    }, 10);
+}
+
+// ===== SUBMIT =====
+async function submitTreatment() {
+    var btn = document.getElementById('btn-next');
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+
+    var data = {
+        token: TOKEN,
+        type: 'treatment',
+        submitted_at: new Date().toISOString(),
+        symptom_duration: answers.symptom_duration || null,
+        weight_loss_attempted: answers.weight_loss_attempted || null,
+        weight_duration: answers.weight_duration || null,
+        weight_method: answers.weight_method || null,
+        weight_lbs_lost: answers.weight_lbs_lost ? parseInt(answers.weight_lbs_lost) : null,
+        nsaids_tried: answers.nsaids_tried || null,
+        nsaid_type: answers.nsaid_type || null,
+        nsaid_duration: answers.nsaid_duration || null,
+        nsaid_response: answers.nsaid_response || null,
+        nsaid_intolerance: answers.nsaid_intolerance || null,
+        pt_done: answers.pt_done || null,
+        pt_duration: answers.pt_duration || null,
+        pt_hep: answers.pt_hep || null,
+        pt_adherence: answers.pt_adherence ? parseInt(answers.pt_adherence) : null,
+        pt_response: answers.pt_response || null,
+        cortisone_done: answers.cortisone_done || null,
+        cortisone_month: answers.cortisone_month ? parseInt(answers.cortisone_month) : null,
+        cortisone_year: answers.cortisone_year ? parseInt(answers.cortisone_year) : null,
+        cortisone_response: answers.cortisone_response || null,
+        ha_done: answers.ha_done || null,
+        ha_response: answers.ha_response || null,
+        prp_done: answers.prp_done || null,
+        brace_used: answers.brace_used || null,
+        activity_modified: answers.activity_modified || null,
+        activities_affected: answers.activities_affected || []
+    };
+
+    try {
+        var r = await fetch(RELAY_BASE + '/api/portal/treatment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (!r.ok) throw new Error('Server error');
+
+        clearProgress();
+        document.getElementById('app').classList.remove('active');
+        document.getElementById('app').style.display = 'none';
+        document.getElementById('success-screen').style.display = 'flex';
+
+    } catch(e) {
+        console.error('Submit error:', e);
+        btn.disabled = false;
+        btn.textContent = 'Submit \u2713';
+        alert('There was a problem submitting your information. Please try again.');
+    }
+}
+</script>
+
+</body>
+</html>

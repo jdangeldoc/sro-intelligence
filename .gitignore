@@ -13,8 +13,8 @@ node_modules/
 *.log
 logs/
 
-# Claude Code worktrees — never commit
-.claude/worktrees/
+# Claude Code
+.claude/
 
 # Large binaries / build output
 dist/
@@ -33,11 +33,11 @@ desktop.ini
 secrets.py
 api_keys.py
 
-# Previously excluded
-PreOp_Optimizer/
-sro-cloud-relay/sro-cloud-relay/
+# SQLite database (local data, do not commit)
+*.db
 
-# Nested git repos — committed independently
-sro-local/
+# Archive (old files, don't need in git)
+archive/
 
-sro-local
+# Batch file shortcuts
+*.lnk

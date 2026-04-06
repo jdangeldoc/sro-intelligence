@@ -1,0 +1,4 @@
+node_modules/
+sro.db
+.DS_Store
+*.log

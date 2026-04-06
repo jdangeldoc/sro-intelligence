@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Provider Directory | SRO Intelligence</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .directory-container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+        
+        .page-header { margin-bottom: 24px; }
+        .page-header h1 { margin: 0 0 4px 0; font-size: 1.6rem; color: #1e293b; }
+        .page-header p { margin: 0; color: #6b7280; font-size: 0.95rem; }
+        
+        .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 2px solid #e5e7eb; }
+        .tab { padding: 10px 20px; background: none; border: none; font-size: 0.95rem; font-weight: 500; color: #6b7280; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+        .tab:hover { color: #374151; }
+        .tab.active { color: #2c5aa0; border-bottom-color: #2c5aa0; font-weight: 600; }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .search-box { padding: 8px 14px; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 0.9rem; width: 280px; }
+        .btn-add { background: #2c5aa0; color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+        .btn-add:hover { background: #1e4080; }
+        
+        .provider-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+        
+        .provider-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e5e7eb; }
+        .provider-card.preferred { border-left: 4px solid #2c5aa0; }
+        .provider-card h3 { margin: 0 0 4px 0; font-size: 1.05rem; color: #1e293b; display: flex; align-items: center; gap: 8px; }
+        .provider-card h3 .star { color: #f59e0b; }
+        .provider-card .type-badge { font-size: 0.7rem; background: #e5e7eb; color: #4b5563; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+        .provider-card .contact { margin-top: 12px; font-size: 0.88rem; color: #4b5563; }
+        .provider-card .contact div { margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+        .provider-card .contact .label { color: #9ca3af; min-width: 50px; }
+        .provider-card .actions { margin-top: 16px; padding-top: 12px; border-top: 1px solid #f3f4f6; display: flex; gap: 8px; }
+        .provider-card .btn-edit { background: #f3f4f6; color: #374151; border: none; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; cursor: pointer; }
+        .provider-card .btn-edit:hover { background: #e5e7eb; }
+        .provider-card .btn-delete { background: none; color: #dc2626; border: none; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; cursor: pointer; }
+        .provider-card .btn-delete:hover { background: #fef2f2; }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state h3 { margin: 0 0 8px 0; color: #374151; }
+        
+        /* Modal */
+        #providerModal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99999; justify-content: center; align-items: center; }
+        .modal-box { background: white; border-radius: 12px; padding: 24px; width: 480px; max-width: 90vw; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .modal-box h2 { margin: 0 0 20px 0; font-size: 1.2rem; color: #1e293b; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 0.9rem; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; }
+        .form-group .checkbox-row { display: flex; align-items: center; gap: 8px; }
+        .form-group .checkbox-row input { width: auto; }
+        .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb; }
+        .form-actions button { padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 0.95rem; cursor: pointer; border: none; }
+        .btn-cancel { background: #f3f4f6; color: #374151; }
+        .btn-save { background: #2c5aa0; color: white; }
+        .btn-save:hover { background: #1e4080; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <div class="logo-icon">SRO</div>
+            <span class="nav-title">SRO Intelligence</span>
+        </div>
+        <div class="nav-links">
+            <a href="/dashboard.html" class="nav-link">Dashboard</a>
+            <a href="/preop.html" class="nav-link">Pre-Op</a>
+            <a href="/surgical-prep.html" class="nav-link">Surg Prep</a>
+            <a href="/nonop-plan.html" class="nav-link">Conservative Care</a>
+            <a href="/analytics.html" class="nav-link">Analytics</a>
+            <a href="/cms-compliance.html" class="nav-link">CMS Compliance</a>
+            <a href="/rpm-report.html" class="nav-link">RPM Billing</a>
+            <a href="/settings.html" class="nav-link active">Settings</a>
+        </div>
+        <div class="nav-user">
+            <span id="userDisplay"></span>
+            <button class="btn btn-sm btn-secondary" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="directory-container">
+        <div class="page-header">
+            <h1>📇 Provider Directory</h1>
+            <p>Manage external providers for referrals, imaging orders, and fax communications</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('pt')">Physical Therapy</button>
+            <button class="tab" onclick="switchTab('imaging')">Imaging Centers</button>
+            <button class="tab" onclick="switchTab('other')">Other Providers</button>
+        </div>
+
+        <!-- PT Clinics Tab -->
+        <div id="tab-pt" class="tab-content active">
+            <div class="toolbar">
+                <input type="text" class="search-box" placeholder="Search PT clinics..." onkeyup="filterProviders('pt', this.value)">
+                <button class="btn-add" onclick="openModal('pt_clinic')">+ Add PT Clinic</button>
+            </div>
+            <div id="pt-grid" class="provider-grid"></div>
+        </div>
+
+        <!-- Imaging Tab -->
+        <div id="tab-imaging" class="tab-content">
+            <div class="toolbar">
+                <input type="text" class="search-box" placeholder="Search imaging centers..." onkeyup="filterProviders('imaging', this.value)">
+                <button class="btn-add" onclick="openModal('imaging_center')">+ Add Imaging Center</button>
+            </div>
+            <div id="imaging-grid" class="provider-grid"></div>
+        </div>
+
+        <!-- Other Tab -->
+        <div id="tab-other" class="tab-content">
+            <div class="toolbar">
+                <input type="text" class="search-box" placeholder="Search providers..." onkeyup="filterProviders('other', this.value)">
+                <button class="btn-add" onclick="openModal('other')">+ Add Provider</button>
+            </div>
+            <div id="other-grid" class="provider-grid"></div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="providerModal">
+        <div class="modal-box">
+            <h2 id="modalTitle">Add Provider</h2>
+            <input type="hidden" id="providerId">
+            <input type="hidden" id="providerTypeHidden">
+            
+            <div class="form-group">
+                <label>Provider Name *</label>
+                <input type="text" id="providerName" placeholder="e.g., Peak Performance Physical Therapy">
+            </div>
+            
+            <div class="form-group">
+                <label>Address</label>
+                <input type="text" id="providerAddress" placeholder="123 Main St, Little Rock, AR 72201">
+            </div>
+            
+            <div class="form-group">
+                <label>Phone</label>
+                <input type="text" id="providerPhone" placeholder="(501) 555-0100">
+            </div>
+            
+            <div class="form-group">
+                <label>Fax Number</label>
+                <input type="text" id="providerFax" placeholder="(501) 555-0101">
+            </div>
+            
+            <div class="form-group">
+                <label>Contact Person</label>
+                <input type="text" id="providerContact" placeholder="Jane Smith">
+            </div>
+            
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="providerEmail" placeholder="referrals@peakpt.com">
+            </div>
+            
+            <div class="form-group">
+                <label>NPI (if applicable)</label>
+                <input type="text" id="providerNPI" placeholder="1234567890">
+            </div>
+            
+            <div class="form-group">
+                <div class="checkbox-row">
+                    <input type="checkbox" id="providerPreferred">
+                    <label for="providerPreferred" style="margin:0; font-weight:normal;">Mark as preferred provider ★</label>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="btn-save" onclick="saveProvider()">Save Provider</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const CLINIC_ID = '11111111-1111-1111-1111-111111111111';
+    let allProviders = [];
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        document.getElementById('userDisplay').textContent = sessionStorage.getItem('userName') || '';
+        await loadAllProviders();
+    });
+
+    async function loadAllProviders() {
+        try {
+            const resp = await fetch('/api/external-providers?clinic_id=' + CLINIC_ID);
+            if (resp.ok) {
+                allProviders = await resp.json();
+                renderProviders();
+            }
+        } catch (e) {
+            console.error('Failed to load providers:', e);
+        }
+    }
+
+    function renderProviders() {
+        renderGrid('pt', allProviders.filter(p => p.provider_type === 'pt_clinic'));
+        renderGrid('imaging', allProviders.filter(p => p.provider_type === 'imaging_center'));
+        renderGrid('other', allProviders.filter(p => !['pt_clinic', 'imaging_center'].includes(p.provider_type)));
+    }
+
+    function renderGrid(type, providers) {
+        const gridId = type + '-grid';
+        const grid = document.getElementById(gridId);
+        
+        if (providers.length === 0) {
+            grid.innerHTML = '<div class="empty-state"><h3>No providers yet</h3><p>Click the button above to add your first provider.</p></div>';
+            return;
+        }
+        
+        grid.innerHTML = providers.map(p => `
+            <div class="provider-card ${p.preferred ? 'preferred' : ''}">
+                <h3>
+                    ${p.preferred ? '<span class="star">★</span>' : ''}
+                    ${escapeHtml(p.name)}
+                    <span class="type-badge">${getTypeBadge(p.provider_type)}</span>
+                </h3>
+                <div class="contact">
+                    ${p.address ? `<div><span class="label">Addr:</span> ${escapeHtml(p.address)}</div>` : ''}
+                    ${p.phone ? `<div><span class="label">Phone:</span> ${escapeHtml(p.phone)}</div>` : ''}
+                    ${p.fax ? `<div><span class="label">Fax:</span> <strong>${escapeHtml(p.fax)}</strong></div>` : ''}
+                    ${p.contact_name ? `<div><span class="label">Contact:</span> ${escapeHtml(p.contact_name)}</div>` : ''}
+                    ${p.email ? `<div><span class="label">Email:</span> ${escapeHtml(p.email)}</div>` : ''}
+                </div>
+                <div class="actions">
+                    <button class="btn-edit" onclick="editProvider('${p.id}')">Edit</button>
+                    <button class="btn-delete" onclick="deleteProvider('${p.id}', '${escapeHtml(p.name)}')">Delete</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function getTypeBadge(type) {
+        const badges = {
+            'pt_clinic': 'PT',
+            'imaging_center': 'Imaging',
+            'other': 'Other'
+        };
+        return badges[type] || type;
+    }
+
+    function switchTab(tab) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        event.target.classList.add('active');
+        document.getElementById('tab-' + tab).classList.add('active');
+    }
+
+    function filterProviders(type, query) {
+        const q = query.toLowerCase();
+        let filtered;
+        
+        if (type === 'pt') {
+            filtered = allProviders.filter(p => p.provider_type === 'pt_clinic' && p.name.toLowerCase().includes(q));
+        } else if (type === 'imaging') {
+            filtered = allProviders.filter(p => p.provider_type === 'imaging_center' && p.name.toLowerCase().includes(q));
+        } else {
+            filtered = allProviders.filter(p => !['pt_clinic', 'imaging_center'].includes(p.provider_type) && p.name.toLowerCase().includes(q));
+        }
+        
+        renderGrid(type, filtered);
+    }
+
+    function openModal(providerType) {
+        document.getElementById('modalTitle').textContent = 'Add Provider';
+        document.getElementById('providerId').value = '';
+        document.getElementById('providerTypeHidden').value = providerType;
+        document.getElementById('providerName').value = '';
+        document.getElementById('providerAddress').value = '';
+        document.getElementById('providerPhone').value = '';
+        document.getElementById('providerFax').value = '';
+        document.getElementById('providerContact').value = '';
+        document.getElementById('providerEmail').value = '';
+        document.getElementById('providerNPI').value = '';
+        document.getElementById('providerPreferred').checked = false;
+        document.getElementById('providerModal').style.display = 'flex';
+    }
+
+    function editProvider(id) {
+        const p = allProviders.find(x => x.id === id);
+        if (!p) return;
+        
+        document.getElementById('modalTitle').textContent = 'Edit Provider';
+        document.getElementById('providerId').value = p.id;
+        document.getElementById('providerTypeHidden').value = p.provider_type;
+        document.getElementById('providerName').value = p.name || '';
+        document.getElementById('providerAddress').value = p.address || '';
+        document.getElementById('providerPhone').value = p.phone || '';
+        document.getElementById('providerFax').value = p.fax || '';
+        document.getElementById('providerContact').value = p.contact_name || '';
+        document.getElementById('providerEmail').value = p.email || '';
+        document.getElementById('providerNPI').value = p.npi || '';
+        document.getElementById('providerPreferred').checked = !!p.preferred;
+        document.getElementById('providerModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('providerModal').style.display = 'none';
+    }
+
+    async function saveProvider() {
+        const id = document.getElementById('providerId').value;
+        const name = document.getElementById('providerName').value.trim();
+        
+        if (!name) {
+            alert('Provider name is required.');
+            return;
+        }
+        
+        const data = {
+            clinic_id: CLINIC_ID,
+            provider_type: document.getElementById('providerTypeHidden').value,
+            name: name,
+            address: document.getElementById('providerAddress').value.trim(),
+            phone: document.getElementById('providerPhone').value.trim(),
+            fax: document.getElementById('providerFax').value.trim(),
+            contact_name: document.getElementById('providerContact').value.trim(),
+            email: document.getElementById('providerEmail').value.trim(),
+            npi: document.getElementById('providerNPI').value.trim(),
+            preferred: document.getElementById('providerPreferred').checked ? 1 : 0
+        };
+        
+        try {
+            let resp;
+            if (id) {
+                resp = await fetch('/api/external-providers/' + id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+            } else {
+                resp = await fetch('/api/external-providers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+            }
+            
+            if (resp.ok) {
+                closeModal();
+                await loadAllProviders();
+            } else {
+                const err = await resp.json();
+                alert('Failed to save: ' + (err.error || 'Unknown error'));
+            }
+        } catch (e) {
+            console.error('Save failed:', e);
+            alert('Failed to save provider.');
+        }
+    }
+
+    async function deleteProvider(id, name) {
+        if (!confirm('Delete "' + name + '"? This cannot be undone.')) return;
+        
+        try {
+            const resp = await fetch('/api/external-providers/' + id, { method: 'DELETE' });
+            if (resp.ok) {
+                await loadAllProviders();
+            } else {
+                alert('Failed to delete provider.');
+            }
+        } catch (e) {
+            console.error('Delete failed:', e);
+            alert('Failed to delete provider.');
+        }
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function logout() { sessionStorage.clear(); window.location.href = '/index.html'; }
+    </script>
+</body>
+</html>

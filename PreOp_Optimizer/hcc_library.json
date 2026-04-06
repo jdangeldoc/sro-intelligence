@@ -1,0 +1,464 @@
+{
+    "library_version": "1.0.0",
+    "last_updated": "2025-01-16",
+    "source": "CMS HCC Risk Adjustment Model V28",
+    
+    "comorbidities": {
+        "diabetes_controlled": {
+            "display_name": "Diabetes (Controlled, A1c < 8)",
+            "hcc_code": "HCC 37",
+            "hcc_weight": 0.105,
+            "category": "metabolic",
+            "workup_required": {
+                "tests": ["HbA1c", "BMP"],
+                "consults": [],
+                "clearance_criteria": "A1c < 8.0, glucose controlled"
+            },
+            "surgical_risk_modifier": 1.1,
+            "outcome_impact": {
+                "koos_reduction": 3,
+                "hoos_reduction": 3,
+                "readmission_increase": 0.02
+            }
+        },
+        "diabetes_uncontrolled": {
+            "display_name": "Diabetes (Uncontrolled, A1c ≥ 8)",
+            "hcc_code": "HCC 36",
+            "hcc_weight": 0.302,
+            "category": "metabolic",
+            "workup_required": {
+                "tests": ["HbA1c", "BMP", "Fructosamine"],
+                "consults": ["Endocrinology"],
+                "clearance_criteria": "A1c < 8.0 or Endocrine clearance with optimization plan"
+            },
+            "surgical_risk_modifier": 1.4,
+            "outcome_impact": {
+                "koos_reduction": 8,
+                "hoos_reduction": 8,
+                "readmission_increase": 0.05
+            }
+        },
+        "chf": {
+            "display_name": "Congestive Heart Failure",
+            "hcc_code": "HCC 85",
+            "hcc_weight": 0.323,
+            "category": "cardiac",
+            "workup_required": {
+                "tests": ["BNP", "Echocardiogram", "EKG"],
+                "consults": ["Cardiology"],
+                "clearance_criteria": "EF > 40%, optimized on medications, Cardiology clearance"
+            },
+            "surgical_risk_modifier": 1.6,
+            "outcome_impact": {
+                "koos_reduction": 5,
+                "hoos_reduction": 5,
+                "readmission_increase": 0.08
+            }
+        },
+        "copd": {
+            "display_name": "COPD / Chronic Lung Disease",
+            "hcc_code": "HCC 111",
+            "hcc_weight": 0.335,
+            "category": "pulmonary",
+            "workup_required": {
+                "tests": ["PFTs", "Chest X-ray", "ABG if severe"],
+                "consults": ["Pulmonology if FEV1 < 50%"],
+                "clearance_criteria": "FEV1 > 50% predicted or Pulmonology clearance"
+            },
+            "surgical_risk_modifier": 1.4,
+            "outcome_impact": {
+                "koos_reduction": 4,
+                "hoos_reduction": 4,
+                "readmission_increase": 0.04
+            }
+        },
+        "ckd_stage_3": {
+            "display_name": "CKD Stage 3 (GFR 30-59)",
+            "hcc_code": "HCC 138",
+            "hcc_weight": 0.069,
+            "category": "renal",
+            "workup_required": {
+                "tests": ["BMP", "GFR", "Urinalysis"],
+                "consults": [],
+                "clearance_criteria": "Stable GFR, electrolytes within normal limits"
+            },
+            "surgical_risk_modifier": 1.2,
+            "outcome_impact": {
+                "koos_reduction": 2,
+                "hoos_reduction": 2,
+                "readmission_increase": 0.02
+            }
+        },
+        "ckd_stage_4": {
+            "display_name": "CKD Stage 4 (GFR 15-29)",
+            "hcc_code": "HCC 137",
+            "hcc_weight": 0.289,
+            "category": "renal",
+            "workup_required": {
+                "tests": ["BMP", "GFR", "CBC", "Phosphorus", "PTH"],
+                "consults": ["Nephrology"],
+                "clearance_criteria": "Nephrology clearance, dialysis plan if needed"
+            },
+            "surgical_risk_modifier": 1.5,
+            "outcome_impact": {
+                "koos_reduction": 6,
+                "hoos_reduction": 6,
+                "readmission_increase": 0.06
+            }
+        },
+        "ckd_stage_5_esrd": {
+            "display_name": "CKD Stage 5 / ESRD",
+            "hcc_code": "HCC 136",
+            "hcc_weight": 0.489,
+            "category": "renal",
+            "workup_required": {
+                "tests": ["BMP", "CBC", "Phosphorus", "PTH", "Iron studies"],
+                "consults": ["Nephrology"],
+                "clearance_criteria": "Nephrology clearance, dialysis schedule coordinated"
+            },
+            "surgical_risk_modifier": 2.0,
+            "outcome_impact": {
+                "koos_reduction": 10,
+                "hoos_reduction": 10,
+                "readmission_increase": 0.10
+            }
+        },
+        "obesity_class_2": {
+            "display_name": "Obesity Class II (BMI 35-39.9)",
+            "hcc_code": "HCC 48",
+            "hcc_weight": 0.250,
+            "category": "metabolic",
+            "workup_required": {
+                "tests": ["BMI calculation", "Fasting glucose", "Lipid panel"],
+                "consults": ["Nutrition if BMI > 40"],
+                "clearance_criteria": "Document BMI, assess for OSA"
+            },
+            "surgical_risk_modifier": 1.3,
+            "outcome_impact": {
+                "koos_reduction": 4,
+                "hoos_reduction": 4,
+                "readmission_increase": 0.03
+            }
+        },
+        "obesity_class_3": {
+            "display_name": "Obesity Class III / Morbid (BMI ≥ 40)",
+            "hcc_code": "HCC 48",
+            "hcc_weight": 0.250,
+            "category": "metabolic",
+            "workup_required": {
+                "tests": ["BMI calculation", "Fasting glucose", "Lipid panel", "HbA1c"],
+                "consults": ["Nutrition", "Bariatric evaluation if BMI > 45"],
+                "clearance_criteria": "BMI < 45 for elective arthroplasty or bariatric clearance"
+            },
+            "surgical_risk_modifier": 1.6,
+            "outcome_impact": {
+                "koos_reduction": 7,
+                "hoos_reduction": 7,
+                "readmission_increase": 0.05
+            }
+        },
+        "cad": {
+            "display_name": "Coronary Artery Disease",
+            "hcc_code": "HCC 88",
+            "hcc_weight": 0.140,
+            "category": "cardiac",
+            "workup_required": {
+                "tests": ["EKG", "Stress test if not done in 2 years"],
+                "consults": ["Cardiology if active symptoms or recent event"],
+                "clearance_criteria": "No active angina, stable on medications, Cardiology clearance if indicated"
+            },
+            "surgical_risk_modifier": 1.4,
+            "outcome_impact": {
+                "koos_reduction": 3,
+                "hoos_reduction": 3,
+                "readmission_increase": 0.04
+            }
+        },
+        "atrial_fibrillation": {
+            "display_name": "Atrial Fibrillation",
+            "hcc_code": "HCC 96",
+            "hcc_weight": 0.271,
+            "category": "cardiac",
+            "workup_required": {
+                "tests": ["EKG", "INR if on warfarin", "Echocardiogram if not done"],
+                "consults": ["Cardiology for anticoagulation bridging plan"],
+                "clearance_criteria": "Rate controlled, anticoagulation bridging plan documented"
+            },
+            "surgical_risk_modifier": 1.3,
+            "outcome_impact": {
+                "koos_reduction": 2,
+                "hoos_reduction": 2,
+                "readmission_increase": 0.03
+            }
+        },
+        "sleep_apnea": {
+            "display_name": "Obstructive Sleep Apnea",
+            "hcc_code": "HCC 108",
+            "hcc_weight": 0.180,
+            "category": "pulmonary",
+            "workup_required": {
+                "tests": ["Sleep study if not done or STOP-BANG ≥ 5"],
+                "consults": ["Sleep medicine if uncontrolled"],
+                "clearance_criteria": "On CPAP with documented compliance (>4hrs/night, >70% nights) or Sleep medicine clearance"
+            },
+            "surgical_risk_modifier": 1.3,
+            "outcome_impact": {
+                "koos_reduction": 2,
+                "hoos_reduction": 2,
+                "readmission_increase": 0.03
+            }
+        },
+        "depression_anxiety": {
+            "display_name": "Depression / Anxiety",
+            "hcc_code": "HCC 155",
+            "hcc_weight": 0.309,
+            "category": "mental_health",
+            "workup_required": {
+                "tests": ["PHQ-9", "GAD-7"],
+                "consults": ["Behavioral health if PHQ-9 > 15 or suicidal ideation"],
+                "clearance_criteria": "PHQ-9 < 15, no active suicidal ideation, stable on medications if applicable"
+            },
+            "surgical_risk_modifier": 1.2,
+            "outcome_impact": {
+                "koos_reduction": 6,
+                "hoos_reduction": 6,
+                "readmission_increase": 0.03
+            }
+        },
+        "serious_mental_illness": {
+            "display_name": "Serious Mental Illness (Bipolar, Schizophrenia)",
+            "hcc_code": "HCC 152",
+            "hcc_weight": 0.309,
+            "category": "mental_health",
+            "workup_required": {
+                "tests": ["Medication reconciliation", "PHQ-9"],
+                "consults": ["Psychiatry"],
+                "clearance_criteria": "Psychiatry clearance, stable on medications, support system identified"
+            },
+            "surgical_risk_modifier": 1.4,
+            "outcome_impact": {
+                "koos_reduction": 8,
+                "hoos_reduction": 8,
+                "readmission_increase": 0.05
+            }
+        },
+        "frailty": {
+            "display_name": "Frailty / Senescence",
+            "hcc_code": "HCC 161",
+            "hcc_weight": 0.149,
+            "category": "functional",
+            "workup_required": {
+                "tests": ["Timed Up and Go", "5x Sit-to-Stand", "Grip strength"],
+                "consults": ["PT for prehabilitation", "Geriatrics if age > 80"],
+                "clearance_criteria": "TUG < 15 seconds or documented prehab plan, Geriatrics clearance if indicated"
+            },
+            "surgical_risk_modifier": 1.5,
+            "outcome_impact": {
+                "koos_reduction": 8,
+                "hoos_reduction": 8,
+                "readmission_increase": 0.07
+            }
+        },
+        "malnutrition": {
+            "display_name": "Malnutrition / Protein-Calorie Deficiency",
+            "hcc_code": "HCC 21",
+            "hcc_weight": 0.250,
+            "category": "metabolic",
+            "workup_required": {
+                "tests": ["Albumin", "Prealbumin", "Transferrin", "Total lymphocyte count"],
+                "consults": ["Nutrition"],
+                "clearance_criteria": "Albumin > 3.5, Prealbumin > 15, Nutrition clearance"
+            },
+            "surgical_risk_modifier": 1.6,
+            "outcome_impact": {
+                "koos_reduction": 7,
+                "hoos_reduction": 7,
+                "readmission_increase": 0.06
+            }
+        },
+        "smoking_current": {
+            "display_name": "Current Smoker",
+            "hcc_code": null,
+            "hcc_weight": 0.100,
+            "category": "lifestyle",
+            "workup_required": {
+                "tests": ["Cotinine level if cessation claimed"],
+                "consults": ["Smoking cessation program"],
+                "clearance_criteria": "Quit > 4 weeks prior to surgery (cotinine negative) or documented counseling"
+            },
+            "surgical_risk_modifier": 1.4,
+            "outcome_impact": {
+                "koos_reduction": 5,
+                "hoos_reduction": 5,
+                "readmission_increase": 0.04
+            }
+        },
+        "opioid_chronic": {
+            "display_name": "Chronic Opioid Use (> 3 months)",
+            "hcc_code": "HCC 135",
+            "hcc_weight": 0.309,
+            "category": "pain_management",
+            "workup_required": {
+                "tests": ["Urine drug screen", "PDMP check", "MME calculation"],
+                "consults": ["Pain management if MME > 90"],
+                "clearance_criteria": "Pain management plan documented, realistic expectations discussed"
+            },
+            "surgical_risk_modifier": 1.3,
+            "outcome_impact": {
+                "koos_reduction": 10,
+                "hoos_reduction": 10,
+                "readmission_increase": 0.04
+            }
+        },
+        "anticoagulation": {
+            "display_name": "On Anticoagulation (Warfarin, DOACs)",
+            "hcc_code": null,
+            "hcc_weight": 0.050,
+            "category": "hematologic",
+            "workup_required": {
+                "tests": ["INR if on warfarin", "Renal function for DOACs", "CBC"],
+                "consults": ["Prescribing physician for bridging plan"],
+                "clearance_criteria": "Bridging/holding plan documented and approved"
+            },
+            "surgical_risk_modifier": 1.2,
+            "outcome_impact": {
+                "koos_reduction": 1,
+                "hoos_reduction": 1,
+                "readmission_increase": 0.02
+            }
+        },
+        "anemia": {
+            "display_name": "Anemia (Hgb < 12 women, < 13 men)",
+            "hcc_code": "HCC 48",
+            "hcc_weight": 0.190,
+            "category": "hematologic",
+            "workup_required": {
+                "tests": ["CBC", "Iron studies", "Reticulocyte count", "B12/Folate"],
+                "consults": ["Hematology if unexplained or Hgb < 10"],
+                "clearance_criteria": "Hgb > 10 or Hematology clearance with treatment plan"
+            },
+            "surgical_risk_modifier": 1.3,
+            "outcome_impact": {
+                "koos_reduction": 3,
+                "hoos_reduction": 3,
+                "readmission_increase": 0.03
+            }
+        },
+        "liver_disease": {
+            "display_name": "Chronic Liver Disease / Cirrhosis",
+            "hcc_code": "HCC 28",
+            "hcc_weight": 0.390,
+            "category": "hepatic",
+            "workup_required": {
+                "tests": ["LFTs", "Albumin", "INR", "Platelets", "MELD score"],
+                "consults": ["Hepatology"],
+                "clearance_criteria": "MELD < 10 or Hepatology clearance"
+            },
+            "surgical_risk_modifier": 1.8,
+            "outcome_impact": {
+                "koos_reduction": 8,
+                "hoos_reduction": 8,
+                "readmission_increase": 0.08
+            }
+        },
+        "pvd": {
+            "display_name": "Peripheral Vascular Disease",
+            "hcc_code": "HCC 108",
+            "hcc_weight": 0.288,
+            "category": "vascular",
+            "workup_required": {
+                "tests": ["ABI", "Lower extremity arterial duplex if symptomatic"],
+                "consults": ["Vascular surgery if ABI < 0.7"],
+                "clearance_criteria": "ABI > 0.7 or Vascular clearance"
+            },
+            "surgical_risk_modifier": 1.4,
+            "outcome_impact": {
+                "koos_reduction": 4,
+                "hoos_reduction": 4,
+                "readmission_increase": 0.04
+            }
+        }
+    },
+    
+    "social_determinants": {
+        "transportation": {
+            "display_name": "Transportation Barrier",
+            "question": "Does patient have reliable transportation to appointments?",
+            "impact": "May affect follow-up compliance",
+            "intervention": "Social work referral, arrange medical transport"
+        },
+        "housing": {
+            "display_name": "Housing Instability",
+            "question": "Is patient's housing stable and safe for recovery?",
+            "impact": "Affects discharge planning",
+            "intervention": "Social work evaluation, SNF consideration"
+        },
+        "caregiver": {
+            "display_name": "Caregiver Support",
+            "question": "Does patient have adequate help at home for first 2 weeks?",
+            "impact": "Critical for early recovery",
+            "intervention": "Identify support, consider SNF if none available"
+        },
+        "health_literacy": {
+            "display_name": "Health Literacy",
+            "question": "Can patient understand and follow medical instructions?",
+            "impact": "Affects medication compliance, wound care",
+            "intervention": "Simplified instructions, teach-back method, caregiver education"
+        },
+        "food_insecurity": {
+            "display_name": "Food Insecurity",
+            "question": "Does patient have reliable access to nutritious food?",
+            "impact": "Affects healing, nutrition optimization",
+            "intervention": "Nutrition referral, community resources"
+        }
+    },
+    
+    "cms_proms_deltas": {
+        "TKA": {
+            "measure": "KOOS-JR",
+            "expected_improvement_mean": 20,
+            "expected_improvement_range": [15, 28],
+            "mcid": 8,
+            "substantial_clinical_benefit": 16,
+            "floor_effect": 35,
+            "ceiling_effect": 85
+        },
+        "THA": {
+            "measure": "HOOS-JR",
+            "expected_improvement_mean": 23,
+            "expected_improvement_range": [18, 30],
+            "mcid": 8,
+            "substantial_clinical_benefit": 18,
+            "floor_effect": 40,
+            "ceiling_effect": 90
+        }
+    },
+    
+    "risk_calculator_placeholder": {
+        "model_name": "Orthoplan Risk Model v0.1",
+        "status": "placeholder",
+        "future_integration": "ACS NSQIP Surgical Risk Calculator",
+        "current_method": "Sum of HCC weights * base risk",
+        "base_readmission_rate": 0.045,
+        "base_mortality_rate": 0.002
+    },
+    
+    "postop_lab_schedule": {
+        "interleukin_6": {
+            "display_name": "IL-6 (Interleukin-6)",
+            "schedule": ["POD 0", "POD 10", "POD 21"],
+            "normal_range": "<7 pg/mL",
+            "expected_postop": {
+                "POD_0": "50-150 pg/mL (expected elevation)",
+                "POD_10": "10-30 pg/mL (declining)",
+                "POD_21": "<15 pg/mL (near baseline)"
+            },
+            "flag_threshold": {
+                "POD_0": 200,
+                "POD_10": 50,
+                "POD_21": 25
+            },
+            "flag_meaning": "Elevated IL-6 may indicate infection, excessive inflammation, or poor tissue healing"
+        }
+    }
+}

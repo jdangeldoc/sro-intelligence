@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SRO Cockpit — Radial</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600&family=Rajdhani:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0a1628; overflow: hidden; font-family: 'Rajdhani', sans-serif; }
+
+        #cockpit-wrapper {
+            position: relative; width: 100vw; height: 100vh;
+            display: flex; align-items: center; justify-content: center; background: #0a1628;
+        }
+
+        #image-frame { position: relative; }
+        #image-frame img { display: block; width: 100%; height: 100%; }
+        #image-frame svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        #image-frame svg .cockpit-hotspot { pointer-events: auto; fill: transparent; cursor: pointer; transition: all 0.15s; }
+        #image-frame svg .cockpit-hotspot:hover { fill: rgba(100,160,220,0.15); stroke: rgba(100,160,220,0.5); stroke-width: 0.4; }
+
+        #back-btn {
+            position: fixed; top: 12px; left: 16px; z-index: 60;
+            color: #00e5ff; font-size: 14px; text-decoration: none;
+            background: rgba(10,22,40,0.8); padding: 6px 14px;
+            border-radius: 4px; border: 1px solid rgba(0,229,255,0.2);
+            transition: all 0.15s ease; font-family: 'Rajdhani', sans-serif;
+        }
+        #back-btn:hover { background: rgba(10,22,40,0.95); border-color: rgba(0,229,255,0.5); color: #00ffff; }
+
+        #detail-panel {
+            position: fixed; right: 0; top: 0; width: 420px; height: 100%;
+            background: rgba(10,18,35,0.97); border-left: 2px solid rgba(0,229,255,0.3);
+            transform: translateX(100%); transition: transform 0.3s ease;
+            z-index: 100; overflow-y: auto; padding: 24px;
+        }
+        #detail-panel.open { transform: translateX(0); }
+        #detail-panel::-webkit-scrollbar { width: 6px; }
+        #detail-panel::-webkit-scrollbar-thumb { background: rgba(0,229,255,0.15); border-radius: 3px; }
+
+        #close-btn { position: absolute; top: 12px; right: 16px; background: none; border: none; color: #00e5ff; font-size: 24px; cursor: pointer; }
+        #detail-content h2 { font-family: 'Orbitron', monospace; color: #00e5ff; font-size: 18px; margin: 0 0 16px 0; padding-top: 24px; }
+        .detail-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(0,229,255,0.08); font-size: 15px; color: #ccc; }
+        .detail-item strong { color: rgba(0,229,255,0.7); }
+        .detail-section { margin-top: 16px; padding-top: 10px; border-top: 1px solid rgba(0,229,255,0.1); }
+        .detail-section h3 { font-family: 'Orbitron', monospace; font-size: 13px; color: rgba(0,229,255,0.6); margin-bottom: 8px; letter-spacing: 1px; }
+        .detail-action-btn {
+            display: inline-block; margin-top: 14px; padding: 8px 18px;
+            font-family: 'Orbitron', monospace; font-size: 11px; color: #00e5ff;
+            border: 1px solid rgba(0,229,255,0.3); border-radius: 6px;
+            background: rgba(0,229,255,0.05); cursor: pointer; text-decoration: none;
+            text-transform: uppercase; letter-spacing: 1px; transition: all 0.2s;
+        }
+        .detail-action-btn:hover { background: rgba(0,229,255,0.12); border-color: rgba(0,229,255,0.5); }
+
+        .status-ok { color: #4caf50; }
+        .status-alert { color: #f44336; }
+        .status-warning { color: #ffab00; }
+        .status-pending { color: rgba(255,255,255,0.3); }
+
+        #last-updated { position: fixed; bottom: 8px; right: 12px; z-index: 50; font-size: 11px; color: rgba(255,255,255,0.2); letter-spacing: 1px; }
+    </style>
+</head>
+<body>
+    <div id="cockpit-wrapper">
+        <div id="image-frame">
+            <img id="cockpit-bg" src="/cockpit/surgeon_cockpit3_bg.png" alt="Cockpit Background">
+            <svg id="cockpit-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <!-- HOTSPOT POLYGONS -->
+                <polygon points="40.62,39.22 41.32,54.04 59.28,53.89 59.08,38.32 40.82,38.92" class="cockpit-hotspot" onclick="openPatientDetail()" data-name="Patient"/>
+                <polygon points="21.06,39.52 34.33,40.72 34.13,51.2 22.06,54.04 21.26,39.52" class="cockpit-hotspot" onclick="openStageDetail('comorbidities')" data-name="Comorbidities"/>
+                <polygon points="36.23,16.02 41.02,30.09 35.63,38.02 24.55,29.04 35.43,16.02" class="cockpit-hotspot" onclick="openStageDetail('conservative')" data-name="Conservative Treatment"/>
+                <polygon points="44.51,23.35 56.99,23.65 56.79,10.48 43.01,11.08 44.41,23.65" class="cockpit-hotspot" onclick="openStageDetail('preop')" data-name="PreOp"/>
+                <polygon points="59.68,29.64 65.37,15.87 75.65,28.14 64.67,38.02 59.18,30.24" class="cockpit-hotspot" onclick="openStageDetail('surgery')" data-name="Surgery"/>
+                <polygon points="65.17,41.02 78.94,36.53 80.04,57.04 65.37,52.84 65.27,40.87" class="cockpit-hotspot" onclick="openStageDetail('outcomes')" data-name="Outcomes"/>
+                <polygon points="59.08,61.98 64.87,54.64 76.95,62.57 64.57,77.25 58.98,61.68" class="cockpit-hotspot" onclick="openStageDetail('pt')" data-name="Physical Therapy"/>
+                <polygon points="43.71,63.77 41.22,77.1 59.38,77.1 56.19,64.07 43.61,63.77" class="cockpit-hotspot" onclick="openStageDetail('engagement')" data-name="Patient Engagement"/>
+                <polygon points="23.75,60.48 35.63,54.49 40.72,63.02 36.43,76.65 23.55,60.63" class="cockpit-hotspot" onclick="openStageDetail('previoustreatment')" data-name="Previous Treatment"/>
+
+                <g id="svg-text-layer" pointer-events="none"></g>
+            </svg>
+        </div>
+    </div>
+
+    <a id="back-btn" href="/dashboard.html">&larr; Back to Dashboard</a>
+    <div id="theme-toggle" onclick="cycleTheme()" style="position:fixed;top:12px;right:16px;z-index:60;font-family:Orbitron,monospace;font-size:11px;letter-spacing:1px;color:#00e5ff;padding:6px 14px;border-radius:4px;border:1px solid rgba(0,229,255,0.25);background:rgba(10,22,40,0.85);cursor:pointer;transition:all 0.2s;">THEME: RADIAL &#x27F3;</div>
+
+    <div id="detail-panel">
+        <button id="close-btn" onclick="closeDetail()">&times;</button>
+        <div id="detail-content"></div>
+    </div>
+
+    <div id="last-updated">Last updated: --:--:--</div>
+
+    <script>
+    // ═══════════════════════════════════════════
+    // IMAGE FRAME SIZING
+    // ═══════════════════════════════════════════
+    var frame = document.getElementById('image-frame');
+    var img = document.getElementById('cockpit-bg');
+    function sizeFrame() {
+        var vw = window.innerWidth, vh = window.innerHeight;
+        var imgRatio = img.naturalWidth / img.naturalHeight;
+        var vpRatio = vw / vh;
+        var w, h;
+        if (vpRatio > imgRatio) { h = vh; w = vh * imgRatio; }
+        else { w = vw; h = vw / imgRatio; }
+        frame.style.width = Math.round(w) + 'px';
+        frame.style.height = Math.round(h) + 'px';
+    }
+    img.onload = sizeFrame;
+    window.addEventListener('resize', sizeFrame);
+    if (img.complete && img.naturalWidth > 0) sizeFrame();
+
+    // ═══════════════════════════════════════════
+    // THEME — redirect to HUD on toggle
+    // ═══════════════════════════════════════════
+    var patientId = new URLSearchParams(window.location.search).get('patient');
+    var returnTo = new URLSearchParams(window.location.search).get('returnTo');
+    var returnDate = new URLSearchParams(window.location.search).get('date');
+
+    // If saved theme is not radial, redirect
+    (function() {
+        var saved = localStorage.getItem('sro-surgeon-cockpit-theme');
+        if (saved && saved !== 'radial') {
+            var r = '/cockpit-view.html?patient=' + (patientId||'');
+            if (returnTo) r += '&returnTo=' + returnTo;
+            if (returnDate) r += '&date=' + returnDate;
+            window.location.replace(r);
+        }
+    })();
+
+    function cycleTheme() {
+        localStorage.setItem('sro-surgeon-cockpit-theme', 'hud');
+        var r = '/cockpit-view.html?patient=' + (patientId||'');
+        if (returnTo) r += '&returnTo=' + returnTo;
+        if (returnDate) r += '&date=' + returnDate;
+        window.location.href = r;
+    }
+
+    // Back button
+    var backBtn = document.getElementById('back-btn');
+    if (returnTo === 'worklist') {
+        backBtn.href = '/clinic-worklist.html' + (returnDate ? '?date=' + returnDate : '');
+        backBtn.textContent = '\u2190 Back to Worklist';
+    }
+
+    // ═══════════════════════════════════════════
+    // STATE
+    // ═══════════════════════════════════════════
+    var pageMap = {
+        comorbidities: '/preop.html?patient=' + patientId + '&tab=2',
+        conservative: '/nonop-plan.html?patient=' + patientId,
+        preop: '/preop.html?patient=' + patientId,
+        surgery: '/surgical-prep.html?patient=' + patientId,
+        outcomes: '/analytics.html?patient=' + patientId,
+        pt: '/episode-timeline.html?patient=' + patientId,
+        engagement: '/patient-comm.html?patient=' + patientId,
+        previoustreatment: '/nonop-plan.html?patient=' + patientId
+    };
+
+    // Double-click navigates directly
+    document.querySelectorAll('.cockpit-hotspot').forEach(function(poly) {
+        poly.addEventListener('dblclick', function(e) {
+            e.preventDefault(); e.stopPropagation();
+            var key = {
+                'Comorbidities':'comorbidities','Conservative Treatment':'conservative','PreOp':'preop',
+                'Surgery':'surgery','Outcomes':'outcomes','Physical Therapy':'pt',
+                'Patient Engagement':'engagement','Previous Treatment':'previoustreatment'
+            }[poly.getAttribute('data-name')];
+            if (key && pageMap[key]) window.location.href = pageMap[key];
+        });
+    });
+
+    var S = {
+        patient: null, stageData: null, checkins: [], proAssessments: [],
+        preopAssessments: [], surgicalPrep: [], nursingNotes: [],
+        adverseEvents: [], promSchedule: [], episodeId: null
+    };
+    var icons = { ok: '\u2713', alert: '\u26A0', warning: '\u25C6', pending: '\u25CB' };
+
+    var centroids = {
+        patient:          { x: 50.0, y: 46.3 },
+        comorbidities:    { x: 27.5, y: 46.4 },
+        conservative:     { x: 33.0, y: 27.0 },
+        preop:            { x: 50.1, y: 17.0 },
+        surgery:          { x: 65.0, y: 27.0 },
+        outcomes:         { x: 72.5, y: 46.5 },
+        pt:               { x: 67.0, y: 67.0 },
+        engagement:       { x: 50.0, y: 70.0 },
+        previoustreatment:{ x: 32.0, y: 67.0 }
+    };
+
+    // ═══════════════════════════════════════════
+    // DATA LOADING
+    // ═══════════════════════════════════════════
+    document.addEventListener('DOMContentLoaded', function() {
+        ensureTextLayer();
+        if (!patientId) { showLoadingText('NO PATIENT ID', 50, 46); }
+        else { showLoadingText('LOADING...', 50, 46); loadAllData(); }
+    });
+
+    function safeFetch(url) {
+        return fetch(url).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
+    }
+
+    async function loadAllData() {
+        try {
+            var pRes = await fetch('/api/patients/' + patientId);
+            if (!pRes.ok) throw new Error('not found');
+            S.patient = await pRes.json();
+            if (!S.patient || !S.patient.id) throw new Error('not found');
+            S.episodeId = S.patient.episode_id;
+            var fetches = [
+                safeFetch('/api/checkins?patient_id=' + patientId),
+                safeFetch('/api/pro-assessments?patient_id=' + patientId),
+                safeFetch('/api/preop-assessments?patient_id=' + patientId),
+                safeFetch('/api/nursing-notes?patient_id=' + patientId),
+                safeFetch('/api/adverse-events?patient_id=' + patientId),
+                safeFetch('/api/prom-schedule?patient_id=' + patientId),
+                S.episodeId ? safeFetch('/api/episodes/' + S.episodeId + '/stage') : Promise.resolve(null),
+                S.episodeId ? safeFetch('/api/surgical-prep?patient_id=' + patientId) : Promise.resolve([])
+            ];
+            var results = await Promise.all(fetches);
+            S.checkins = Array.isArray(results[0]) ? results[0] : [];
+            S.proAssessments = Array.isArray(results[1]) ? results[1] : [];
+            S.preopAssessments = Array.isArray(results[2]) ? results[2] : [];
+            S.nursingNotes = Array.isArray(results[3]) ? results[3] : [];
+            S.adverseEvents = Array.isArray(results[4]) ? results[4] : [];
+            S.promSchedule = Array.isArray(results[5]) ? results[5] : [];
+            S.stageData = results[6];
+            S.surgicalPrep = Array.isArray(results[7]) ? results[7] : [];
+            renderAllOverlays();
+            updateTimestamp();
+            startAutoRefresh();
+        } catch (e) {
+            clearTextLayer();
+            showLoadingText('PATIENT NOT FOUND', 50, 44);
+            addSvgText(50, 48, 'Return to Dashboard', 1.68, 'rgba(0,229,255,0.6)');
+        }
+    }
+
+    // ═══════════════════════════════════════════
+    // SVG TEXT RENDERING
+    // ═══════════════════════════════════════════
+    var NS = 'http://www.w3.org/2000/svg';
+    var textLayer = null;
+
+    function ensureTextLayer() {
+        if (!textLayer) {
+            textLayer = document.getElementById('svg-text-layer');
+            if (!textLayer) {
+                var svg = document.getElementById('cockpit-svg');
+                if (svg) { textLayer = document.createElementNS(NS, 'g'); textLayer.setAttribute('id', 'svg-text-layer'); textLayer.setAttribute('pointer-events', 'none'); svg.appendChild(textLayer); }
+            }
+        }
+        return textLayer;
+    }
+    function clearTextLayer() { var tl = ensureTextLayer(); if (tl) tl.innerHTML = ''; }
+    function showLoadingText(msg, x, y) { clearTextLayer(); addSvgText(x, y, msg, 2.64, '#00e5ff', 'Orbitron, sans-serif'); }
+
+    function addSvgText(x, y, content, size, fill, fontFamily, anchor, bold) {
+        var shadow = document.createElementNS(NS, 'text');
+        shadow.setAttribute('x', parseFloat(x) + 0.1); shadow.setAttribute('y', parseFloat(y) + 0.1);
+        shadow.setAttribute('font-size', size || 1.6); shadow.setAttribute('fill', 'rgba(0,0,0,0.7)');
+        shadow.setAttribute('font-family', fontFamily || 'Rajdhani, sans-serif');
+        shadow.setAttribute('text-anchor', anchor || 'middle'); shadow.setAttribute('pointer-events', 'none');
+        if (bold) shadow.setAttribute('font-weight', 'bold');
+        shadow.textContent = content;
+        var tl = ensureTextLayer(); if (tl) tl.appendChild(shadow);
+        var t = document.createElementNS(NS, 'text');
+        t.setAttribute('x', x); t.setAttribute('y', y);
+        t.setAttribute('font-size', size || 1.6); t.setAttribute('fill', fill || '#ffffff');
+        t.setAttribute('font-family', fontFamily || 'Rajdhani, sans-serif');
+        t.setAttribute('text-anchor', anchor || 'middle'); t.setAttribute('pointer-events', 'none');
+        if (bold) t.setAttribute('font-weight', 'bold');
+        t.textContent = content; if (tl) tl.appendChild(t);
+        return t;
+    }
+
+    function addSvgTextBlock(x, startY, lines, lineHeight) {
+        var cy = startY; var lh = lineHeight || 2.88;
+        lines.forEach(function(l) {
+            addSvgText(x, cy, l.text, l.size || 1.5, l.fill || '#ffffff', l.font || 'Rajdhani, sans-serif', 'middle', l.bold);
+            cy += lh;
+        });
+    }
+
+    function addBackingRect(cx, cy, width, height, fill) {
+        var rect = document.createElementNS(NS, 'rect');
+        rect.setAttribute('x', (cx - width / 2) + '');
+        rect.setAttribute('y', (cy - height / 2) + '');
+        rect.setAttribute('width', width + '');
+        rect.setAttribute('height', height + '');
+        rect.setAttribute('rx', '1');
+        rect.setAttribute('fill', fill);
+        rect.setAttribute('pointer-events', 'none');
+        ensureTextLayer().appendChild(rect);
+    }
+
+    // ═══════════════════════════════════════════
+    // RENDER ALL
+    // ═══════════════════════════════════════════
+    function renderAllOverlays() {
+        clearTextLayer();
+        renderPatientHub();
+        renderComorbidities();
+        renderConservative();
+        renderPreop();
+        renderSurgery();
+        renderOutcomes();
+        renderPT();
+        renderEngagement();
+        renderPreviousTreatment();
+    }
+
+    function renderPatientHub() {
+        var p = S.patient; if (!p) return;
+        var c = centroids.patient;
+        addBackingRect(c.x, c.y + 1, 22, 18, 'rgba(40,55,80,0.92)');
+        var fn = p.first_name || '', ln = p.last_name || '';
+        var name = (ln + ', ' + fn).toUpperCase();
+        var age = p.date_of_birth ? Math.floor((Date.now() - new Date(p.date_of_birth).getTime()) / (365.25*24*60*60*1000)) : '--';
+        var pain = '--', painColor = '#ffffff';
+        if (S.checkins[0] && S.checkins[0].pain_level != null) {
+            pain = S.checkins[0].pain_level;
+            painColor = pain <= 3 ? '#4caf50' : pain <= 6 ? '#ffab00' : '#f44336';
+        }
+        addSvgText(c.x, c.y - 4, name, 1.8, '#ffffff', 'Orbitron, sans-serif', 'middle', true);
+        addSvgText(c.x, c.y - 1.5, age + ' / M', 1.5, '#ffffff', 'Rajdhani, sans-serif');
+        addSvgText(c.x, c.y + 0.5, 'MRN: ' + (p.mrn || '----'), 1.5, '#ffffff', 'Rajdhani, sans-serif');
+        addSvgText(c.x, c.y + 2.5, 'BP: --/--', 1.5, '#ffffff', 'Rajdhani, sans-serif');
+        addSvgText(c.x, c.y + 4.5, 'HR: --', 1.5, '#ffffff', 'Rajdhani, sans-serif');
+        if (pain !== '--') addSvgText(c.x, c.y + 6.5, 'Pain: ' + pain + '/10', 1.5, painColor, 'Rajdhani, sans-serif');
+        if (p.surgeon_last_name) addSvgText(c.x, c.y + 8.5, 'Dr. ' + p.surgeon_last_name, 1.3, 'rgba(255,255,255,0.4)', 'Rajdhani, sans-serif');
+    }
+
+    function renderComorbidities() {
+        var c = centroids.comorbidities; var pa = S.preopAssessments[0];
+        addBackingRect(c.x, c.y, 16, 14, 'rgba(210,155,60,0.92)');
+        var y = c.y - 3; var tc = '#1a2744';
+        addSvgText(c.x, y, 'COMORBIDITIES', 1.8, tc, 'Orbitron, sans-serif', undefined, true); y += 2.88;
+        if (!pa) { addSvgText(c.x, y, icons.pending + ' No Assessment', 1.5, tc, 'Rajdhani, sans-serif'); return; }
+        if (pa.asa_class) { addSvgText(c.x, y, icons.ok + ' ASA ' + pa.asa_class, 1.5, tc, 'Rajdhani, sans-serif'); y += 2.4; }
+        if (pa.bmi) { addSvgText(c.x, y, icons.ok + ' BMI: ' + Math.round(pa.bmi*10)/10, 1.5, tc, 'Rajdhani, sans-serif'); y += 2.4; }
+        var cl = []; try { cl = JSON.parse(pa.comorbidities || '[]'); } catch(e) {}
+        if (Array.isArray(cl)) { cl.slice(0, 3).forEach(function(cm) { addSvgText(c.x, y, icons.ok + ' ' + cm, 1.3, tc, 'Rajdhani, sans-serif'); y += 2; }); }
+    }
+
+    function renderConservative() {
+        var c = centroids.conservative; var tc = '#1a2744';
+        addBackingRect(c.x, c.y, 16, 16, 'rgba(210,155,60,0.92)');
+        var y = c.y - 3;
+        addSvgText(c.x, y, 'CONSERVATIVE', 1.8, tc, 'Orbitron, sans-serif', undefined, true); y += 2.5;
+        addSvgText(c.x, y, 'TREATMENT', 1.8, tc, 'Orbitron, sans-serif', undefined, true); y += 2.88;
+        if (!S.stageData || !S.stageData.stages) return;
+        var cc = S.stageData.stages.find(function(s) { return s.key === 'conservative_care'; });
+        if (!cc) return;
+        if (cc.status === 'completed') {
+            addSvgText(c.x, y, icons.ok + ' Completed', 1.5, tc, 'Rajdhani, sans-serif'); y += 2.4;
+            if (cc.completed_at) addSvgText(c.x, y, cc.completed_at.substring(0,10), 1.3, tc, 'Rajdhani, sans-serif');
+        } else if (cc.status === 'current') {
+            addSvgText(c.x, y, icons.warning + ' In Progress', 1.5, tc, 'Rajdhani, sans-serif');
+        } else {
+            addSvgText(c.x, y, icons.pending + ' Upcoming', 1.3, tc, 'Rajdhani, sans-serif');
+        }
+    }
+
+    function renderPreop() {
+        var c = centroids.preop; var pa = S.preopAssessments[0]; var tc = '#1a2744';
+        addBackingRect(c.x, c.y, 18, 14, 'rgba(210,155,60,0.92)');
+        var y = c.y - 2;
+        addSvgText(c.x, y, 'PREOP', 1.8, tc, 'Orbitron, sans-serif', undefined, true); y += 2.88;
+        var hasRisk = pa != null;
+        var cleared = pa && (pa.status === 'complete' || pa.status === 'cleared');
+        addSvgText(c.x, y, (hasRisk ? icons.ok : icons.pending) + ' Risk Assessment', 1.5, tc, 'Rajdhani, sans-serif'); y += 2.4;
+        addSvgText(c.x, y, (cleared ? icons.ok : icons.alert) + ' Clearance' + (cleared ? '' : ' Needed'), 1.5, tc, 'Rajdhani, sans-serif'); y += 2.4;
+        addSvgText(c.x, y, (hasRisk ? icons.ok : icons.pending) + ' Labs', 1.5, tc, 'Rajdhani, sans-serif'); y += 2.8;
+        addSvgText(c.x, y, cleared ? 'All Set' : 'Needs Review', 1.4, cleared ? '#2e7d32' : '#c77800', 'Rajdhani, sans-serif', undefined, true);
+    }
+
+    function renderSurgery() {
+        var c = centroids.surgery; var p = S.patient; var sp = S.surgicalPrep[0]; var tc = '#1a2744';
+        addBackingRect(c.x, c.y, 16, 16, 'rgba(210,155,60,0.92)');
+        var y = c.y - 3;
+        addSvgText(c.x, y, 'SURGERY', 1.8, tc, 'Orbitron, sans-serif', undefined, true); y += 2.88;
+        var orOk = sp && sp.history_data; var implOk = sp && sp.prosthesis_data;
+        addSvgText(c.x, y, (orOk ? icons.ok : icons.pending) + ' OR Prepped', 1.5, tc, 'Rajdhani, sans-serif'); y += 2.4;
+        addSvgText(c.x, y, (implOk ? icons.ok : icons.pending) + ' Implants Set', 1.5, tc, 'Rajdhani, sans-serif'); y += 2.4;
+        if (p.surgery_date) {
+            var sd = new Date(p.surgery_date);
+            addSvgText(c.x, y, (p.surgery_type||'') + ' \u2014 ' + shortDate(sd), 1.4, tc, 'Rajdhani, sans-serif'); y += 2.4;
+            var diff = Math.ceil((sd - new Date()) / 86400000);
+            if (diff < 0) addSvgText(c.x, y, 'Completed', 1.4, '#2e7d32', 'Rajdhani, sans-serif', undefined, true);
+            else if (diff === 0) addSvgText(c.x, y, 'TODAY', 1.4, '#c62828', 'Rajdhani, sans-serif', undefined, true);
+            else addSvgText(c.x, y, 'In ' + diff + ' days', 1.4, '#c77800', 'Rajdhani, sans-serif', undefined, true);
+        } else { addSvgText(c.x, y, 'Not Scheduled', 1.4, tc, 'Rajdhani, sans-serif'); }
+    }
+
+    function renderOutcomes() {
+        var c = centroids.outcomes;
+        addBackingRect(c.x, c.y, 18, 16, 'rgba(30,60,70,0.92)');
+        var y = c.y - 3;
+        addSvgText(c.x, y, 'OUTCOMES', 1.8, '#ffffff', 'Orbitron, sans-serif', undefined, true); y += 2.88;
+        var pro = S.proAssessments[0];
+        if (pro) {
+            var typ = (pro.assessment_type || '').toUpperCase();
+            addSvgText(c.x, y, typ + ': ' + (pro.score != null ? Math.round(pro.score) : '--'), 1.5, '#ffffff', 'Rajdhani, sans-serif'); y += 2.4;
+        }
+        var recent = S.checkins.slice(0, 3);
+        if (recent.length) {
+            var trend = recent.map(function(ci) { return ci.pain_level != null ? ci.pain_level : '--'; }).reverse().join(' \u2192 ');
+            var last = recent[0].pain_level;
+            var tc = last != null ? (last <= 3 ? '#4caf50' : last <= 6 ? '#ffab00' : '#f44336') : '#8899aa';
+            addSvgText(c.x, y, 'Pain: ' + trend, 1.4, tc, 'Rajdhani, sans-serif'); y += 2.4;
+        }
+        var ae = S.adverseEvents.length;
+        if (ae > 0) addSvgText(c.x, y, icons.alert + ' ' + ae + ' Event' + (ae > 1 ? 's' : ''), 1.5, '#ffffff', 'Rajdhani, sans-serif');
+        else addSvgText(c.x, y, icons.ok + ' No Events', 1.3, '#ffffff', 'Rajdhani, sans-serif');
+        y += 2.5;
+        if (recent.length >= 2) {
+            var first = recent[recent.length-1].pain_level, latest = recent[0].pain_level;
+            if (first != null && latest != null) {
+                if (latest < first) addSvgText(c.x, y, 'Improving', 1.4, '#4caf50', 'Rajdhani, sans-serif', undefined, true);
+                else if (latest > first) addSvgText(c.x, y, 'Declining', 1.4, '#f44336', 'Rajdhani, sans-serif', undefined, true);
+                else addSvgText(c.x, y, 'Stable', 1.4, '#ffab00', 'Rajdhani, sans-serif', undefined, true);
+            }
+        }
+    }
+
+    function renderPT() {
+        var c = centroids.pt;
+        addBackingRect(c.x, c.y, 18, 18, 'rgba(30,60,70,0.92)');
+        var y = c.y - 4;
+        addSvgText(c.x, y, 'PHYSICAL', 1.8, '#ffffff', 'Orbitron, sans-serif', undefined, true); y += 2.5;
+        addSvgText(c.x, y, 'THERAPY', 1.8, '#ffffff', 'Orbitron, sans-serif', undefined, true); y += 2.88;
+        var cks = S.checkins;
+        var ptD = cks.filter(function(ci) { return ci.pt_exercises; }).length;
+        var tot = cks.length; var pct = tot > 0 ? Math.round(ptD/tot*100) : 0;
+        addSvgText(c.x, y, 'Compliance: ' + pct + '%', 1.5, pct >= 70 ? '#4caf50' : pct >= 40 ? '#ffab00' : '#f44336', 'Rajdhani, sans-serif'); y += 2.4;
+        var ptNote = S.nursingNotes.some(function(n) { return (n.note_type||'').match(/pt|therapy|physical/i); });
+        addSvgText(c.x, y, (ptNote ? icons.ok : icons.pending) + ' PT Eval', 1.5, '#ffffff', 'Rajdhani, sans-serif'); y += 2.4;
+        var streak = 0; for (var i = 0; i < cks.length; i++) { if (cks[i].pt_exercises) streak++; else break; }
+        addSvgText(c.x, y, 'Streak: ' + streak + 'd', 1.3, '#ffffff', 'Rajdhani, sans-serif'); y += 2.5;
+        addSvgText(c.x, y, pct >= 50 ? 'Active' : 'Needs Attention', 1.4, pct >= 50 ? '#4caf50' : '#ffab00', 'Rajdhani, sans-serif', undefined, true);
+    }
+
+    function renderEngagement() {
+        var c = centroids.engagement; var tc = '#1a2744';
+        addBackingRect(c.x, c.y, 20, 14, 'rgba(210,155,60,0.92)');
+        var y = c.y - 3;
+        addSvgText(c.x, y, 'PATIENT', 1.8, tc, 'Orbitron, sans-serif', undefined, true); y += 2.5;
+        addSvgText(c.x, y, 'ENGAGEMENT', 1.8, tc, 'Orbitron, sans-serif', undefined, true); y += 2.88;
+        var notes = S.nursingNotes;
+        var famOk = notes.some(function(n) { return (n.note_type||'').match(/family|communication|update/i); });
+        var dischOk = notes.some(function(n) { return (n.note_type||'').match(/discharge/i) || (n.note_text||'').match(/discharge/i); });
+        addSvgText(c.x, y, (famOk ? icons.ok : icons.pending) + ' Family Updated', 1.5, tc, 'Rajdhani, sans-serif'); y += 2.4;
+        addSvgText(c.x, y, (dischOk ? icons.ok : icons.pending) + ' Discharge Plan', 1.5, tc, 'Rajdhani, sans-serif'); y += 2.4;
+        var last7 = S.checkins.filter(function(ci) { return (Date.now() - new Date(ci.checkin_date||ci.created_at).getTime()) < 7*86400000; });
+        addSvgText(c.x, y, 'Check-ins: ' + last7.length + '/7d', 1.3, tc, 'Rajdhani, sans-serif');
+    }
+
+    function renderPreviousTreatment() {
+        var c = centroids.previoustreatment; var tc = '#1a2744';
+        addBackingRect(c.x, c.y, 18, 16, 'rgba(210,155,60,0.92)');
+        var y = c.y - 3;
+        addSvgText(c.x, y, 'PREVIOUS', 1.8, tc, 'Orbitron, sans-serif', undefined, true); y += 2.5;
+        addSvgText(c.x, y, 'TREATMENT', 1.8, tc, 'Orbitron, sans-serif', undefined, true); y += 2.88;
+        if (!S.stageData || !S.stageData.stages) { addSvgText(c.x, y, icons.pending + ' No Prior Treatment', 1.3, tc, 'Rajdhani, sans-serif'); return; }
+        var cc = S.stageData.stages.find(function(s) { return s.key === 'conservative_care'; });
+        if (cc && (cc.status === 'completed' || cc.status === 'current')) {
+            addSvgText(c.x, y, icons.ok + ' Conservative Care', 1.5, tc, 'Rajdhani, sans-serif'); y += 2.4;
+        } else { addSvgText(c.x, y, icons.pending + ' No Prior Treatment', 1.3, tc, 'Rajdhani, sans-serif'); return; }
+        var ptD = S.checkins.filter(function(ci) { return ci.pt_exercises; }).length;
+        addSvgText(c.x, y, 'PT Sessions: ' + ptD, 1.3, tc, 'Rajdhani, sans-serif'); y += 2;
+        var inj = S.nursingNotes.filter(function(n) { return (n.note_type||'').match(/injection/i) || (n.note_text||'').match(/injection/i); }).length;
+        addSvgText(c.x, y, 'Injections: ' + inj, 1.3, tc, 'Rajdhani, sans-serif');
+    }
+
+    // ═══════════════════════════════════════════
+    // DETAIL PANEL
+    // ═══════════════════════════════════════════
+    function openDetail(html) { document.getElementById('detail-content').innerHTML = html; document.getElementById('detail-panel').classList.add('open'); }
+    function closeDetail() { document.getElementById('detail-panel').classList.remove('open'); }
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeDetail(); });
+    function dRow(label, val) { return '<div class="detail-item"><span><strong>' + label + ':</strong> ' + val + '</span></div>'; }
+
+    function openPatientDetail() {
+        if (!S.patient) { openDetail('<h2>Patient</h2><div class="detail-item" style="color:#ffab00">No patient loaded</div>'); return; }
+        var p = S.patient;
+        var age = p.date_of_birth ? Math.floor((Date.now() - new Date(p.date_of_birth).getTime()) / (365.25*24*60*60*1000)) : 'N/A';
+        var html = '<h2>' + (p.first_name||'') + ' ' + (p.last_name||'') + '</h2>';
+        html += dRow('MRN', p.mrn || 'N/A') + dRow('DOB', p.date_of_birth || 'N/A') + dRow('Age', age);
+        html += dRow('Email', p.email || 'N/A') + dRow('Phone', p.phone || 'N/A');
+        html += '<div class="detail-section"><h3>Episode</h3>';
+        html += dRow('Surgery', p.surgery_type || 'N/A');
+        html += dRow('Date', p.surgery_date ? shortDate(new Date(p.surgery_date)) : 'Not scheduled');
+        html += dRow('Surgeon', p.surgeon_last_name ? 'Dr. ' + p.surgeon_first_name + ' ' + p.surgeon_last_name : 'N/A');
+        html += dRow('Stage', S.stageData ? S.stageData.current_stage : 'N/A') + '</div>';
+        html += '<div class="detail-section"><h3>Recent Check-ins</h3>';
+        var recent = S.checkins.slice(0, 5);
+        if (!recent.length) html += '<div class="detail-item" style="color:rgba(255,255,255,0.3)">No check-ins</div>';
+        recent.forEach(function(ci) {
+            var pc = ci.pain_level <= 3 ? 'status-ok' : ci.pain_level <= 6 ? 'status-warning' : 'status-alert';
+            html += '<div class="detail-item"><span class="' + pc + '">' + (ci.pain_level != null ? ci.pain_level + '/10' : '--') + '</span><span>' + (ci.checkin_date || '--') + (ci.concerns ? ' \u2014 ' + ci.concerns : '') + '</span></div>';
+        });
+        html += '</div>';
+        if (S.adverseEvents.length) {
+            html += '<div class="detail-section"><h3>Adverse Events</h3>';
+            S.adverseEvents.forEach(function(ae) { html += '<div class="detail-item"><span class="status-alert">' + icons.alert + '</span><span><strong>' + (ae.event_type||'') + '</strong> ' + (ae.event_date||'') + '<br>' + (ae.reason||ae.notes||'') + '</span></div>'; });
+            html += '</div>';
+        }
+        html += '<a class="detail-action-btn" href="/episode-timeline.html?patient=' + patientId + '">Timeline \u2192</a> ';
+        html += '<a class="detail-action-btn" href="/dashboard.html">Dashboard \u2192</a>';
+        openDetail(html);
+    }
+
+    function openStageDetail(sid) {
+        var handlers = {
+            comorbidities: function() {
+                var pa = S.preopAssessments[0]; var html = '<h2>Comorbidities</h2>';
+                if (!pa) { html += '<div class="detail-item" style="color:#ffab00">No assessment</div>'; }
+                else {
+                    html += dRow('ASA', pa.asa_class || 'N/A') + dRow('BMI', pa.bmi || 'N/A') + dRow('Risk Tier', pa.risk_tier || 'N/A');
+                    var cl = []; try { cl = JSON.parse(pa.comorbidities || '[]'); } catch(e) {}
+                    if (Array.isArray(cl) && cl.length) html += dRow('Comorbidities', cl.join(', '));
+                    html += dRow('Status', pa.status || 'N/A');
+                }
+                html += '<a class="detail-action-btn" href="/preop.html?patient=' + patientId + '&tab=2">Comorbidities Tab \u2192</a>';
+                return html;
+            },
+            conservative: function() {
+                var html = '<h2>Conservative Treatment</h2>';
+                if (S.stageData && S.stageData.stages) {
+                    var cc = S.stageData.stages.find(function(s) { return s.key === 'conservative_care'; });
+                    if (cc) { html += dRow('Status', cc.status); if (cc.completed_at) html += dRow('Completed', cc.completed_at.substring(0,10)); }
+                }
+                html += '<a class="detail-action-btn" href="/nonop-plan.html?patient=' + patientId + '">Non-Op Plan \u2192</a>';
+                return html;
+            },
+            preop: function() {
+                var pa = S.preopAssessments[0]; var sp = S.surgicalPrep[0];
+                var html = '<h2>PreOp Assessment</h2>';
+                if (!pa) { html += '<div class="detail-item" style="color:#ffab00">No assessment</div>'; }
+                else {
+                    html += dRow('ASA', pa.asa_class || 'N/A') + dRow('BMI', pa.bmi || 'N/A') + dRow('Risk Tier', pa.risk_tier || 'N/A');
+                    html += dRow('Clearance', pa.status === 'complete' || pa.status === 'cleared' ? '<span style="color:#4caf50">Cleared</span>' : '<span style="color:#ffab00">Pending</span>');
+                    var cl = []; try { cl = JSON.parse(pa.comorbidities || '[]'); } catch(e) {}
+                    if (Array.isArray(cl) && cl.length) html += dRow('Comorbidities', cl.join(', '));
+                }
+                html += dRow('Consent', sp && sp.consent_signed_at ? shortDate(new Date(sp.consent_signed_at)) : 'Not signed');
+                html += '<a class="detail-action-btn" href="/preop.html?patient=' + patientId + '">Open PreOp \u2192</a>';
+                return html;
+            },
+            surgery: function() {
+                var p = S.patient, sp = S.surgicalPrep[0]; var html = '<h2>Surgery</h2>';
+                html += dRow('Procedure', p.surgery_type || 'N/A');
+                html += dRow('Date', p.surgery_date ? shortDate(new Date(p.surgery_date)) : 'Not scheduled');
+                html += dRow('OR Prepped', sp && sp.history_data ? 'Yes' : 'No');
+                html += dRow('Implants', sp && sp.prosthesis_data ? 'Ordered' : 'Pending');
+                if (p.surgeon_last_name) html += dRow('Surgeon', 'Dr. ' + p.surgeon_first_name + ' ' + p.surgeon_last_name);
+                html += '<a class="detail-action-btn" href="/surgical-prep.html?patient=' + patientId + '">Surgical Prep \u2192</a>';
+                return html;
+            },
+            outcomes: function() {
+                var html = '<h2>Outcomes</h2>';
+                if (S.proAssessments.length) {
+                    html += '<div class="detail-section"><h3>PRO Scores</h3>';
+                    S.proAssessments.forEach(function(a) { html += '<div class="detail-item"><span class="status-ok">' + icons.ok + '</span><span><strong>' + (a.assessment_type||'') + '</strong>: ' + (a.score != null ? a.score : '--') + ' \u2014 ' + (a.assessment_date||'') + '</span></div>'; });
+                    html += '</div>';
+                }
+                html += '<div class="detail-section"><h3>Pain Trend</h3>';
+                S.checkins.slice(0,10).forEach(function(ci) {
+                    var pc = ci.pain_level <= 3 ? 'status-ok' : ci.pain_level <= 6 ? 'status-warning' : 'status-alert';
+                    html += '<div class="detail-item"><span class="' + pc + '">' + (ci.pain_level != null ? ci.pain_level + '/10' : '--') + '</span><span>' + (ci.checkin_date||'--') + '</span></div>';
+                });
+                html += '</div>';
+                if (S.adverseEvents.length) {
+                    html += '<div class="detail-section"><h3>Adverse Events</h3>';
+                    S.adverseEvents.forEach(function(ae) { html += '<div class="detail-item"><span class="status-alert">' + icons.alert + '</span><span><strong>' + (ae.event_type||'') + '</strong> ' + (ae.event_date||'') + '</span></div>'; });
+                    html += '</div>';
+                }
+                html += '<a class="detail-action-btn" href="/analytics.html?patient=' + patientId + '">Analytics \u2192</a>';
+                return html;
+            },
+            pt: function() {
+                var html = '<h2>Physical Therapy</h2>';
+                var ptDays = S.checkins.filter(function(c) { return c.pt_exercises; }).length;
+                var total = S.checkins.length;
+                html += dRow('Exercise Days', ptDays + '/' + total);
+                html += dRow('Compliance', total > 0 ? Math.round(ptDays/total*100) + '%' : 'N/A');
+                html += '<div class="detail-section"><h3>Recent</h3>';
+                S.checkins.slice(0,10).forEach(function(ci) {
+                    html += '<div class="detail-item"><span class="' + (ci.pt_exercises ? 'status-ok' : 'status-warning') + '">' + (ci.pt_exercises ? icons.ok : icons.warning) + '</span><span>' + (ci.checkin_date||'--') + ' PT:' + (ci.pt_exercises ? 'Yes' : 'No') + ' Pain:' + (ci.pain_level != null ? ci.pain_level : '--') + '</span></div>';
+                });
+                html += '</div>';
+                html += '<a class="detail-action-btn" href="/episode-timeline.html?patient=' + patientId + '">Timeline \u2192</a>';
+                return html;
+            },
+            engagement: function() {
+                var html = '<h2>Patient Engagement</h2>';
+                var notes = S.nursingNotes;
+                if (!notes.length) { html += '<div class="detail-item" style="color:rgba(255,255,255,0.3)">No nursing notes</div>'; }
+                else { notes.slice(0,15).forEach(function(n) {
+                    html += '<div class="detail-item"><span style="color:#00e5ff">' + icons.warning + '</span><span><strong>' + (n.note_type||'Note') + '</strong><br>' + (n.note_text||'') + '<br><small style="color:rgba(255,255,255,0.3)">' + (n.created_at||'') + '</small></span></div>';
+                }); }
+                html += '<a class="detail-action-btn" href="/patient-comm.html?patient=' + patientId + '">Patient Comm \u2192</a>';
+                return html;
+            },
+            previoustreatment: function() {
+                var html = '<h2>Previous Treatment</h2>';
+                if (S.stageData && S.stageData.stages) {
+                    var cc = S.stageData.stages.find(function(s) { return s.key === 'conservative_care'; });
+                    if (cc && (cc.status === 'completed' || cc.status === 'current')) {
+                        html += dRow('Conservative Care', cc.status);
+                        if (cc.completed_at) html += dRow('Completed', cc.completed_at.substring(0,10));
+                    }
+                }
+                var ptD = S.checkins.filter(function(c) { return c.pt_exercises; }).length;
+                html += dRow('PT Sessions', ptD);
+                var inj = S.nursingNotes.filter(function(n) { return (n.note_type||'').match(/injection/i) || (n.note_text||'').match(/injection/i); }).length;
+                html += dRow('Injections', inj);
+                html += '<a class="detail-action-btn" href="/nonop-plan.html?patient=' + patientId + '">Non-Op Plan \u2192</a>';
+                return html;
+            }
+        };
+        var handler = handlers[sid];
+        if (handler) {
+            var html = handler();
+            var navUrl = pageMap[sid];
+            if (navUrl) html = '<a class="detail-action-btn" href="' + navUrl + '" style="margin-bottom:12px;display:inline-block;">OPEN FULL PAGE \u2192</a>' + html;
+            openDetail(html);
+        } else {
+            openDetail('<h2>' + sid + '</h2><div class="detail-item" style="color:rgba(255,255,255,0.3)">Coming soon...</div>');
+        }
+    }
+
+    // ═══════════════════════════════════════════
+    // UTILITIES
+    // ═══════════════════════════════════════════
+    function shortDate(d) { var m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return m[d.getMonth()] + ' ' + d.getDate(); }
+    function updateTimestamp() { document.getElementById('last-updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString(); }
+    function startAutoRefresh() {
+        setInterval(async function() {
+            try {
+                var results = await Promise.all([
+                    safeFetch('/api/checkins?patient_id=' + patientId),
+                    safeFetch('/api/adverse-events?patient_id=' + patientId),
+                    safeFetch('/api/nursing-notes?patient_id=' + patientId)
+                ]);
+                if (Array.isArray(results[0])) S.checkins = results[0];
+                if (Array.isArray(results[1])) S.adverseEvents = results[1];
+                if (Array.isArray(results[2])) S.nursingNotes = results[2];
+                renderAllOverlays();
+                updateTimestamp();
+            } catch(e) {}
+        }, 60000);
+    }
+    </script>
+</body>
+</html>

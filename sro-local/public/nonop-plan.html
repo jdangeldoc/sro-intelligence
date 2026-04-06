@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conservative Care Checklist | SRO Intelligence</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .nop-container { max-width: 960px; margin: 0 auto; padding: 20px; }
+        
+        .patient-header { background: #f8f9fa; border-radius: 12px; padding: 16px 24px; margin-bottom: 24px; }
+        .patient-header h2 { margin: 0; font-size: 1.3rem; color: #1e293b; }
+        .patient-header .meta { font-size: 0.85rem; color: #6b7280; }
+        .patient-info { margin-top: 8px; font-size: 1rem; color: #2c5aa0; font-weight: 600; }
+
+        .section-title { font-size: 1.4rem; font-weight: 700; color: #2c5aa0; margin: 0 0 8px 0; }
+        .section-subtitle { font-size: 0.95rem; font-weight: 600; color: #374151; margin: 0 0 4px 0; }
+        .section-note { font-size: 0.85rem; color: #6b7280; font-style: italic; margin: 0 0 16px 0; }
+
+        .care-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .care-table th { background: #2c5aa0; color: white; font-size: 0.85rem; font-weight: 600; padding: 12px 10px; text-align: left; }
+        .care-table th.check-col { width: 45px; text-align: center; padding: 12px 6px; }
+        .care-table th.action-col { width: 100px; text-align: center; }
+        .care-table td { padding: 10px; border-bottom: 1px solid #e5e7eb; font-size: 0.88rem; vertical-align: middle; }
+        .care-table tr:last-child td { border-bottom: none; }
+        .care-table tr:nth-child(even) { background: #f8fafc; }
+        .care-table tr:hover { background: #eff6ff; }
+        .care-table .tx-name { font-weight: 600; color: #1e293b; }
+        .care-table .tx-req { color: #4b5563; font-size: 0.82rem; line-height: 1.35; }
+        .care-table td.check-col { text-align: center; }
+        .care-table input[type="checkbox"] { width: 18px; height: 18px; accent-color: #2c5aa0; cursor: pointer; }
+
+        .btn-order { background: #059669; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+        .btn-order:hover { background: #047857; }
+        .btn-order.ordered { background: #2c5aa0; }
+
+        .sources { font-size: 0.78rem; color: #6b7280; line-height: 1.5; margin-bottom: 24px; padding: 10px 14px; background: #f9fafb; border-radius: 8px; border-left: 3px solid #2c5aa0; }
+        .sources strong { color: #374151; }
+
+        /* Diagnostic Workup Section (not payer-required, but useful for surgical planning) */
+        .diagnostic-header { font-size: 1rem; font-weight: 700; color: #7c3aed; margin: 24px 0 8px 0; }
+        .diagnostic-note { font-size: 0.82rem; color: #6b7280; font-style: italic; margin: 0 0 12px 0; }
+        .diagnostic-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .diagnostic-table th { background: #7c3aed; color: white; font-size: 0.85rem; font-weight: 600; padding: 12px 10px; text-align: left; }
+        .diagnostic-table th.check-col { width: 45px; text-align: center; padding: 12px 6px; }
+        .diagnostic-table th.action-col { width: 100px; text-align: center; }
+        .diagnostic-table td { padding: 10px; border-bottom: 1px solid #e5e7eb; font-size: 0.88rem; vertical-align: middle; }
+        .diagnostic-table tr:last-child td { border-bottom: none; }
+        .diagnostic-table tr:nth-child(even) { background: #faf5ff; }
+        .diagnostic-table tr:hover { background: #f3e8ff; }
+        .diagnostic-table .tx-name { font-weight: 600; color: #1e293b; }
+        .diagnostic-table .tx-req { color: #4b5563; font-size: 0.82rem; line-height: 1.35; }
+        .diagnostic-table td.check-col { text-align: center; }
+        .diagnostic-table input[type="checkbox"] { width: 18px; height: 18px; accent-color: #7c3aed; cursor: pointer; }
+        .btn-order-diag { background: #7c3aed; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+        .btn-order-diag:hover { background: #6d28d9; }
+        .btn-order-diag.ordered { background: #5b21b6; }
+
+        .additional-header { font-size: 1rem; font-weight: 700; color: #2c5aa0; margin: 20px 0 6px 0; }
+        .additional-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; margin-bottom: 20px; }
+        .additional-item { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; }
+        .additional-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: #2c5aa0; cursor: pointer; margin-top: 2px; }
+        .additional-item label { font-size: 0.85rem; color: #1e293b; cursor: pointer; }
+        .additional-item label strong { font-weight: 600; }
+        .additional-item label span { color: #6b7280; font-size: 0.78rem; }
+        .additional-item input[type="text"] { flex: 1; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.82rem; }
+
+        .nop-actions { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; align-items: center; }
+        .nop-actions .btn { padding: 10px 24px; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; border: none; }
+        .btn-save { background: #2c5aa0; color: white; }
+        .btn-print { background: #059669; color: white; }
+        .btn-back { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db !important; }
+        #saveStatus { font-size: 0.85rem; color: #059669; margin-left: 12px; }
+
+        .loading { text-align: center; padding: 60px; color: #6b7280; }
+        .error-msg { background: #fef2f2; border: 1px solid #fca5a5; color: #dc2626; padding: 16px; border-radius: 8px; margin: 20px 0; }
+
+        /* ORDER MODAL - using unique class names to avoid conflicts */
+        #orderModalOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        #orderModalBox {
+            background: white;
+            border-radius: 12px;
+            padding: 24px 32px;
+            width: 700px;
+            max-width: 95vw;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .order-fields-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px 24px;
+        }
+        .order-field-full {
+            grid-column: 1 / -1;
+        }
+        #orderModalBox h3 {
+            margin: 0 !important;
+            color: #1e293b !important;
+            font-size: 1.2rem !important;
+        }
+        .order-field {
+            margin-bottom: 16px !important;
+        }
+        .order-field label {
+            display: block !important;
+            font-size: 0.9rem !important;
+            font-weight: 600 !important;
+            color: #374151 !important;
+            margin-bottom: 6px !important;
+        }
+        .order-field select,
+        .order-field input[type="text"],
+        .order-field textarea {
+            width: 100% !important;
+            padding: 10px 12px !important;
+            border: 1.5px solid #d1d5db !important;
+            border-radius: 8px !important;
+            font-size: 0.95rem !important;
+            font-family: inherit !important;
+            box-sizing: border-box !important;
+        }
+        .order-field textarea {
+            min-height: 70px !important;
+            resize: vertical !important;
+        }
+        .order-field input[type="checkbox"] {
+            width: 18px !important;
+            height: 18px !important;
+            margin-right: 8px !important;
+            vertical-align: middle !important;
+        }
+        .order-field .checkbox-label {
+            display: inline !important;
+            font-weight: normal !important;
+            font-size: 0.9rem !important;
+        }
+        .order-buttons {
+            display: flex !important;
+            gap: 10px !important;
+            justify-content: flex-end !important;
+            margin-top: 24px !important;
+            padding-top: 16px !important;
+            border-top: 1px solid #e5e7eb !important;
+        }
+        .order-buttons button {
+            padding: 10px 20px !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            font-size: 0.95rem !important;
+            cursor: pointer !important;
+            border: none !important;
+        }
+        .order-btn-cancel {
+            background: #f3f4f6 !important;
+            color: #374151 !important;
+        }
+        .order-btn-submit {
+            background: #059669 !important;
+            color: white !important;
+        }
+        .order-btn-submit:hover {
+            background: #047857 !important;
+        }
+
+        .print-handout { display: none; }
+        @media print {
+            .navbar, .nop-actions, .btn, .btn-order, #orderModalOverlay { display: none !important; }
+            .print-handout { display: block !important; }
+            .action-col { display: none !important; }
+        }
+
+        .hip-section, .knee-section { display: none; }
+        .hip-section.active, .knee-section.active { display: block; }
+
+        /* Ensure modal is hidden by default */
+        .order-modal-hidden { display: none; }
+        .order-modal-visible { display: flex; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <div class="logo-icon">SRO</div>
+            <span class="nav-title">SRO Intelligence</span>
+        </div>
+        <div class="nav-links">
+            <a href="/dashboard.html" class="nav-link">Dashboard</a>
+            <a href="/preop.html" class="nav-link">Pre-Op</a>
+            <a href="/surgical-prep.html" class="nav-link">Surg Prep</a>
+            <a href="/nonop-plan.html" class="nav-link active">Conservative Care</a>
+            <a href="/analytics.html" class="nav-link">Analytics</a>
+            <a href="/cms-compliance.html" class="nav-link">CMS Compliance</a>
+            <a href="/rpm-report.html" class="nav-link">RPM Billing</a>
+            <a href="/settings.html" class="nav-link">Settings</a>
+        </div>
+        <div class="nav-user">
+            <span id="userDisplay"></span>
+            <button class="btn btn-sm btn-secondary" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <!-- Stage Tracker -->
+    <div id="stageTracker"></div>
+
+    <div class="nop-container">
+        <div class="patient-header">
+            <h2>📋 Conservative Care Checklist</h2>
+            <span class="meta">Payer-Required Documentation for OA Episodes</span>
+            <div class="patient-info" id="patientInfo">Loading patient...</div>
+        </div>
+
+        <div class="loading" id="loadingState">Loading checklist...</div>
+        <div class="error-msg" id="errorState" style="display:none;"><strong>Error:</strong> <span id="errorText"></span><br><br><a href="/dashboard.html">← Return to Dashboard</a></div>
+
+        <div class="print-handout" id="printHeader">
+            <h2>Conservative Care Checklist — Osteoarthritis</h2>
+            <p><strong>Patient:</strong> <span id="printPatientName"></span> | <strong>Joint:</strong> <span id="printJoint"></span> | <strong>Date:</strong> <span id="printDate"></span></p>
+        </div>
+
+        <!-- KNEE SECTION -->
+        <div class="knee-section" id="kneeSection">
+            <h1 class="section-title">OA Knee Episode — Conservative Care Checklist</h1>
+            <p class="section-subtitle">PAYER-REQUIRED CONSERVATIVE CARE FOR ARTHROPLASTY</p>
+            <p class="section-note">All items must be completed or documented as contraindicated prior to surgical authorization.</p>
+
+            <table class="care-table">
+                <thead><tr><th style="width:24%">Treatment</th><th>Payer Requirements for Arthroplasty</th><th class="check-col">✓</th><th class="check-col">N/A</th><th class="action-col">Order</th></tr></thead>
+                <tbody>
+                    <tr data-item="knee_nsaid" data-order-type="MEDICATION">
+                        <td class="tx-name">NSAIDs or Acetaminophen</td>
+                        <td class="tx-req">UHC: ≥3 weeks | CMS: incl. in ≥3-month total | BCBS: required unless contraindicated</td>
+                        <td class="check-col"><input type="checkbox" data-field="knee_nsaid_done"></td>
+                        <td class="check-col"><input type="checkbox" data-field="knee_nsaid_na"></td>
+                        <td class="action-col"><button class="btn-order" onclick="openOrderModal('knee_nsaid', 'MEDICATION', 'NSAIDs/Acetaminophen')">📝 Rx</button></td>
+                    </tr>
+                    <tr data-item="knee_pt" data-order-type="PT_REFERRAL">
+                        <td class="tx-name">Physical Therapy</td>
+                        <td class="tx-req">UHC: ≥12 weeks | CMS: incl. in ≥3-month total | BCBS: required — document ADL impairment</td>
+                        <td class="check-col"><input type="checkbox" data-field="knee_pt_done"></td>
+                        <td class="check-col"><input type="checkbox" data-field="knee_pt_na"></td>
+                        <td class="action-col"><button class="btn-order" onclick="openOrderModal('knee_pt', 'PT_REFERRAL', 'Physical Therapy Referral')">📠 Order</button></td>
+                    </tr>
+                    <tr data-item="knee_activity">
+                        <td class="tx-name">Activity Modification</td>
+                        <td class="tx-req">UHC: ≥12 weeks | CMS: incl. in ≥3-month total | BCBS: required</td>
+                        <td class="check-col"><input type="checkbox" data-field="knee_activity_done"></td>
+                        <td class="check-col"><input type="checkbox" data-field="knee_activity_na"></td>
+                        <td class="action-col">—</td>
+                    </tr>
+                    <tr data-item="knee_injection" data-order-type="INJECTION">
+                        <td class="tx-name">Corticosteroid Injection</td>
+                        <td class="tx-req">UHC: ≥1 injection may substitute for NSAIDs | BCBS: required as appropriate | CMS: document</td>
+                        <td class="check-col"><input type="checkbox" data-field="knee_injection_done"></td>
+                        <td class="check-col"><input type="checkbox" data-field="knee_injection_na"></td>
+                        <td class="action-col"><button class="btn-order" onclick="openOrderModal('knee_injection', 'INJECTION', 'Corticosteroid Injection - Knee')">📝 Order</button></td>
+                    </tr>
+                    <tr data-item="knee_assistive" data-order-type="DME">
+                        <td class="tx-name">Assistive Device</td>
+                        <td class="tx-req">BCBS: required | CMS/UHC: document use when applicable</td>
+                        <td class="check-col"><input type="checkbox" data-field="knee_assistive_done"></td>
+                        <td class="check-col"><input type="checkbox" data-field="knee_assistive_na"></td>
+                        <td class="action-col"><button class="btn-order" onclick="openOrderModal('knee_assistive', 'DME', 'Assistive Device (Cane/Walker)')">📝 Order</button></td>
+                    </tr>
+                    <tr data-item="knee_weight">
+                        <td class="tx-name">Weight Reduction Counseling</td>
+                        <td class="tx-req">BCBS: required as appropriate | CMS/UHC: document if BMI >25</td>
+                        <td class="check-col"><input type="checkbox" data-field="knee_weight_done"></td>
+                        <td class="check-col"><input type="checkbox" data-field="knee_weight_na"></td>
+                        <td class="action-col">—</td>
+                    </tr>
+                    <tr data-item="knee_topical" data-order-type="MEDICATION">
+                        <td class="tx-name">Topical NSAIDs</td>
+                        <td class="tx-req">AAOS OAK3: Strong | OARSI: Level 1A | Counts toward NSAID requirement</td>
+                        <td class="check-col"><input type="checkbox" data-field="knee_topical_done"></td>
+                        <td class="check-col"><input type="checkbox" data-field="knee_topical_na"></td>
+                        <td class="action-col"><button class="btn-order" onclick="openOrderModal('knee_topical', 'MEDICATION', 'Topical Diclofenac Gel')">📝 Rx</button></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="sources"><strong>Sources:</strong> UHC Surgery of the Knee (Dec 2024) | CMS LCD L39911 (Oct 2024) | BCBS CA Knee Arthroplasty Policy (Feb 2025). <strong>AAOS OAK3 recommends AGAINST:</strong> lateral wedge insoles, HA (routine), oral narcotics.</div>
+
+            <h3 class="diagnostic-header">🔬 DIAGNOSTIC WORKUP — Pre-Surgical Planning</h3>
+            <p class="diagnostic-note">Not required by insurance, but may be needed for surgical planning and authorization support.</p>
+            <table class="diagnostic-table">
+                <thead><tr><th style="width:24%">Study</th><th>Clinical Indication</th><th class="check-col">✓</th><th class="check-col">N/A</th><th class="action-col">Order</th></tr></thead>
+                <tbody>
+                    <tr data-item="knee_mri" data-order-type="IMAGING">
+                        <td class="tx-name">MRI Knee</td>
+                        <td class="tx-req">Document structural findings | May be required for surgical authorization | Rule out AVN, tumor, infection</td>
+                        <td class="check-col"><input type="checkbox" data-field="knee_mri_done"></td>
+                        <td class="check-col"><input type="checkbox" data-field="knee_mri_na"></td>
+                        <td class="action-col"><button class="btn-order-diag" onclick="openImagingOrderModal('knee_mri', 'MRI Knee without contrast')">🩻 Order</button></td>
+                    </tr>
+                    <tr data-item="knee_ct" data-order-type="IMAGING">
+                        <td class="tx-name">CT Knee</td>
+                        <td class="tx-req">Bony detail for complex deformity | Revision planning | Hardware assessment</td>
+                        <td class="check-col"><input type="checkbox" data-field="knee_ct_done"></td>
+                        <td class="check-col"><input type="checkbox" data-field="knee_ct_na"></td>
+                        <td class="action-col"><button class="btn-order-diag" onclick="openImagingOrderModal('knee_ct', 'CT Knee without contrast')">🩻 Order</button></td>
+                    </tr>
+                    <tr data-item="knee_aspiration" data-order-type="PROCEDURE">
+                        <td class="tx-name">Aspiration / Arthrogram</td>
+                        <td class="tx-req">Rule out infection pre-revision | Synovial fluid analysis | Cell count, culture, crystals</td>
+                        <td class="check-col"><input type="checkbox" data-field="knee_aspiration_done"></td>
+                        <td class="check-col"><input type="checkbox" data-field="knee_aspiration_na"></td>
+                        <td class="action-col"><button class="btn-order-diag" onclick="openImagingOrderModal('knee_aspiration', 'Knee Aspiration with Synovial Fluid Analysis')">🩻 Order</button></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 class="additional-header">ADDITIONAL CONSERVATIVE CARE — Check All Attempted</h3>
+            <div class="additional-grid">
+                <div class="additional-item"><input type="checkbox" data-field="knee_brace"><label><strong>Unloader Brace</strong> <span>— AAOS OAK3 Moderate | HCPCS L1851</span></label></div>
+                <div class="additional-item"><input type="checkbox" data-field="knee_taping"><label><strong>Patellar Taping</strong> <span>— OARSI/APTA within PT</span></label></div>
+                <div class="additional-item"><input type="checkbox" data-field="knee_iovera"><label><strong>Iovera Cryoablation</strong> <span>— Medicare only</span></label></div>
+                <div class="additional-item"><input type="checkbox" data-field="knee_tens"><label><strong>TENS / H-TENS</strong> <span>— AAOS Limited | DME</span></label></div>
+                <div class="additional-item"><input type="checkbox" data-field="knee_prp"><label><strong>PRP Injection</strong> <span>— Generally not covered</span></label></div>
+                <div class="additional-item"><input type="checkbox" data-field="knee_duloxetine"><label><strong>Duloxetine (SNRI)</strong> <span>— ACR/AF & OARSI</span></label></div>
+                <div class="additional-item"><input type="checkbox" data-field="knee_aquatic"><label><strong>Aquatic Therapy</strong> <span>— within PT benefit</span></label></div>
+                <div class="additional-item"><input type="checkbox" data-field="knee_other_check"><label><strong>Other:</strong></label><input type="text" data-field="knee_other_text" placeholder="Specify..."></div>
+            </div>
+        </div>
+
+        <!-- HIP SECTION -->
+        <div class="hip-section" id="hipSection">
+            <h1 class="section-title">OA Hip Episode — Conservative Care Checklist</h1>
+            <p class="section-subtitle">PAYER-REQUIRED CONSERVATIVE CARE FOR ARTHROPLASTY</p>
+            <p class="section-note">All items must be completed or documented as contraindicated prior to surgical authorization.</p>
+
+            <table class="care-table">
+                <thead><tr><th style="width:24%">Treatment</th><th>Payer Requirements for Arthroplasty</th><th class="check-col">✓</th><th class="check-col">N/A</th><th class="action-col">Order</th></tr></thead>
+                <tbody>
+                    <tr data-item="hip_nsaid" data-order-type="MEDICATION">
+                        <td class="tx-name">NSAIDs or Acetaminophen</td>
+                        <td class="tx-req">UHC: ≥3 weeks | CMS: incl. in ≥3-month total | BCBS: required unless contraindicated</td>
+                        <td class="check-col"><input type="checkbox" data-field="hip_nsaid_done"></td>
+                        <td class="check-col"><input type="checkbox" data-field="hip_nsaid_na"></td>
+                        <td class="action-col"><button class="btn-order" onclick="openOrderModal('hip_nsaid', 'MEDICATION', 'NSAIDs/Acetaminophen')">📝 Rx</button></td>
+                    </tr>
+                    <tr data-item="hip_pt" data-order-type="PT_REFERRAL">
+                        <td class="tx-name">Physical Therapy</td>
+                        <td class="tx-req">UHC: ≥12 weeks | CMS: incl. in ≥3-month total | BCBS: required — document ADL impairment</td>
+                        <td class="check-col"><input type="checkbox" data-field="hip_pt_done"></td>
+                        <td class="check-col"><input type="checkbox" data-field="hip_pt_na"></td>
+                        <td class="action-col"><button class="btn-order" onclick="openOrderModal('hip_pt', 'PT_REFERRAL', 'Physical Therapy Referral')">📠 Order</button></td>
+                    </tr>
+                    <tr data-item="hip_activity">
+                        <td class="tx-name">Activity Modification</td>
+                        <td class="tx-req">UHC: ≥12 weeks | CMS: incl. in ≥3-month total | BCBS: required</td>
+                        <td class="check-col"><input type="checkbox" data-field="hip_activity_done"></td>
+                        <td class="check-col"><input type="checkbox" data-field="hip_activity_na"></td>
+                        <td class="action-col">—</td>
+                    </tr>
+                    <tr data-item="hip_assistive" data-order-type="DME">
+                        <td class="tx-name">Assistive Device</td>
+                        <td class="tx-req">BCBS: required | CMS/UHC: document use when applicable</td>
+                        <td class="check-col"><input type="checkbox" data-field="hip_assistive_done"></td>
+                        <td class="check-col"><input type="checkbox" data-field="hip_assistive_na"></td>
+                        <td class="action-col"><button class="btn-order" onclick="openOrderModal('hip_assistive', 'DME', 'Assistive Device (Cane/Walker)')">📝 Order</button></td>
+                    </tr>
+                    <tr data-item="hip_weight">
+                        <td class="tx-name">Weight Reduction Counseling</td>
+                        <td class="tx-req">BCBS: required as appropriate | CMS/UHC: document if BMI >25</td>
+                        <td class="check-col"><input type="checkbox" data-field="hip_weight_done"></td>
+                        <td class="check-col"><input type="checkbox" data-field="hip_weight_na"></td>
+                        <td class="action-col">—</td>
+                    </tr>
+                    <tr data-item="hip_injection" data-order-type="INJECTION">
+                        <td class="tx-name">Corticosteroid Injection (Hip)</td>
+                        <td class="tx-req">BCBS: required as appropriate | CMS/UHC: document if applicable</td>
+                        <td class="check-col"><input type="checkbox" data-field="hip_injection_done"></td>
+                        <td class="check-col"><input type="checkbox" data-field="hip_injection_na"></td>
+                        <td class="action-col"><button class="btn-order" onclick="openOrderModal('hip_injection', 'INJECTION', 'Corticosteroid Injection - Hip')">📝 Order</button></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="sources"><strong>Sources:</strong> UHC Surgery of the Hip (Dec 2024) | CMS LCD L39911 (Oct 2024) | BCBS CA Hip Arthroplasty Policy (Oct 2024).</div>
+
+            <h3 class="diagnostic-header">🔬 DIAGNOSTIC WORKUP — Pre-Surgical Planning</h3>
+            <p class="diagnostic-note">Not required by insurance, but may be needed for surgical planning and authorization support.</p>
+            <table class="diagnostic-table">
+                <thead><tr><th style="width:24%">Study</th><th>Clinical Indication</th><th class="check-col">✓</th><th class="check-col">N/A</th><th class="action-col">Order</th></tr></thead>
+                <tbody>
+                    <tr data-item="hip_mri" data-order-type="IMAGING">
+                        <td class="tx-name">MRI Hip</td>
+                        <td class="tx-req">Rule out AVN, labral pathology | Occult fracture | Tumor, infection workup</td>
+                        <td class="check-col"><input type="checkbox" data-field="hip_mri_done"></td>
+                        <td class="check-col"><input type="checkbox" data-field="hip_mri_na"></td>
+                        <td class="action-col"><button class="btn-order-diag" onclick="openImagingOrderModal('hip_mri', 'MRI Hip without contrast')">🩻 Order</button></td>
+                    </tr>
+                    <tr data-item="hip_ct" data-order-type="IMAGING">
+                        <td class="tx-name">CT Hip / Pelvis</td>
+                        <td class="tx-req">Bony detail for dysplasia | Revision planning | Acetabular bone stock</td>
+                        <td class="check-col"><input type="checkbox" data-field="hip_ct_done"></td>
+                        <td class="check-col"><input type="checkbox" data-field="hip_ct_na"></td>
+                        <td class="action-col"><button class="btn-order-diag" onclick="openImagingOrderModal('hip_ct', 'CT Hip/Pelvis without contrast')">🩻 Order</button></td>
+                    </tr>
+                    <tr data-item="hip_aspiration" data-order-type="PROCEDURE">
+                        <td class="tx-name">Aspiration / Arthrogram</td>
+                        <td class="tx-req">Rule out infection pre-revision | Fluoroscopic-guided | Cell count, culture, alpha-defensin</td>
+                        <td class="check-col"><input type="checkbox" data-field="hip_aspiration_done"></td>
+                        <td class="check-col"><input type="checkbox" data-field="hip_aspiration_na"></td>
+                        <td class="action-col"><button class="btn-order-diag" onclick="openImagingOrderModal('hip_aspiration', 'Hip Aspiration with Synovial Fluid Analysis')">🩻 Order</button></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 class="additional-header">ADDITIONAL CONSERVATIVE CARE — Check All Attempted</h3>
+            <div class="additional-grid">
+                <div class="additional-item"><input type="checkbox" data-field="hip_aquatic"><label><strong>Aquatic Therapy</strong> <span>— OARSI & AAOS within PT</span></label></div>
+                <div class="additional-item"><input type="checkbox" data-field="hip_needling"><label><strong>Dry Needling</strong> <span>— APTA 2025 CPG</span></label></div>
+                <div class="additional-item"><input type="checkbox" data-field="hip_duloxetine"><label><strong>Duloxetine (SNRI)</strong> <span>— ACR/AF & OARSI</span></label></div>
+                <div class="additional-item"><input type="checkbox" data-field="hip_other_check"><label><strong>Other:</strong></label><input type="text" data-field="hip_other_text" placeholder="Specify..."></div>
+            </div>
+        </div>
+
+        <div class="nop-actions" id="nopActions" style="display:none;">
+            <button class="btn btn-save" onclick="savePlan()">💾 Save Checklist</button>
+            <button class="btn btn-print" onclick="printPlan()">🖨️ Print</button>
+            <button class="btn btn-back" onclick="goBack()">← Back</button>
+            <span id="saveStatus"></span>
+        </div>
+    </div>
+
+    <!-- ORDER MODAL -->
+    <div id="orderModalOverlay" style="display:none;" onclick="if(event.target === this) closeOrderModal();">
+        <div id="orderModalBox">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid #e5e7eb;">
+                <h3 id="orderModalTitle" style="margin:0; font-size:1.25rem; color:#1e293b;">Create Order</h3>
+                <button onclick="closeOrderModal()" style="background:none; border:none; font-size:1.8rem; cursor:pointer; color:#6b7280; padding:0 8px; line-height:1;">&times;</button>
+            </div>
+            
+            <div class="order-fields-grid">
+                <div class="order-field">
+                    <label>Order Type</label>
+                    <input type="text" id="orderType" readonly>
+                </div>
+                
+                <div class="order-field">
+                    <label>ICD-10 Code</label>
+                    <input type="text" id="orderICD10" placeholder="e.g., M17.11">
+                </div>
+                
+                <div class="order-field order-field-full" id="providerSelectField">
+                    <label>Send To (PT Clinic / Provider)</label>
+                    <select id="orderProvider">
+                        <option value="">— Select Provider —</option>
+                    </select>
+                </div>
+                
+                <div class="order-field order-field-full">
+                    <label>Clinical Indication</label>
+                    <input type="text" id="orderIndication" value="Osteoarthritis, conservative care prior to arthroplasty">
+                </div>
+                
+                <div class="order-field order-field-full">
+                    <label>Special Instructions</label>
+                    <textarea id="orderNotes" rows="2" placeholder="Duration, frequency, special instructions..."></textarea>
+                </div>
+            </div>
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; padding-top:16px; border-top:1px solid #e5e7eb;">
+                <div class="order-field" style="margin:0;">
+                    <input type="checkbox" id="orderFaxOffice" checked>
+                    <label class="checkbox-label" for="orderFaxOffice">Also fax copy to our office</label>
+                </div>
+                <div class="order-buttons" style="margin:0;">
+                    <button class="order-btn-cancel" onclick="closeOrderModal()">Cancel</button>
+                    <button class="order-btn-submit" onclick="submitOrder()">📠 Create Order & Fax</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const CLINIC_ID = '11111111-1111-1111-1111-111111111111';
+    let currentPatientId = null;
+    let currentEpisodeId = null;
+    let currentPlanId = null;
+    let currentJoint = 'knee';
+    let patientName = '';
+    let patientData = null;
+    let providers = [];
+    let currentOrderItem = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        document.getElementById('userDisplay').textContent = sessionStorage.getItem('userName') || '';
+
+        const params = new URLSearchParams(window.location.search);
+        const patientId = params.get('patient');
+        const episodeId = params.get('episode');
+
+        if (!patientId && !episodeId) {
+            showError('No patient selected. Please select a patient from the Dashboard.');
+            return;
+        }
+
+        try {
+            await loadProviders();
+            await loadPatientAndEpisode(patientId, episodeId);
+        } catch (e) {
+            console.error('Load error:', e);
+            showError('Failed to load: ' + e.message);
+        }
+    });
+
+    function showError(msg) {
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('errorState').style.display = 'block';
+        document.getElementById('errorText').textContent = msg;
+    }
+
+    async function loadProviders() {
+        try {
+            const resp = await fetch('/api/external-providers?clinic_id=' + CLINIC_ID + '&type=pt_clinic');
+            if (resp.ok) {
+                providers = await resp.json();
+                const sel = document.getElementById('orderProvider');
+                sel.innerHTML = '<option value="">— Select Provider —</option>';
+                providers.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = p.name + (p.fax ? ' (Fax: ' + p.fax + ')' : '');
+                    if (p.preferred) opt.textContent += ' ★';
+                    sel.appendChild(opt);
+                });
+            }
+        } catch (e) { console.log('No providers loaded:', e); }
+    }
+
+    async function loadPatientAndEpisode(patientId, episodeId) {
+        if (episodeId) {
+            const epResp = await fetch('/api/episodes/' + episodeId);
+            if (!epResp.ok) throw new Error('Episode not found');
+            const episode = await epResp.json();
+            currentEpisodeId = episodeId;
+            currentPatientId = episode.patient_id;
+            const st = (episode.surgery_type || '').toLowerCase();
+            currentJoint = (st.includes('hip') || st === 'tha') ? 'hip' : 'knee';
+        } else {
+            currentPatientId = patientId;
+            const epResp = await fetch('/api/episodes?patient_id=' + patientId);
+            if (epResp.ok) {
+                const episodes = await epResp.json();
+                if (episodes.length > 0) {
+                    currentEpisodeId = episodes[0].id;
+                    const st = (episodes[0].surgery_type || '').toLowerCase();
+                    currentJoint = (st.includes('hip') || st === 'tha') ? 'hip' : 'knee';
+                }
+            }
+        }
+
+        const patResp = await fetch('/api/patients/' + currentPatientId);
+        if (!patResp.ok) throw new Error('Patient not found');
+        patientData = await patResp.json();
+        patientName = patientData.last_name + ', ' + patientData.first_name;
+        
+        document.getElementById('patientInfo').innerHTML = '<strong>' + patientName + '</strong> — ' + (currentJoint === 'hip' ? 'Hip' : 'Knee') + ' OA Episode';
+        document.getElementById('kneeSection').classList.toggle('active', currentJoint === 'knee');
+        document.getElementById('hipSection').classList.toggle('active', currentJoint === 'hip');
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('nopActions').style.display = 'flex';
+
+        document.getElementById('orderICD10').value = currentJoint === 'knee' ? 'M17.11' : 'M16.11';
+
+        await loadExistingPlan();
+    }
+
+    async function loadExistingPlan() {
+        try {
+            const resp = await fetch('/api/nonop-plans?patient_id=' + currentPatientId + '&clinic_id=' + CLINIC_ID);
+            if (!resp.ok) return;
+            const plans = await resp.json();
+            if (plans.length > 0) {
+                currentPlanId = plans[0].id;
+                if (plans[0].plan_data) restorePlan(JSON.parse(plans[0].plan_data));
+            }
+        } catch (e) { console.error('Failed to load plan:', e); }
+    }
+
+    function gatherPlan() {
+        const data = { joint: currentJoint };
+        document.querySelectorAll('[data-field]').forEach(el => {
+            if (el.type === 'checkbox') data[el.dataset.field] = el.checked;
+            else data[el.dataset.field] = el.value;
+        });
+        return data;
+    }
+
+    function restorePlan(data) {
+        if (!data) return;
+        document.querySelectorAll('[data-field]').forEach(el => {
+            if (data[el.dataset.field] !== undefined) {
+                if (el.type === 'checkbox') el.checked = data[el.dataset.field];
+                else el.value = data[el.dataset.field];
+            }
+        });
+    }
+
+    async function savePlan() {
+        if (!currentPatientId) return;
+        const body = { patient_id: currentPatientId, clinic_id: CLINIC_ID, joint: currentJoint, plan_data: JSON.stringify(gatherPlan()) };
+        try {
+            let resp = currentPlanId 
+                ? await fetch('/api/nonop-plans/' + currentPlanId, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+                : await fetch('/api/nonop-plans', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            const result = await resp.json();
+            if (result.id) currentPlanId = result.id;
+            document.getElementById('saveStatus').textContent = '✓ Saved ' + new Date().toLocaleTimeString();
+            setTimeout(() => document.getElementById('saveStatus').textContent = '', 4000);
+        } catch (e) {
+            document.getElementById('saveStatus').textContent = '✕ Save failed';
+        }
+    }
+
+    // ORDER MODAL
+    function openOrderModal(itemCode, orderType, description) {
+        currentOrderItem = { itemCode, orderType, description };
+        document.getElementById('orderModalTitle').textContent = 'Order: ' + description;
+        document.getElementById('orderType').value = orderType;
+        document.getElementById('providerSelectField').style.display = (orderType === 'PT_REFERRAL') ? 'block' : 'none';
+        document.getElementById('orderModalOverlay').style.display = 'flex';
+    }
+
+    function openImagingOrderModal(itemCode, description) {
+        currentOrderItem = { itemCode, orderType: 'IMAGING', description };
+        document.getElementById('orderModalTitle').textContent = '🩻 Order: ' + description;
+        document.getElementById('orderType').value = 'IMAGING';
+        document.getElementById('providerSelectField').style.display = 'none';
+        
+        // Pre-fill indication based on item type
+        const indicationField = document.getElementById('orderIndication');
+        if (itemCode.includes('mri')) {
+            indicationField.value = 'Pre-surgical planning / Rule out underlying pathology';
+        } else if (itemCode.includes('ct')) {
+            indicationField.value = 'Bony detail for surgical planning';
+        } else if (itemCode.includes('aspiration')) {
+            indicationField.value = 'Rule out infection / Synovial fluid analysis';
+        }
+        
+        document.getElementById('orderModalOverlay').style.display = 'flex';
+    }
+
+    function closeOrderModal() {
+        document.getElementById('orderModalOverlay').style.display = 'none';
+        currentOrderItem = null;
+    }
+
+    async function submitOrder() {
+        if (!currentOrderItem) return;
+        
+        const orderType = currentOrderItem.orderType;
+        const providerId = document.getElementById('orderProvider').value;
+        const indication = document.getElementById('orderIndication').value;
+        const icd10 = document.getElementById('orderICD10').value;
+        const notes = document.getElementById('orderNotes').value;
+        const faxToOffice = document.getElementById('orderFaxOffice').checked;
+        
+        if (orderType === 'PT_REFERRAL' && !providerId) {
+            alert('Please select a PT clinic to send the referral to.');
+            return;
+        }
+
+        try {
+            const orderResp = await fetch('/api/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    clinic_id: CLINIC_ID,
+                    patient_id: currentPatientId,
+                    episode_id: currentEpisodeId,
+                    order_type: orderType,
+                    order_subtype: currentOrderItem.itemCode,
+                    description: currentOrderItem.description,
+                    clinical_indication: indication,
+                    icd10_codes: JSON.stringify([icd10]),
+                    destination_provider_id: providerId || null,
+                    order_details: JSON.stringify({ notes, fax_to_office: faxToOffice }),
+                    created_by: sessionStorage.getItem('userId')
+                })
+            });
+            
+            const order = await orderResp.json();
+            
+            if (order.id && providerId) {
+                const provider = providers.find(p => p.id === providerId);
+                if (provider && provider.fax) {
+                    await fetch('/api/fax-queue', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            order_id: order.id,
+                            clinic_id: CLINIC_ID,
+                            fax_number: provider.fax
+                        })
+                    });
+                }
+            }
+            
+            const row = document.querySelector(`tr[data-item="${currentOrderItem.itemCode}"]`);
+            if (row) {
+                const btn = row.querySelector('.btn-order');
+                btn.classList.add('ordered');
+                btn.innerHTML = '✓ Ordered';
+                const doneCheck = row.querySelector('input[data-field$="_done"]');
+                if (doneCheck) doneCheck.checked = true;
+            }
+            
+            closeOrderModal();
+            await savePlan();
+            
+            alert('Order created: ' + order.order_number + (providerId ? '\nFax queued to provider.' : ''));
+            
+        } catch (e) {
+            console.error('Order failed:', e);
+            alert('Failed to create order: ' + e.message);
+        }
+    }
+
+    function printPlan() {
+        document.getElementById('printPatientName').textContent = patientName;
+        document.getElementById('printJoint').textContent = currentJoint === 'hip' ? 'Hip' : 'Knee';
+        document.getElementById('printDate').textContent = new Date().toLocaleDateString();
+        window.print();
+    }
+
+    function goBack() {
+        if (document.referrer && document.referrer.includes(window.location.hostname)) history.back();
+        else window.location.href = '/dashboard.html';
+    }
+
+    function logout() { sessionStorage.clear(); window.location.href = '/index.html'; }
+
+    function goBack() {
+        var params = new URLSearchParams(window.location.search);
+        var pid = params.get('patient') || params.get('episode');
+        if (pid && currentPatientId) {
+            window.location.href = '/dashboard.html?openPatient=' + currentPatientId;
+        } else if (document.referrer && document.referrer.includes(window.location.hostname)) {
+            history.back();
+        } else {
+            window.location.href = '/dashboard.html';
+        }
+    }
+    </script>
+    <script src="/js/stage-tracker.js"></script>
+    <script>
+    (function() {
+        var params = new URLSearchParams(window.location.search);
+        var patientId = params.get('patient');
+        var episodeId = params.get('episode');
+        // If we have episode, use it directly; otherwise fetch patient to get episode
+        if (episodeId) {
+            fetch('/api/episodes/' + episodeId)
+                .then(function(r) { return r.json(); })
+                .then(function(ep) {
+                    if (ep && ep.id) {
+                        StageTracker.init('stageTracker', ep.id, { showActions: true, darkMode: false, patientId: ep.patient_id || patientId });
+                    }
+                }).catch(function(e) { console.error('Stage tracker init error:', e); });
+        } else if (patientId) {
+            fetch('/api/patients/' + patientId)
+                .then(function(r) { return r.json(); })
+                .then(function(patient) {
+                    if (patient && patient.episode_id) {
+                        StageTracker.init('stageTracker', patient.episode_id, { showActions: true, darkMode: false, patientId: patientId });
+                    }
+                }).catch(function(e) { console.error('Stage tracker init error:', e); });
+        }
+    })();
+    </script>
+<script src="/js/cockpit-btn.js"></script>
+</body>
+</html>
