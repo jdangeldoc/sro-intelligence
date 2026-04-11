@@ -1241,6 +1241,7 @@
                     <button id="startReviewBtn" class="btn btn-primary" onclick="startReview()">Start Review ⏱️</button>
                     <button class="btn" style="background:#1e40af;color:white;font-size:0.8rem;padding:6px 12px;" onclick="openEpisodeTimeline()">📋 Timeline</button>
                     <button id="portalBtnHeader" class="btn btn-sm" style="background:#1a3a5c;color:white;padding:6px 12px;border-radius:6px;font-size:0.8rem;display:none;" onclick="openPatientPortal()">🌐 Portal</button>
+                    <button id="noteBlockBtnHeader" class="btn btn-sm" style="background:#1d4ed8;color:white;padding:6px 12px;border-radius:6px;font-size:0.8rem;" onclick="(function(){var pid=currentPatient&&currentPatient.id;if(pid)NoteBlock.showModal(pid);else alert('No patient loaded.');})();">NOTE BLOCK</button>
                 </div>
             </div>
             <div class="detail-body">
@@ -1656,6 +1657,7 @@
         </div>
     </div>
 
+    <script src="js/note-block.js"></script>
     <script src="js/dashboard.js"></script>
     <script src="js/stage-tracker.js"></script>
     <script>

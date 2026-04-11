@@ -130,10 +130,11 @@
                 <h2 id="patientName">Select a Patient</h2>
                 <span class="meta" id="patientMeta"></span>
             </div>
-            <div>
+            <div style="display:flex;gap:8px;align-items:center;">
                 <select id="patientSelect" onchange="selectPatient()" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #d1d5db; font-size: 0.9rem;">
                     <option value="">Select patient...</option>
                 </select>
+                <button onclick="(function(){var sel=document.getElementById('patientSelect');var pid=sel&&sel.value;if(pid)NoteBlock.showModal(pid);else alert('No patient selected.');})();" style="background:#1d4ed8;color:white;border:none;border-radius:8px;padding:8px 14px;font-size:0.85rem;font-weight:600;cursor:pointer;white-space:nowrap;">NOTE BLOCK</button>
             </div>
         </div>
 
@@ -1607,6 +1608,7 @@ ${additional ? '<p><strong>Additional risks discussed:</strong> ' + additional +
             window.location.href = '/index.html';
         }
     </script>
+    <script src="/js/note-block.js"></script>
     <script src="/js/stage-tracker.js"></script>
     <script>
     (function() {

@@ -183,6 +183,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
         <button class="btn btn-primary" onclick="launchPatientIntake()">Launch Patient Intake</button>
         <button class="btn btn-outline" onclick="sendToPatient('checkin')" title="Copy check-in link">Send Check-in Link</button>
         <button class="btn btn-outline" onclick="sendToPatient('preop')" title="Copy preop intake link">Send PreOp Link</button>
+        <button class="btn" style="background:#1d4ed8;color:white;" onclick="(function(){var pid=currentPatientId;if(pid)NoteBlock.showModal(pid);else alert('No patient loaded.');})();">NOTE BLOCK</button>
     </div>
 </div>
 
@@ -2206,6 +2207,7 @@ function setConsultStatus(specialtyName, val) {
     </div>
 </div>
 
+<script src="/js/note-block.js"></script>
 <script src="/js/stage-tracker.js"></script>
 <script>
 (function() {

@@ -147,6 +147,8 @@
     </div>
 
     <a id="back-btn" href="/dashboard.html">&larr; Back to Dashboard</a>
+    <button onclick="(function(){var pid=new URLSearchParams(window.location.search).get('patient');if(pid)NoteBlock.showModal(pid);else alert('No patient loaded.');})();" style="position:fixed;top:12px;right:16px;z-index:60;background:rgba(37,99,235,0.85);color:#e0f2fe;border:1px solid rgba(96,165,250,0.4);border-radius:4px;padding:6px 14px;font-size:13px;font-family:'Rajdhani',sans-serif;font-weight:600;cursor:pointer;letter-spacing:0.05em;">NOTE BLOCK</button>
+    <script src="/js/note-block.js"></script>
 
     <div id="corner-nav-tl" class="corner-nav" style="top:60px;left:20px;">DASHBOARD</div>
     <div id="corner-nav-tr" class="corner-nav" style="top:60px;right:20px;">IMPLANT/EQUIPMENT</div>

@@ -4481,6 +4481,36 @@ app.get('*', (req, res) => {
   }
 });
 
+// ============ NOTE BLOCK ============
+app.get('/api/patients/:id/note-block', (req, res) => {
+  const patientId = req.params.id;
+
+  const patient = db.prepare(`
+    SELECT p.*, e.id as episode_id, e.surgery_type, e.surgery_date, e.status as episode_status,
+           e.surgeon_id, u.first_name as surgeon_first_name, u.last_name as surgeon_last_name
+    FROM patients p
+    LEFT JOIN episodes e ON e.patient_id = p.id AND e.status = 'active'
+    LEFT JOIN users u ON e.surgeon_id = u.id
+    WHERE p.id = ?
+  `).get(patientId);
+
+  if (!patient) return res.status(404).json({ error: 'Patient not found' });
+
+  const recentCheckin = db.prepare(`
+    SELECT * FROM checkins WHERE patient_id = ? ORDER BY checkin_date DESC, created_at DESC LIMIT 1
+  `).get(patientId);
+
+  const recentPreop = db.prepare(`
+    SELECT * FROM preop_assessments WHERE patient_id = ? ORDER BY assessed_at DESC LIMIT 1
+  `).get(patientId);
+
+  const recentPro = db.prepare(`
+    SELECT * FROM pro_assessments WHERE patient_id = ? ORDER BY assessment_date DESC LIMIT 1
+  `).get(patientId);
+
+  res.json({ patient, recentCheckin, recentPreop, recentPro });
+});
+
 // ============ CLOUD RELAY POLLING ============
 const RELAY_URL = process.env.RELAY_URL || 'https://sro-cloud-relay.onrender.com';
 const RELAY_SECRET = process.env.RELAY_SECRET || 'clinic-secret-key';
