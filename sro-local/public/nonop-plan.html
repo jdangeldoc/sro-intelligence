@@ -180,6 +180,72 @@
             .action-col { display: none !important; }
         }
 
+        /* Advance + SNI buttons */
+        /* Stack of fixed action buttons — bottom-right, stacked vertically above COCKPIT */
+        #actionBtnStack {
+            position: fixed;
+            bottom: 72px; /* sits above cockpit-btn (bottom:20px + ~44px height) */
+            right: 20px;
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            align-items: stretch;
+            z-index: 200;
+            min-width: 180px;
+        }
+        #advanceBtn {
+            background: #2563eb;
+            color: white;
+            padding: 11px 24px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+            text-align: center;
+        }
+        #advanceBtn:hover { background: #1d4ed8; }
+        #sniBtn {
+            background: #d1d5db;
+            color: #6b7280;
+            padding: 11px 24px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            box-shadow: none;
+            text-align: center;
+            transition: background 0.15s, color 0.15s;
+        }
+        #sniBtn:hover { background: #f97316; color: white; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+        #sniBtn.flagged { background: #9ca3af; color: white; cursor: default; }
+        /* Push content left so it doesn't hide under the button stack */
+        .nop-container { padding-right: 210px; }
+        #sniBanner {
+            display: none;
+            width: 100%;
+            background: #dc2626;
+            color: white;
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: 700;
+            text-align: center;
+            position: relative;
+            letter-spacing: 0.04em;
+        }
+        #sniBanner .sni-dismiss {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            font-size: 1.1rem;
+            opacity: 0.8;
+        }
+        #sniBanner .sni-dismiss:hover { opacity: 1; }
+
         .hip-section, .knee-section { display: none; }
         .hip-section.active, .knee-section.active { display: block; }
 
@@ -189,6 +255,9 @@
     </style>
 </head>
 <body>
+    <!-- Surgery Not Indicated banner (shown when flagged) -->
+    <div id="sniBanner">⚠ SURGERY NOT PROCEEDING TODAY <span class="sni-dismiss" onclick="clearSNI()" title="Remove flag">✕</span></div>
+
     <nav class="navbar">
         <div class="nav-brand">
             <div class="logo-icon">SRO</div>
@@ -573,6 +642,7 @@
         document.getElementById('hipSection').classList.toggle('active', currentJoint === 'hip');
         document.getElementById('loadingState').style.display = 'none';
         document.getElementById('nopActions').style.display = 'flex';
+        document.getElementById('actionBtnStack').style.display = 'flex';
 
         document.getElementById('orderICD10').value = currentJoint === 'knee' ? 'M17.11' : 'M16.11';
 
@@ -755,7 +825,66 @@
             window.location.href = '/dashboard.html';
         }
     }
+
+    // === 5b-5d: Advance to PreOp ===
+    async function advanceToPreOp() {
+        if (!currentPatientId) return;
+        // Silent save first
+        await savePlan();
+        // Advance stage
+        if (currentEpisodeId) {
+            try {
+                const userName = sessionStorage.getItem('userName') || 'Unknown';
+                await fetch('/api/episodes/' + currentEpisodeId + '/advance-stage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ completed_by: userName })
+                });
+            } catch(e) { console.error('Advance stage error:', e); }
+        }
+        window.location.href = '/preop.html?patient=' + currentPatientId;
+    }
+
+    // === 6a-6c: Surgery Not Indicated ===
+    var sniActive = false;
+
+    async function markSurgeryNotIndicated() {
+        if (!confirm('Document that surgery is not proceeding today?')) return;
+        sniActive = true;
+        const banner = document.getElementById('sniBanner');
+        const btn = document.getElementById('sniBtn');
+        banner.style.display = 'block';
+        btn.textContent = 'Surgery Not Indicated ✓';
+        btn.classList.add('flagged');
+        btn.onclick = null;
+        // Save note
+        if (currentPatientId) {
+            try {
+                await fetch('/api/patients/' + currentPatientId + '/notes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'surgery-not-indicated', note: 'Surgery not proceeding today — ' + new Date().toLocaleDateString() })
+                });
+            } catch(e) { console.error('SNI note error:', e); }
+        }
+    }
+
+    async function clearSNI() {
+        if (!confirm('Remove the "Surgery Not Indicated" flag?')) return;
+        sniActive = false;
+        document.getElementById('sniBanner').style.display = 'none';
+        const btn = document.getElementById('sniBtn');
+        btn.textContent = 'Surgery Not Indicated Today';
+        btn.classList.remove('flagged');
+        btn.onclick = markSurgeryNotIndicated;
+    }
     </script>
+    <!-- Floating action button stack (SNI on top, Advance below, Cockpit from cockpit-btn.js at bottom) -->
+    <div id="actionBtnStack">
+        <button id="sniBtn" onclick="markSurgeryNotIndicated()">Surgery Not Indicated Today</button>
+        <button id="advanceBtn" onclick="advanceToPreOp()">Advance →</button>
+    </div>
+
     <script src="/js/stage-tracker.js"></script>
     <script>
     (function() {

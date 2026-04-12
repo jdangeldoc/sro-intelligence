@@ -751,7 +751,7 @@ const EPISODE_STAGES = [
   { key: 'preop_assessment', label: 'PreOp Assessment', icon: '🩺', description: 'Risk stratification, comorbidities, workup clearance', page: '/preop.html' },
   { key: 'surgical_prep', label: 'Surgical Prep', icon: '📝', description: 'Insurance, consent, disposition, prehab', page: '/surgical-prep.html' },
   { key: 'surgery', label: 'Surgery', icon: '🔪', description: 'Procedure performed', page: null },
-  { key: 'postop', label: 'Post-Op', icon: '📊', description: 'Recovery tracking, check-ins, post-op PROMs', page: '/episode-timeline.html' }
+  { key: 'postop', label: 'Post-Op', icon: '📊', description: 'Recovery tracking, check-ins, post-op PROMs', page: '/dashboard.html' }
 ];
 
 const STAGE_ORDER = EPISODE_STAGES.map(s => s.key);
@@ -1670,7 +1670,22 @@ app.post('/api/previsit', (req, res) => {
     } catch(e) { /* prom_schedule may not have matching record */ }
     
     console.log(`[PreVisit] Saved for patient ${patient.patient_id.substring(0,8)}... — ${comorbFlags.length} comorbidities, joint: ${jointScore || 'N/A'}`);
-    
+
+    // 5a: Auto-advance episode stage from intake → conservative_care on first intake submission
+    try {
+      if (patient.episode_id) {
+        const ep = db.prepare('SELECT episode_stage FROM episodes WHERE id = ?').get(patient.episode_id);
+        if (ep && (ep.episode_stage === 'intake' || ep.episode_stage === null)) {
+          let stageData = {};
+          try { const raw = db.prepare('SELECT stage_data FROM episodes WHERE id = ?').get(patient.episode_id); stageData = JSON.parse(raw.stage_data || '{}'); } catch(e) {}
+          stageData['intake'] = { completed_at: new Date().toISOString(), completed_by: 'patient' };
+          db.prepare('UPDATE episodes SET episode_stage = ?, stage_data = ?, stage_updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+            .run('conservative_care', JSON.stringify(stageData), patient.episode_id);
+          console.log(`[PreVisit] Stage advanced intake → conservative_care for episode ${patient.episode_id.substring(0,8)}...`);
+        }
+      }
+    } catch(stageErr) { console.error('[PreVisit] Stage advance error:', stageErr); }
+
     res.json({ id: preopId, success: true });
   } catch(err) {
     console.error('previsit POST error:', err);
@@ -4433,11 +4448,13 @@ app.post('/api/clinic-visits', (req, res) => {
 });
 
 app.put('/api/clinic-visits/:id', (req, res) => {
-  const { visit_status, notes } = req.body;
+  const { visit_status, notes, visit_date, visit_time } = req.body;
   const updates = ['updated_at = CURRENT_TIMESTAMP'];
   const vals = [];
   if (visit_status) { updates.push('visit_status = ?'); vals.push(visit_status); }
   if (notes !== undefined) { updates.push('notes = ?'); vals.push(notes); }
+  if (visit_date) { updates.push('visit_date = ?'); vals.push(visit_date); }
+  if (visit_time) { updates.push('visit_time = ?'); vals.push(visit_time); }
   vals.push(req.params.id);
   db.prepare('UPDATE clinic_visits SET ' + updates.join(', ') + ' WHERE id = ?').run(...vals);
   res.json({ success: true });
@@ -4500,6 +4517,41 @@ app.get('/api/patients/:id/note-block', (req, res) => {
   `).get(patientId);
 
   res.json({ patient, recentCheckin, recentPreop, recentPro });
+});
+
+// ============ PATIENT NOTES ============
+app.post('/api/patients/:id/notes', (req, res) => {
+  const { type, note } = req.body;
+  if (!type || !note) return res.status(400).json({ error: 'type and note required' });
+  const patient = db.prepare('SELECT id FROM patients WHERE id = ?').get(req.params.id);
+  if (!patient) return res.status(404).json({ error: 'Patient not found' });
+
+  // Store in patient metadata JSON field if it exists, or use a simple notes table fallback
+  // We'll store in a patient_notes approach using the existing notes column or create minimal record
+  const noteId = require('crypto').randomUUID ? require('crypto').randomUUID() : Date.now().toString();
+  const noteRecord = { id: noteId, patient_id: req.params.id, type, note, created_at: new Date().toISOString() };
+
+  // Check if patient_notes table exists; if not, use a JSON field on patients table
+  const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='patient_notes'").get();
+  if (!tables) {
+    db.exec(`CREATE TABLE IF NOT EXISTS patient_notes (
+      id TEXT PRIMARY KEY,
+      patient_id TEXT NOT NULL REFERENCES patients(id),
+      type TEXT,
+      note TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+  }
+  db.prepare('INSERT INTO patient_notes (id, patient_id, type, note, created_at) VALUES (?, ?, ?, ?, ?)')
+    .run(noteId, req.params.id, type, note, noteRecord.created_at);
+  res.json({ success: true, id: noteId });
+});
+
+app.get('/api/patients/:id/notes', (req, res) => {
+  const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='patient_notes'").get();
+  if (!tables) return res.json([]);
+  const notes = db.prepare('SELECT * FROM patient_notes WHERE patient_id = ? ORDER BY created_at DESC').all(req.params.id);
+  res.json(notes);
 });
 
 // Catch-all: serve index.html for any unmatched routes (SPA support)

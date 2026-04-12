@@ -105,10 +105,10 @@
                 <polygon points="56.52,48.05 56.52,48.05 43.65,48.5 42.48,58.98 57.6,58.98 56.35,48.2" class="cockpit-hotspot" onclick="openPatientDetail()" data-name="Patient"/>
                 <polygon points="4.71,63.32 4.71,63.32 4.88,41.77 28.61,42.22 28.61,60.48 4.55,63.47" class="cockpit-hotspot" onclick="openZone('orders')" data-name="Orders and Billing"/>
                 <polygon points="21.93,35.78 21.59,8.68 35.21,7.78 35.04,33.83 22.09,35.63" class="cockpit-hotspot" onclick="openZone('preop')" data-name="Pre-Op Preparation"/>
-                <polygon points="83.76,10.48 83.76,10.48 83.92,32.63 69.38,30.24 69.89,11.08 83.59,11.08" class="cockpit-hotspot" onclick="openZone('surgery')" data-name="Surgery Schedule"/>
-                <polygon points="42.4,11.08 41.64,32.93 59.36,32.93 58.02,10.18 42.48,9.88" class="cockpit-hotspot" onclick="openZone('triage')" data-name="Joint Decision Tool"/>
+                <polygon points="83.76,10.48 83.76,10.48 83.92,32.63 69.38,30.24 69.89,11.08 83.59,11.08" class="cockpit-hotspot" onclick="openZone('surgery')" data-name="Surgery Workup"/>
+                <polygon points="42.4,11.08 41.64,32.93 59.36,32.93 58.02,10.18 42.48,9.88" class="cockpit-hotspot" onclick="openZone('triage')" data-name="Nurse Tasks"/>
                 <polygon points="71.72,39.22 72.39,57.93 94.45,57.78 93.78,39.82 72.06,38.62" class="cockpit-hotspot" onclick="openZone('postop')" data-name="Post-Op Monitoring"/>
-                <polygon points="13.74,71.41 34.12,71.71 33.96,88.32 13.65,88.02 13.74,71.41" class="cockpit-hotspot" onclick="openZone('comm')" data-name="Communication"/>
+                <polygon points="13.74,71.41 34.12,71.71 33.96,88.32 13.65,88.02 13.74,71.41" class="cockpit-hotspot" onclick="openZone('comm')" data-name="Patient Communication"/>
                 <polygon points="69.72,78.29 69.72,78.29 69.8,88.02 86.68,88.32 86.51,77.84 69.55,78.59" class="cockpit-hotspot" onclick="openZone('pt')" data-name="Physical Therapy"/>
 
                 <!-- DATA TEXT OVERLAYS -->
@@ -243,7 +243,7 @@
 
     // Page navigation map
     var pageMap = {
-        triage: '/preop.html?patient=' + patientId,
+        triage: '/nurse-tasks.html?patient=' + patientId,
         preop: '/preop.html?patient=' + patientId,
         surgery: '/surgical-prep.html?patient=' + patientId,
         orders: '/nurse-tasks.html?patient=' + patientId,
@@ -257,8 +257,8 @@
         poly.addEventListener('dblclick', function(e) {
             e.preventDefault(); e.stopPropagation();
             var name = poly.getAttribute('data-name');
-            var key = {'Pre-Op Preparation':'preop','Joint Decision Tool':'triage','Surgery Schedule':'surgery',
-                'Orders and Billing':'orders','Post-Op Monitoring':'postop','Communication':'comm',
+            var key = {'Pre-Op Preparation':'preop','Nurse Tasks':'triage','Surgery Workup':'surgery',
+                'Orders and Billing':'orders','Post-Op Monitoring':'postop','Patient Communication':'comm',
                 'Physical Therapy':'pt'}[name];
             if (key && pageMap[key]) window.location.href = pageMap[key];
         });
@@ -401,7 +401,7 @@
         renderPT();
     }
 
-    // --- CENTER: Patient Identity (critical alerts only) ---
+    // --- CENTER: Patient Identity ---
     function renderCenter() {
         var p = S.patient; if (!p) return;
         var c = centroids.center;
@@ -409,33 +409,39 @@
         var name = (ln+', '+fn).toUpperCase();
         var age = p.date_of_birth ? Math.floor((Date.now()-new Date(p.date_of_birth).getTime())/(365.25*24*60*60*1000)) : '--';
 
-        var pain = null, painStr = '--', painColor = '#ffffff', painSize = 1.5;
+        var pain = null, painStr = '--', painColor = '#1a1008', painSize = 1.5;
         if (S.checkins[0] && S.checkins[0].pain_level != null) {
             pain = S.checkins[0].pain_level;
             painStr = pain+'/10';
-            painColor = pain<=3?'#5a9e3e':pain<=6?'#d4a04a':'#ff4444';
+            painColor = pain<=3?'#1a5c1a':pain<=6?'#7a4800':'#8b0000';
             painSize = pain>=7 ? 2.8 : pain>=4 ? 2.2 : 1.8;
         }
 
-        var daysSinceCI = null, ciIco = icons.pending, ciIcoColor = '#ffffff', ciText = '';
+        var daysSinceCI = null, ciIco = icons.pending, ciIcoColor = '#1a1008', ciText = '';
         if (S.checkins[0]) {
             daysSinceCI = Math.floor((Date.now()-new Date(S.checkins[0].checkin_date||S.checkins[0].created_at).getTime())/(24*60*60*1000));
-            if (daysSinceCI > 3) { ciIco = icons.alert; ciIcoColor = '#ff4444'; ciText = daysSinceCI+'d since check-in'; }
-            else { ciIco = icons.ok; ciIcoColor = '#5a9e3e'; ciText = 'Checked in '+daysSinceCI+'d ago'; }
-        } else { ciIco = icons.alert; ciIcoColor = '#ff4444'; ciText = 'No check-ins'; }
+            if (daysSinceCI > 3) { ciIco = icons.alert; ciIcoColor = '#8b0000'; ciText = daysSinceCI+'d since check-in'; }
+            else { ciIco = icons.ok; ciIcoColor = '#1a5c1a'; ciText = 'Checked in '+daysSinceCI+'d ago'; }
+        } else { ciIco = icons.alert; ciIcoColor = '#8b0000'; ciText = 'No check-ins'; }
 
         var aeCount = S.adverseEvents.length;
+        var tl = document.getElementById('svg-text-layer');
 
-        addSvgText(c.x, c.y-9, name, 1.5, '#ffffff', 'Cinzel Decorative, serif', 'middle', true);
-        addSvgText(c.x, c.y-6.5, age+'/M  MRN:'+(p.mrn||'--'), 1.3, '#ffffff');
-        addSvgText(c.x, c.y-3.5, 'PAIN', 1.2, '#ffffff', undefined, undefined, false, '0.5');
-        addSvgText(c.x, c.y+0.5, painStr, painSize, painColor, 'Cinzel Decorative, serif', 'middle', true);
-        // Check-in: icon colored, text white
-        addSvgText(c.x-1, c.y+4, ciIco, daysSinceCI>3?1.8:1.2, ciIcoColor, undefined, undefined, undefined, daysSinceCI>3?undefined:'0.6');
-        addSvgText(c.x+5, c.y+4, ciText, daysSinceCI>3?1.8:1.2, '#ffffff', undefined, 'middle', undefined, daysSinceCI>3?undefined:'0.6');
+        // Cover the "Center" image label with a parchment-colored rect
+        var coverRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        coverRect.setAttribute('x', '38'); coverRect.setAttribute('y', '36');
+        coverRect.setAttribute('width', '26'); coverRect.setAttribute('height', '5');
+        coverRect.setAttribute('fill', '#c8a96e'); coverRect.setAttribute('opacity', '0.85');
+        coverRect.setAttribute('pointer-events', 'none');
+        tl.appendChild(coverRect);
+
+        // Patient name — large, centered, black, on the book
+        addSvgText(c.x, c.y-4, name, 2.0, '#1a1008', 'Cinzel Decorative, serif', 'middle', true);
+        addSvgText(c.x, c.y-1.2, 'Age: '+age+'   MRN: '+(p.mrn||'--'), 1.3, '#2a1a08', 'Crimson Text, serif', 'middle', false);
+        addSvgText(c.x, c.y+1.8, 'PAIN: '+painStr, painSize, painColor, 'Cinzel Decorative, serif', 'middle', true);
+        addSvgText(c.x, c.y+4.8, ciIco+' '+ciText, 1.3, ciIcoColor, 'Crimson Text, serif', 'middle', false);
         if (aeCount > 0) {
-            addSvgText(c.x-1, c.y+7, icons.alert, 2.2, '#ff4444', undefined, undefined, true);
-            addSvgText(c.x+6, c.y+7, aeCount+' ADVERSE EVENT'+(aeCount>1?'S':''), 2.2, '#ffffff', undefined, 'middle', true);
+            addSvgText(c.x, c.y+7, icons.alert+' '+aeCount+' ADVERSE EVENT'+(aeCount>1?'S':''), 1.8, '#8b0000', 'Crimson Text, serif', 'middle', true);
         }
     }
 
@@ -651,7 +657,7 @@
     function openZone(zoneId) {
         var handlers = {
             triage: function() {
-                var html = '<h2>Joint Decision Tool</h2>';
+                var html = '<h2>Nurse Tasks</h2>';
                 // Episode Journey
                 html += '<div class="detail-section"><h3>Episode Journey</h3>';
                 if (S.stageData && S.stageData.stages) {
@@ -713,7 +719,7 @@
             },
             surgery: function() {
                 var p = S.patient; var sp = S.surgicalPrep[0];
-                var html = '<h2>Surgery Schedule</h2>';
+                var html = '<h2>Surgery Workup</h2>';
                 html += dRow('Procedure',p.surgery_type||'N/A');
                 html += dRow('Date',p.surgery_date?shortDate(new Date(p.surgery_date)):'Not scheduled');
                 html += dRow('OR Prepped',sp&&sp.history_data?'Yes':'No');
@@ -751,7 +757,7 @@
                 return html;
             },
             comm: function() {
-                var html = '<h2>Communication</h2>';
+                var html = '<h2>Patient Communication</h2>';
                 var notes = S.nursingNotes;
                 if(!notes.length){html+='<div class="detail-item" style="color:rgba(245,230,200,0.3)">No nursing notes</div>';}
                 else{notes.slice(0,15).forEach(function(n){
@@ -762,6 +768,7 @@
             },
             proms: function() {
                 var html = '<h2>PROMs / Outcomes</h2>';
+                html += '<a class="detail-action-btn" href="/previsit.html?patient='+patientId+'" style="margin-bottom:16px;display:inline-block;background:#2a6049;border-color:#4caf87;">&#128203; Start Intake</a>';
                 if(!S.promSchedule.length){html+='<div class="detail-item" style="color:rgba(245,230,200,0.3)">No PROMs scheduled</div>';}
                 else{S.promSchedule.forEach(function(p){
                     var sc=p.status==='completed'?'status-ok':p.status==='overdue'?'status-alert':'status-pending';

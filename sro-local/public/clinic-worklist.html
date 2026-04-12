@@ -282,6 +282,22 @@
         </div>
     </div>
 
+    <!-- Edit appointment date/time modal -->
+    <div class="modal-overlay" id="editApptModal" onclick="if(event.target===this)closeEditAppt()">
+        <div class="modal-box" style="max-width:320px;">
+            <h2>Edit Appointment</h2>
+            <input type="hidden" id="editApptId">
+            <label>Date</label>
+            <input type="date" id="editApptDate">
+            <label>Time</label>
+            <input type="time" id="editApptTime">
+            <div class="btn-row">
+                <button class="btn-cancel" onclick="closeEditAppt()">Cancel</button>
+                <button class="btn-save" onclick="saveEditAppt()">SAVE</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Add visit modal -->
     <div class="modal-overlay" id="addModal" onclick="if(event.target===this)closeAddModal()">
         <div class="modal-box">
@@ -457,6 +473,7 @@
                 '<td class="actions">' +
                     '<a class="btn-cockpit" href="' + cockpitPage + '?patient=' + v.patient_id + '&returnTo=worklist&date=' + dateStr + '">COCKPIT</a>' +
                     '<a class="btn-cockpit" href="/nurse-cockpit.html?patient=' + v.patient_id + '&returnTo=worklist&date=' + dateStr + '" style="background:rgba(212,160,74,0.15);border-color:rgba(212,160,74,0.4);color:#d4a04a;">NURSE</a>' +
+                    '<button class="btn-status" onclick="openEditAppt(\'' + v.id + '\',\'' + (v.visit_date||'') + '\',\'' + (v.visit_time||'') + '\')" title="Edit date/time" style="background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.25);color:rgba(0,229,255,0.7);padding:4px 8px;font-size:0.8rem;border-radius:4px;cursor:pointer;">✎</button>' +
                     '<button class="btn-status" onclick="cycleStatus(\'' + v.id + '\',\'' + (v.visit_status||'scheduled') + '\')" title="Advance status">&#10003;</button>' +
                 '</td></tr>';
         }).join('');
@@ -470,6 +487,29 @@
             method:'PUT', headers:{'Content-Type':'application/json'},
             body: JSON.stringify({ visit_status: next })
         });
+        loadVisits();
+    }
+
+    function openEditAppt(id, date, time) {
+        document.getElementById('editApptId').value = id;
+        document.getElementById('editApptDate').value = date || '';
+        document.getElementById('editApptTime').value = time ? time.substring(0,5) : '';
+        document.getElementById('editApptModal').classList.add('open');
+    }
+    function closeEditAppt() {
+        document.getElementById('editApptModal').classList.remove('open');
+    }
+    async function saveEditAppt() {
+        var id = document.getElementById('editApptId').value;
+        var date = document.getElementById('editApptDate').value;
+        var time = document.getElementById('editApptTime').value;
+        if (!date || !time) { alert('Date and time are required.'); return; }
+        await fetch('/api/clinic-visits/' + id, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ visit_date: date, visit_time: time })
+        });
+        closeEditAppt();
         loadVisits();
     }
 

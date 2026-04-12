@@ -233,7 +233,7 @@
         previoustreatment: '/nonop-plan.html?patient=' + patientId,
         outcomes: '/analytics.html?patient=' + patientId,
         comorbidities: '/preop.html?patient=' + patientId + '&tab=2',
-        engagement: '/patient-comm.html?patient=' + patientId,
+        engagement: '/preop.html?patient=' + patientId + '&tab=5',
         pt: '/episode-timeline.html?patient=' + patientId
     };
 
@@ -750,13 +750,12 @@
             },
             engagement: function() {
                 var html = '<h2>Patient Engagement</h2>';
-                var notes = S.nursingNotes;
-                if (!notes.length) { html += '<div class="detail-item" style="color:rgba(255,255,255,0.3)">No nursing notes</div>'; }
-                else {
-                    notes.slice(0,15).forEach(function(n) {
-                        html += '<div class="detail-item"><span style="color:#00e5ff">'+icons.warning+'</span><span><strong>'+(n.note_type||'Note')+'</strong><br>'+(n.note_text||'')+'<br><small style="color:rgba(255,255,255,0.3)">'+(n.created_at||'')+' — '+(n.author_first||'')+' '+(n.author_last||'')+'</small></span></div>';
-                    });
-                }
+                var lastCheckin = S.checkins.length ? S.checkins[0] : null;
+                html += dRow('Last Check-in', lastCheckin ? lastCheckin.checkin_date : 'Never');
+                html += dRow('Total Check-ins', S.checkins.length);
+                html += dRow('PROMs Completed', S.promSchedule.filter(function(p){return p.status==='completed';}).length + ' / ' + S.promSchedule.length);
+                html += '<a class="detail-action-btn" href="/preop.html?patient='+patientId+'&tab=5">Patient View (PreOp) →</a>';
+                html += '<a class="detail-action-btn" style="margin-top:6px;" href="/previsit.html" onclick="event.preventDefault();fetch('/api/patients/'+patientId).then(function(r){return r.json();}).then(function(p){if(p&&p.token)window.open('/previsit.html?t='+p.token,'_blank');});">Launch Intake →</a>';
                 return html;
             },
             pt: function() {

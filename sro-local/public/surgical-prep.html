@@ -97,6 +97,10 @@
         /* Back button */
         .back-btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; color: #93c5fd; background: transparent; border: none; cursor: pointer; text-decoration: none; transition: all 0.2s; margin-right: 8px; }
         .back-btn:hover { background: rgba(255,255,255,0.1); color: white; }
+        /* Equipment toggle rows */
+        .equip-toggle-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: background 0.2s, border-color 0.2s; user-select: none; }
+        .equip-toggle-row:hover { background: #f0f9ff; }
+        .equip-toggle-row.selected { background: #e0f2fe; border-color: #3b82f6; }
     </style>
 </head>
 <body>
@@ -138,19 +142,19 @@
             </div>
         </div>
 
-        <!-- Tabs - Reordered: History, Precert, Insurance, Implant Matching, Equipment, Consent, Contract -->
+        <!-- Tabs -->
         <div class="prep-tabs">
-            <button class="prep-tab" onclick="switchPrepTab('history')">📁 History</button>
-            <button class="prep-tab" onclick="switchPrepTab('precert')">📋 Precert</button>
-            <button class="prep-tab" onclick="switchPrepTab('insurance')">🏥 Insurance</button>
-            <button class="prep-tab active" id="prepTabProsthesis" onclick="switchPrepTab('prosthesis')">🔧 Implant Matching</button>
-            <button class="prep-tab" onclick="switchPrepTab('equipment')">📦 Equipment</button>
-            <button class="prep-tab" onclick="switchPrepTab('consent')">⚕️ Consent</button>
-            <button class="prep-tab" onclick="switchPrepTab('contract')">✍️ Contract</button>
+            <button class="prep-tab active" data-tab="history" onclick="switchPrepTab('history')">📁 History</button>
+            <button class="prep-tab" data-tab="precert" onclick="switchPrepTab('precert')">📋 Precert</button>
+            <button class="prep-tab" data-tab="insurance" onclick="switchPrepTab('insurance')">🏥 Insurance</button>
+            <button class="prep-tab" data-tab="prosthesis" id="prepTabProsthesis" onclick="switchPrepTab('prosthesis')">🔧 Implant Matching</button>
+            <button class="prep-tab" data-tab="equipment" onclick="switchPrepTab('equipment')">📦 Equipment</button>
+            <button class="prep-tab" data-tab="consent" onclick="switchPrepTab('consent')">⚕️ Consent</button>
+            <button class="prep-tab" data-tab="contract" onclick="switchPrepTab('contract')">✍️ Contract</button>
         </div>
 
         <!-- Tab 1: Implant Matching Calculator -->
-        <div id="panelProsthesis" class="prep-panel active">
+        <div id="panelProsthesis" class="prep-panel">
             <div class="calc-grid">
                 <!-- Inputs -->
                 <div>
@@ -230,10 +234,49 @@
 
         <!-- Tab 2: Equipment List -->
         <div id="panelEquipment" class="prep-panel">
+            <!-- Section 1: Special Equipment / Representative -->
+            <div class="input-card" style="margin-bottom:16px;">
+                <h3>⚠️ Special Equipment / Representative</h3>
+                <div class="equip-toggle-row" onclick="toggleEquipmentRow(this)">
+                    <input type="checkbox" onclick="event.stopPropagation()" style="width:18px;height:18px;flex-shrink:0;">
+                    <span style="font-weight:600;min-width:180px;">Rep Required</span>
+                    <input type="text" placeholder="Rep Name" onclick="event.stopPropagation()" style="flex:1;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem;">
+                </div>
+                <div class="equip-toggle-row" onclick="toggleEquipmentRow(this)">
+                    <input type="checkbox" onclick="event.stopPropagation()" style="width:18px;height:18px;flex-shrink:0;">
+                    <span style="font-weight:600;">Revision Instruments — double check with rep</span>
+                </div>
+                <div class="equip-toggle-row" onclick="toggleEquipmentRow(this)">
+                    <input type="checkbox" onclick="event.stopPropagation()" style="width:18px;height:18px;flex-shrink:0;">
+                    <span style="font-weight:600;min-width:180px;">Allograft on Standby</span>
+                    <select onclick="event.stopPropagation()" style="flex:1;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem;">
+                        <option value="">Select type...</option>
+                        <option>Croutons</option>
+                        <option>Femoral Head</option>
+                        <option>Cortical Strut</option>
+                    </select>
+                </div>
+                <div class="equip-toggle-row" onclick="toggleEquipmentRow(this)">
+                    <input type="checkbox" onclick="event.stopPropagation()" style="width:18px;height:18px;flex-shrink:0;">
+                    <span style="font-weight:600;min-width:180px;">Other</span>
+                    <input type="text" placeholder="Specify..." onclick="event.stopPropagation()" style="flex:1;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem;">
+                </div>
+            </div>
+
+            <!-- Section 2: Implant System -->
             <div class="input-card">
-                <h3>📦 Equipment & Supply List for OR</h3>
-                <div id="equipmentList" style="padding: 20px; color: #6b7280; text-align: center;">
-                    Run the prosthesis calculator first to generate the equipment list.
+                <h3>🔧 Implant System</h3>
+                <div class="field-row">
+                    <label>Brand</label>
+                    <select id="implantBrand" style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;font-size:0.95rem;">
+                        <option value="">Select brand...</option>
+                        <option>Stryker</option>
+                        <option>DePuy</option>
+                        <option>Arthrex</option>
+                    </select>
+                </div>
+                <div id="equipmentList" style="padding: 8px 0; color: #6b7280;">
+                    Run the prosthesis calculator first to generate the implant list.
                 </div>
                 <div class="print-bar" id="equipPrintBar" style="display: none;">
                     <button class="btn" style="background: #2c5aa0; color: white;" onclick="printEquipment()">🖨️ Print Equipment List</button>
@@ -461,7 +504,7 @@
         </div>
 
         <!-- Tab 6: Previous Injuries & Treatments (B6) -->
-        <div id="panelHistory" class="prep-panel">
+        <div id="panelHistory" class="prep-panel active">
             <div class="calc-grid">
                 <div class="input-card">
                     <h3>📁 Surgical History</h3>
@@ -479,15 +522,13 @@
                         </div>
                         <div class="field-row">
                             <label>Prior Treatments for This Joint</label>
-                            <div style="display:flex;flex-direction:column;gap:6px;">
-                                <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;"><input type="checkbox" id="histPT"> Physical Therapy</label>
-                                <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;"><input type="checkbox" id="histInjCort"> Corticosteroid Injections</label>
-                                <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;"><input type="checkbox" id="histInjHA"> Hyaluronic Acid (Gel) Injections</label>
-                                <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;"><input type="checkbox" id="histInjPRP"> PRP Injections</label>
-                                <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;"><input type="checkbox" id="histArthroscopy"> Prior Arthroscopy</label>
-                                <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;"><input type="checkbox" id="histBracing"> Bracing</label>
-                                <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;"><input type="checkbox" id="histNSAIDs"> NSAIDs / Anti-inflammatory</label>
+                            <div id="histTreatmentRows" style="display:flex;flex-direction:column;gap:4px;">
+                                <!-- Populated dynamically by buildTreatmentRows() based on joint -->
                             </div>
+                        </div>
+                        <div class="field-row" style="margin-top:12px;">
+                            <label>Conservative Care Completed (from record)</label>
+                            <div id="histConservativeCare" style="display:flex;flex-direction:column;gap:4px;color:#6b7280;font-size:0.85rem;font-style:italic;">Loading...</div>
                         </div>
                     </div>
                     <div class="input-card" style="margin-top:16px;">
@@ -718,7 +759,8 @@
             // Clear form fields
             ['contractSignature','contractCaregiver','contractCaregiverPhone','consentPatientSig','consentWitness','consentAdditional','histPriorInjuries','histAllergies','histMedications','histSurgeonNotes','insCarrier','insPolicyNum','insGroupNum','insSecondary','insProgramNotes','insAuthNum'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
             ['contractContactMethod','contractTransport','insPlanType','insAuthStatus'].forEach(id => { const el = document.getElementById(id); if (el) el.selectedIndex = 0; });
-            ['histPT','histInjCort','histInjHA','histInjPRP','histArthroscopy','histBracing','histNSAIDs','insTEAM','insBPCI','insCJR','insCommBundle','insMSSP'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
+            ['insTEAM','insBPCI','insCJR','insCommBundle','insMSSP'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
+            buildTreatmentRows({});
             document.querySelectorAll('#consentGeneralRisks input').forEach(cb => cb.checked = false);
             document.querySelectorAll('.allergy-chip').forEach(b => b.classList.remove('active'));
             var oldBadge = document.getElementById('historyImportBadge'); if (oldBadge) oldBadge.remove();
@@ -762,6 +804,15 @@
             
             // 5A: Auto-import intake data into Hist/PE if fields are empty
             importIntakeToHistPE();
+            // 4h: Load conservative care items
+            loadConservativeCare(id);
+        }
+
+        // ============ EQUIPMENT TOGGLE ROWS ============
+        function toggleEquipmentRow(row) {
+            row.classList.toggle('selected');
+            var checkbox = row.querySelector('input[type="checkbox"]');
+            if (checkbox) checkbox.checked = row.classList.contains('selected');
         }
 
         // ============ PROSTHESIS CALCULATOR ============
@@ -925,17 +976,6 @@
                 items.push({ cat: 'Instrumentation', item: 'PS Trial Components' });
             }
             
-            // Standard surgical supplies
-            items.push({ cat: 'Instruments', item: 'Cutting Guides (Femoral + Tibial)' });
-            items.push({ cat: 'Instruments', item: 'Oscillating Saw + Blades' });
-            items.push({ cat: 'Instruments', item: 'Trial Components (full set)' });
-            items.push({ cat: 'Instruments', item: 'Alignment Rod / Navigation (if used)' });
-            
-            items.push({ cat: 'Surgical Supplies', item: 'Tourniquet' });
-            items.push({ cat: 'Surgical Supplies', item: 'Pulse Lavage + Saline (3L)' });
-            items.push({ cat: 'Surgical Supplies', item: 'Drain (if surgeon preference)' });
-            items.push({ cat: 'Surgical Supplies', item: 'Wound Closure (staples + steri-strips)' });
-            items.push({ cat: 'Surgical Supplies', item: 'Sterile Dressing + ACE Wrap' });
             
             const el = document.getElementById('equipmentList');
             const grouped = {};
@@ -1058,16 +1098,17 @@ ${surgeonName}
 
         // ============ TAB SWITCHING ============
         function switchPrepTab(tab) {
-            document.querySelectorAll('.prep-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.prep-panel').forEach(p => p.classList.remove('active'));
-            
-            const panels = { prosthesis: 'panelProsthesis', equipment: 'panelEquipment', precert: 'panelPrecert', contract: 'panelContract', consent: 'panelConsent', history: 'panelHistory', insurance: 'panelInsurance' };
-            document.getElementById(panels[tab]).classList.add('active');
-            
-            const tabOrder = ['prosthesis','equipment','precert','contract','consent','history','insurance'];
-            const tabs = document.querySelectorAll('.prep-tab');
-            tabs[tabOrder.indexOf(tab)].classList.add('active');
-            
+            // Remove active from ALL tab buttons
+            document.querySelectorAll('.prep-tab').forEach(function(t) { t.classList.remove('active'); });
+            // Hide ALL panels
+            document.querySelectorAll('.prep-panel').forEach(function(p) { p.classList.remove('active'); });
+            // Activate the correct tab button via data-tab attribute
+            var activeTab = document.querySelector('.prep-tab[data-tab="' + tab + '"]');
+            if (activeTab) activeTab.classList.add('active');
+            // Show the matching panel
+            var panels = { prosthesis: 'panelProsthesis', equipment: 'panelEquipment', precert: 'panelPrecert', contract: 'panelContract', consent: 'panelConsent', history: 'panelHistory', insurance: 'panelInsurance' };
+            var panelEl = document.getElementById(panels[tab]);
+            if (panelEl) panelEl.classList.add('active');
             // Populate dynamic content when switching
             if (tab === 'contract') populateContract();
             if (tab === 'consent') populateConsent();
@@ -1176,22 +1217,21 @@ ${surgeonName}
             const sig = document.getElementById('contractSignature').value || '_______________';
             const dt = document.getElementById('contractDate').value || '_______________';
             const w = window.open('', '_blank');
-            w.document.write(`<html><head><title>Patient Agreement</title><style>body{font-family:Arial,sans-serif;padding:40px;line-height:1.8;} h2{text-align:center;} .sig{margin-top:40px;border-top:1px solid #000;width:300px;padding-top:4px;}</style></head><body>
-<h2>Patient Agreement & Survey Commitment</h2>
-<p><strong>Patient:</strong> ${name}<br><strong>Procedure:</strong> ${procedure}<br><strong>Surgeon:</strong> ${surgeon}</p>
-<p>I, <strong>${name}</strong>, understand and agree to the following:</p>
-<ol>
-<li>I will complete all scheduled post-operative surveys at 6 weeks, 3 months, and 1 year after surgery.</li>
-<li>I will complete daily check-ins through the SRO patient portal during my recovery period.</li>
-<li>I will attend all scheduled follow-up appointments.</li>
-<li>I will follow my prescribed physical therapy program.</li>
-<li>I will notify my care team immediately if I experience warning signs.</li>
-<li>My participation helps my surgeon monitor my recovery and improve outcomes.</li>
-<li>Completing surveys may be required by my insurance program.</li>
-</ol>
-<br><div class="sig"><strong>${sig}</strong><br>Patient Signature &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Date: ${dt}</div>
-<script src="/js/cockpit-btn.js"></script>
-</body></html>`);
+            w.document.write('<html><head><title>Patient Agreement</title><style>body{font-family:Arial,sans-serif;padding:40px;line-height:1.8;} h2{text-align:center;} .sig{margin-top:40px;border-top:1px solid #000;width:300px;padding-top:4px;}</style></head><body>' +
+'<h2>Patient Agreement &amp; Survey Commitment</h2>' +
+'<p><strong>Patient:</strong> ' + name + '<br><strong>Procedure:</strong> ' + procedure + '<br><strong>Surgeon:</strong> ' + surgeon + '</p>' +
+'<p>I, <strong>' + name + '</strong>, understand and agree to the following:</p>' +
+'<ol>' +
+'<li>I will complete all scheduled post-operative surveys at 6 weeks, 3 months, and 1 year after surgery.</li>' +
+'<li>I will complete daily check-ins through the SRO patient portal during my recovery period.</li>' +
+'<li>I will attend all scheduled follow-up appointments.</li>' +
+'<li>I will follow my prescribed physical therapy program.</li>' +
+'<li>I will notify my care team immediately if I experience warning signs.</li>' +
+'<li>My participation helps my surgeon monitor my recovery and improve outcomes.</li>' +
+'<li>Completing surveys may be required by my insurance program.</li>' +
+'</ol>' +
+'<br><div class="sig"><strong>' + sig + '</strong><br>Patient Signature &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Date: ' + dt + '</div>' +
+'</body></html>');
             w.document.close();
             w.print();
         }
@@ -1294,16 +1334,15 @@ ${surgeonName}
             const witness = document.getElementById('consentWitness').value || '_______________';
             const dt = document.getElementById('consentDate').value || '_______________';
             const w = window.open('', '_blank');
-            w.document.write(`<html><head><title>Informed Consent</title><style>body{font-family:Arial,sans-serif;padding:40px;line-height:1.7;} h2{text-align:center;} .sig-row{display:flex;gap:40px;margin-top:40px;} .sig{border-top:1px solid #000;width:280px;padding-top:4px;font-size:0.9rem;}</style></head><body>
-<h2>INFORMED CONSENT FOR SURGERY</h2>
-<p><strong>Patient:</strong> ${name} &nbsp; <strong>Procedure:</strong> ${proc} &nbsp; <strong>Surgeon:</strong> ${surgeon}</p>
-<p>The following risks of ${proc} have been discussed with the patient:</p>
-<ul>${checks.map(c => '<li>' + c + '</li>').join('')}</ul>
-${additional ? '<p><strong>Additional risks discussed:</strong> ' + additional + '</p>' : ''}
-<p>Patient has been informed of the nature of the procedure, expected benefits, material risks, alternatives including non-operative management, and risks of not having surgery. Patient has had the opportunity to ask questions and all questions have been answered.</p>
-<div class="sig-row"><div class="sig"><strong>${sig}</strong><br>Patient Signature<br>Date: ${dt}</div><div class="sig"><strong>${witness}</strong><br>Witness</div><div class="sig"><br>${surgeon}<br>Surgeon</div></div>
-<script src="/js/cockpit-btn.js"></script>
-</body></html>`);
+            w.document.write('<html><head><title>Informed Consent</title><style>body{font-family:Arial,sans-serif;padding:40px;line-height:1.7;} h2{text-align:center;} .sig-row{display:flex;gap:40px;margin-top:40px;} .sig{border-top:1px solid #000;width:280px;padding-top:4px;font-size:0.9rem;}</style></head><body>' +
+'<h2>INFORMED CONSENT FOR SURGERY</h2>' +
+'<p><strong>Patient:</strong> ' + name + ' &nbsp; <strong>Procedure:</strong> ' + proc + ' &nbsp; <strong>Surgeon:</strong> ' + surgeon + '</p>' +
+'<p>The following risks of ' + proc + ' have been discussed with the patient:</p>' +
+'<ul>' + checks.map(function(c) { return '<li>' + c + '</li>'; }).join('') + '</ul>' +
+(additional ? '<p><strong>Additional risks discussed:</strong> ' + additional + '</p>' : '') +
+'<p>Patient has been informed of the nature of the procedure, expected benefits, material risks, alternatives including non-operative management, and risks of not having surgery. Patient has had the opportunity to ask questions and all questions have been answered.</p>' +
+'<div class="sig-row"><div class="sig"><strong>' + sig + '</strong><br>Patient Signature<br>Date: ' + dt + '</div><div class="sig"><strong>' + witness + '</strong><br>Witness</div><div class="sig"><br>' + surgeon + '<br>Surgeon</div></div>' +
+'</body></html>');
             w.document.close();
             w.print();
         }
@@ -1313,7 +1352,8 @@ ${additional ? '<p><strong>Additional risks discussed:</strong> ' + additional +
 
         function addHistoryEntry(type) {
             const id = 'hist_' + Date.now();
-            historyEntries.push({ id, type, procedure: '', date: '', surgeon: '', notes: '', facility: '' });
+            const defaultSurgeon = sessionStorage.getItem('selectedSurgeonName') || sessionStorage.getItem('userName') || '';
+            historyEntries.push({ id, type, procedure: '', date: '', surgeon: defaultSurgeon, facility: 'WRH' });
             renderHistoryEntries();
         }
 
@@ -1328,20 +1368,23 @@ ${additional ? '<p><strong>Additional risks discussed:</strong> ' + additional +
                 container.innerHTML = '<div style="color:#6b7280;padding:12px;text-align:center;">No surgical history recorded.</div>';
                 return;
             }
-            container.innerHTML = historyEntries.map(e => `
-                <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:8px;background:#fafafa;">
-                    <div style="display:flex;justify-content:space-between;align-items:start;">
-                        <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                            <input type="text" placeholder="Procedure (e.g., R TKA, L ACL repair)" value="${e.procedure}" onchange="updateHistEntry('${e.id}','procedure',this.value)" style="padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;">
-                            <input type="text" placeholder="Date / Year" value="${e.date}" onchange="updateHistEntry('${e.id}','date',this.value)" style="padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;">
-                            <input type="text" placeholder="Surgeon" value="${e.surgeon}" onchange="updateHistEntry('${e.id}','surgeon',this.value)" style="padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;">
-                            <input type="text" placeholder="Facility" value="${e.facility}" onchange="updateHistEntry('${e.id}','facility',this.value)" style="padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;">
-                        </div>
-                        <button onclick="removeHistoryEntry('${e.id}')" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:1.2rem;margin-left:8px;" title="Remove">✕</button>
-                    </div>
-                    <input type="text" placeholder="Notes / Outcome" value="${e.notes}" onchange="updateHistEntry('${e.id}','notes',this.value)" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;margin-top:6px;">
-                </div>
-            `).join('');
+            const PROC_OPTIONS = ['TKA','THA','Revision TKA','Revision THA','PKA','Hip Resurfacing','Other'];
+            container.innerHTML = historyEntries.map(function(e) {
+                var procOptions = PROC_OPTIONS.map(function(p) {
+                    return '<option value="' + p + '"' + (e.procedure === p ? ' selected' : '') + '>' + p + '</option>';
+                }).join('');
+                return '<div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:8px;background:#fafafa;">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:start;">' +
+                    '<div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+                    '<select onchange="updateHistEntry(\'' + e.id + '\',\'procedure\',this.value)" style="padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;">' +
+                    '<option value="">-- Select Procedure --</option>' + procOptions + '</select>' +
+                    '<input type="date" value="' + (e.date || '') + '" onchange="updateHistEntry(\'' + e.id + '\',\'date\',this.value)" style="padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;">' +
+                    '<input type="text" placeholder="Surgeon" value="' + (e.surgeon || '') + '" onchange="updateHistEntry(\'' + e.id + '\',\'surgeon\',this.value)" style="padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;">' +
+                    '<input type="text" placeholder="Facility" value="' + (e.facility || 'WRH') + '" onchange="updateHistEntry(\'' + e.id + '\',\'facility\',this.value)" style="padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;">' +
+                    '</div>' +
+                    '<button onclick="removeHistoryEntry(\'' + e.id + '\')" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:1.2rem;margin-left:8px;" title="Remove">✕</button>' +
+                    '</div></div>';
+            }).join('');
         }
 
         function updateHistEntry(id, field, value) {
@@ -1472,40 +1515,90 @@ ${additional ? '<p><strong>Additional risks discussed:</strong> ' + additional +
             });
         }
 
+        // Build treatment toggle rows based on patient joint
+        function buildTreatmentRows(savedTreatments) {
+            var joint = (currentPatient && currentPatient.joint) ? currentPatient.joint.toLowerCase() : '';
+            var isKnee = joint.indexOf('knee') !== -1 || joint.indexOf('tka') !== -1 || joint.indexOf('pka') !== -1;
+            var isHip = joint.indexOf('hip') !== -1 || joint.indexOf('tha') !== -1;
+            var rows = [];
+            if (isKnee) rows.push({ key: 'prior_knee_surgery', label: 'Prior Knee Surgery' });
+            if (isHip) rows.push({ key: 'prior_hip_surgery', label: 'Prior Hip Surgery' });
+            if (!isKnee && !isHip) {
+                rows.push({ key: 'prior_knee_surgery', label: 'Prior Knee Surgery' });
+                rows.push({ key: 'prior_hip_surgery', label: 'Prior Hip Surgery' });
+            }
+            var container = document.getElementById('histTreatmentRows');
+            if (!container) return;
+            container.innerHTML = rows.map(function(r) {
+                var isSelected = savedTreatments && savedTreatments[r.key];
+                return '<div class="equip-toggle-row' + (isSelected ? ' selected' : '') + '" data-key="' + r.key + '" onclick="toggleTreatmentRow(this)" style="padding:10px 14px;border-radius:8px;border:1px solid #e5e7eb;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;gap:10px;">' +
+                    '<input type="checkbox"' + (isSelected ? ' checked' : '') + ' onclick="event.stopPropagation()" onchange="toggleTreatmentRowByCheckbox(this)" style="pointer-events:none;">' +
+                    '<span>' + r.label + '</span></div>';
+            }).join('');
+        }
+        function toggleTreatmentRow(row) {
+            row.classList.toggle('selected');
+            var cb = row.querySelector('input[type="checkbox"]');
+            if (cb) cb.checked = row.classList.contains('selected');
+        }
+        function toggleTreatmentRowByCheckbox(cb) {
+            var row = cb.closest('.equip-toggle-row');
+            if (row) row.classList.toggle('selected', cb.checked);
+        }
+        function getTreatmentSelections() {
+            var result = {};
+            document.querySelectorAll('#histTreatmentRows .equip-toggle-row').forEach(function(row) {
+                result[row.dataset.key] = row.classList.contains('selected');
+            });
+            return result;
+        }
+
+        // Load conservative care items for this patient
+        async function loadConservativeCare(patientId) {
+            var container = document.getElementById('histConservativeCare');
+            if (!container) return;
+            try {
+                var resp = await fetch('/api/conservative-care-items?patient_id=' + patientId);
+                var items = await resp.json();
+                var completed = items.filter(function(i) { return i.status === 'completed' || i.status === 'in_progress'; });
+                if (completed.length === 0) {
+                    container.innerHTML = '<span style="color:#9ca3af;">No conservative care items recorded.</span>';
+                    return;
+                }
+                container.innerHTML = completed.map(function(i) {
+                    var isComp = i.status === 'completed';
+                    return '<div class="equip-toggle-row selected" style="padding:10px 14px;border-radius:8px;border:1px solid #bbf7d0;background:#f0fdf4;font-size:0.85rem;display:flex;align-items:center;gap:10px;cursor:default;">' +
+                        '<span style="color:#059669;font-weight:700;">' + (isComp ? '✓' : '◷') + '</span>' +
+                        '<span>' + (i.item_name || i.item_code) + '</span>' +
+                        (i.provider_name ? '<span style="color:#6b7280;margin-left:auto;">' + i.provider_name + '</span>' : '') +
+                        '</div>';
+                }).join('');
+            } catch(e) {
+                container.innerHTML = '<span style="color:#9ca3af;">Could not load conservative care data.</span>';
+            }
+        }
+
         async function saveHistory() {
             const data = {
                 surgeries: historyEntries,
                 prior_injuries: document.getElementById('histPriorInjuries').value,
-                treatments: {
-                    pt: document.getElementById('histPT').checked,
-                    cortisone: document.getElementById('histInjCort').checked,
-                    ha: document.getElementById('histInjHA').checked,
-                    prp: document.getElementById('histInjPRP').checked,
-                    arthroscopy: document.getElementById('histArthroscopy').checked,
-                    bracing: document.getElementById('histBracing').checked,
-                    nsaids: document.getElementById('histNSAIDs').checked
-                },
+                treatments: getTreatmentSelections(),
                 allergy_chips: getSelectedAllergies(),
                 allergies: document.getElementById('histAllergies').value,
                 medications: document.getElementById('histMedications').value,
                 surgeon_notes: document.getElementById('histSurgeonNotes').value
             };
             const result = await saveSurgPrepField('history_data', data);
-            if (result.success) alert('History saved!');
+            if (result.success) {
+                if (typeof showToast === 'function') showToast('History saved!', 'success');
+                else alert('History saved!');
+            }
         }
 
         function restoreHistory(data) {
             if (data.surgeries) { historyEntries = data.surgeries; renderHistoryEntries(); }
             if (data.prior_injuries) document.getElementById('histPriorInjuries').value = data.prior_injuries;
-            if (data.treatments) {
-                if (data.treatments.pt) document.getElementById('histPT').checked = true;
-                if (data.treatments.cortisone) document.getElementById('histInjCort').checked = true;
-                if (data.treatments.ha) document.getElementById('histInjHA').checked = true;
-                if (data.treatments.prp) document.getElementById('histInjPRP').checked = true;
-                if (data.treatments.arthroscopy) document.getElementById('histArthroscopy').checked = true;
-                if (data.treatments.bracing) document.getElementById('histBracing').checked = true;
-                if (data.treatments.nsaids) document.getElementById('histNSAIDs').checked = true;
-            }
+            buildTreatmentRows(data.treatments || {});
             if (data.allergy_chips) setSelectedAllergies(data.allergy_chips);
             if (data.allergies) document.getElementById('histAllergies').value = data.allergies;
             if (data.medications) document.getElementById('histMedications').value = data.medications;
@@ -1583,8 +1676,7 @@ ${additional ? '<p><strong>Additional risks discussed:</strong> ' + additional +
         function printEquipment() {
             const el = document.getElementById('equipmentList');
             const win = window.open('', '_blank');
-            win.document.write(`<html><head><title>Equipment List</title><style>body{font-family:Arial,sans-serif;padding:20px;} ul{list-style:none;padding:0;} li{padding:6px 0;border-bottom:1px solid #eee;}</style></head><body>${el.innerHTML}<script src="/js/cockpit-btn.js"></script>
-</body></html>`);
+            win.document.write('<html><head><title>Equipment List</title><style>body{font-family:Arial,sans-serif;padding:20px;} ul{list-style:none;padding:0;} li{padding:6px 0;border-bottom:1px solid #eee;}</style></head><body>' + el.innerHTML + '</body></html>');
             win.document.close();
             win.print();
         }
@@ -1592,8 +1684,7 @@ ${additional ? '<p><strong>Additional risks discussed:</strong> ' + additional +
         function printPrecert() {
             const text = document.getElementById('precertOutput').textContent;
             const win = window.open('', '_blank');
-            win.document.write(`<html><head><title>Precertification</title><style>body{font-family:Arial,sans-serif;padding:40px;white-space:pre-wrap;line-height:1.6;}</style></head><body>${text}<script src="/js/cockpit-btn.js"></script>
-</body></html>`);
+            win.document.write('<html><head><title>Precertification</title><style>body{font-family:Arial,sans-serif;padding:40px;white-space:pre-wrap;line-height:1.6;}</style></head><body>' + text + '</body></html>');
             win.document.close();
             win.print();
         }
@@ -1621,6 +1712,27 @@ ${additional ? '<p><strong>Additional risks discussed:</strong> ' + additional +
                     if (patient && patient.episode_id) {
                         StageTracker.init('stageTracker', patient.episode_id, { showActions: true, darkMode: false, patientId: patientId });
                     }
+                    // Override Surgery pill → episode timeline
+                    // Override Post-Op pill → dashboard patient detail
+                    setTimeout(function() {
+                        document.querySelectorAll('.stage-node').forEach(function(node) {
+                            var stage = node.getAttribute('data-stage');
+                            if (stage === 'surgery') {
+                                node.style.cursor = 'pointer';
+                                node.onclick = function(e) {
+                                    e.stopPropagation();
+                                    window.location.href = '/episode-timeline.html?patient=' + patientId;
+                                };
+                            }
+                            if (stage === 'postop') {
+                                node.style.cursor = 'pointer';
+                                node.onclick = function(e) {
+                                    e.stopPropagation();
+                                    window.location.href = '/dashboard.html?openPatient=' + patientId;
+                                };
+                            }
+                        });
+                    }, 500);
                 }).catch(function(e) { console.error('Stage tracker init error:', e); });
         }
     })();

@@ -19,7 +19,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
 .tab-btn{padding:12px 20px;cursor:pointer;font-size:0.9rem;font-weight:600;color:#6b7280;border:none;background:none;border-bottom:3px solid transparent;transition:all 0.2s}
 .tab-btn:hover{color:#1e40af;background:#f0f4ff}
 .tab-btn.active{color:#1e40af;border-bottom-color:#2563eb}
-.tab-panel{display:none;padding:20px;max-width:1200px;margin:0 auto}
+.tab-panel{display:none;padding:20px 210px 20px 20px;max-width:1200px;margin:0 auto}
 .tab-panel.active{display:block}
 .card{background:white;border-radius:10px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.08)}
 .card h3{font-size:1rem;color:#1e40af;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #e5e7eb}
@@ -181,7 +181,6 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
     <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
         <span id="draftBadge" style="display:none;background:#f59e0b;color:white;padding:4px 10px;border-radius:10px;font-size:0.75rem;font-weight:700;">DRAFT LOADED</span>
         <button class="btn btn-primary" onclick="launchPatientIntake()">Launch Patient Intake</button>
-        <button class="btn btn-outline" onclick="sendToPatient('checkin')" title="Copy check-in link">Send Check-in Link</button>
         <button class="btn btn-outline" onclick="sendToPatient('preop')" title="Copy preop intake link">Send PreOp Link</button>
         <button class="btn" style="background:#1d4ed8;color:white;" onclick="(function(){var pid=currentPatientId;if(pid)NoteBlock.showModal(pid);else alert('No patient loaded.');})();">NOTE BLOCK</button>
     </div>
@@ -193,6 +192,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
     <button class="tab-btn" onclick="switchTab(2)">3. Workup Tracking</button>
     <button class="tab-btn" onclick="switchTab(3)">4. Decision Tool</button>
     <button class="tab-btn" onclick="switchTab(4)">5. Patient View</button>
+    <button onclick="(function(){var pid=currentPatientId||(new URLSearchParams(window.location.search).get('patient'));if(pid){window.location.href='/surgical-prep.html?patient='+pid;}else{alert('No patient loaded.');}})();" style="margin-left:auto;background:#2563eb;color:white;padding:10px 24px;border-radius:8px;font-weight:600;cursor:pointer;border:none;font-size:0.9rem;transition:background 0.2s;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">Finished / Proceed →</button>
 </div>
 
 <!-- TAB 0: INTAKE RESULTS -->
@@ -231,6 +231,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1f293
     <div class="card"><h3>Other Medical Problems</h3><div id="otherMedicalDisplay" style="color:#6b7280;padding:8px;">Run patient intake to capture.</div><textarea id="otherMedicalText" style="width:100%;min-height:80px;margin-top:8px;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;resize:vertical;font-family:inherit;" placeholder="Add other conditions not listed above..."></textarea></div>
     <div style="text-align:center;padding:16px;"><button class="btn btn-primary" onclick="switchTab(2);">Generate Workup &rarr;</button></div>
 </div>
+
+<!-- Floating Generate Workup button (bottom-right, visible on Tab 1) -->
+<button id="floatingWorkupBtn" onclick="switchTab(2);" style="position:fixed;bottom:72px;right:20px;background:#2563eb;color:white;padding:11px 24px;font-size:0.95rem;font-weight:600;border-radius:8px;border:none;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.18);z-index:200;display:block;min-width:160px;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">Generate Workup &rarr;</button>
 
 <!-- TAB 2: WORKUP -->
 <div class="tab-panel" id="panel2">
@@ -685,6 +688,8 @@ function switchTab(n) {
     if(n===2) generateWorkup();
     if(n===3) updateDecisionTool();
     if(n===4) updateSafetyView();
+    var floatBtn = document.getElementById('floatingWorkupBtn');
+    if (floatBtn) floatBtn.style.display = (n === 0 || n === 1) ? 'block' : 'none';
 }
 
 function onProcChange() {
@@ -695,12 +700,15 @@ function onProcChange() {
 
 // FULL-SCREEN INTAKE
 function launchPatientIntake() {
-    intakeResponses = {};
-    intakeIdx = 0;
-    intakeJoint = document.getElementById('procSelect').value === 'THA' ? 'hip' : 'knee';
-    intakeQuestions = buildQuestions(intakeJoint);
-    document.getElementById('fsIntake').classList.add('active');
-    showFsQuestion(0);
+    var pid = currentPatientId || (new URLSearchParams(window.location.search).get('patient'));
+    if (!pid) { alert('No patient loaded.'); return; }
+    fetch('/api/patients/' + pid).then(function(r){ return r.json(); }).then(function(pt){
+        if (pt && pt.token) {
+            window.open('/previsit.html?t=' + pt.token, '_blank');
+        } else {
+            alert('Patient token not found. Cannot launch intake.');
+        }
+    }).catch(function(){ alert('Could not load patient data.'); });
 }
 
 function showFsQuestion(idx) {

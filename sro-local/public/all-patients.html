@@ -631,8 +631,6 @@
         </div>
         <div class="nav-links">
             <a href="/dashboard.html" class="nav-link">Dashboard</a>
-            <a href="/preop.html" class="nav-link">Pre-Op</a>
-            <a href="/surgical-prep.html" class="nav-link">Surg Prep</a>
             <a href="/clinic-worklist.html" class="nav-link" style="color:#00e5ff;">Worklist</a>
             <a href="/all-patients.html" class="nav-link active">All Patients</a>
             <a href="/analytics.html" class="nav-link">Analytics</a>
@@ -833,8 +831,8 @@
                     <div id="preopInfo" style="margin-top:15px;">Loading...</div>
                 </div>
                 <div style="background:#f8f9fa;border-radius:8px;padding:15px;margin-top:20px;"><h3 style="margin:0 0 10px 0;">&#128203; PROM Collection Schedule</h3><div id="promScheduleList">Loading...</div></div>
-                <div class="chart-section"><h3>Pain Trend (Last 14 Days)</h3><div id="painChart" class="chart-container"><canvas id="painChartCanvas"></canvas></div></div>
-                <div class="chart-section" style="margin-top:20px;"><h3>PROM Score Trend</h3><div class="chart-container"><canvas id="promTrendCanvas" width="700" height="250"></canvas></div></div>
+                <div class="chart-section"><h3>Pain Trend (Last 14 Days)</h3><div id="painChart" class="chart-container" style="max-width:560px;"><canvas id="painChartCanvas" width="560" height="220" style="width:100%;height:auto;display:block;"></canvas></div></div>
+                <div class="chart-section" style="margin-top:20px;"><h3>PROM Score Trend</h3><div class="chart-container" style="max-width:560px;"><canvas id="promTrendCanvas" width="560" height="220" style="width:100%;height:auto;display:block;"></canvas></div></div>
                 <div class="checkins-section"><h3>Recent Check-ins</h3><div id="checkinsList" class="checkins-list">Loading...</div></div>
                 <div style="margin-top:20px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><h3>&#9888;&#65039; Adverse Events</h3><button class="btn btn-sm" style="background:#dc3545;color:white;" onclick="openAdverseEventModal()">+ Log Event</button></div><div id="adverseEventsList" style="background:#f8f9fa;border-radius:8px;padding:15px;"><p class="text-muted">No adverse events recorded.</p></div></div>
                 <div style="margin-top:20px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><h3>&#128221; Notes</h3><button class="btn btn-sm" style="background:#2c5aa0;color:white;" onclick="openNoteModal()">+ Add Note</button></div><div id="nursingNotesList" style="background:#f8f9fa;border-radius:8px;padding:15px;"><p class="text-muted">No notes yet.</p></div></div>
@@ -984,10 +982,6 @@
                                 <option value="Revision TKA">Revision TKA</option>
                                 <option value="Revision THA">Revision THA</option>
                             </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Surgery Date *</label>
-                            <input type="date" id="newSurgeryDate" required>
                         </div>
                     </div>
                     <div class="form-group">
@@ -1287,6 +1281,92 @@
         }
         var token = match[1];
         window.open('/previsit.html?t=' + token, '_blank');
+    }
+    </script>
+
+    <!-- Clinic Appointment Modal -->
+    <div id="clinicApptModal" class="modal" style="display:none;">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2 id="clinicApptModalTitle">Schedule Clinic Appointment</h2>
+                <button class="btn btn-close" onclick="closeClinicApptModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Date *</label>
+                        <input type="date" id="clinicApptDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Time *</label>
+                        <input type="time" id="clinicApptTime" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Visit Type</label>
+                    <select id="clinicApptType" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.95rem;">
+                        <option value="follow_up">Follow-Up</option>
+                        <option value="new_patient">New Consult</option>
+                        <option value="pre_op">Pre-Op</option>
+                        <option value="post_op">Post-Op</option>
+                        <option value="injection">Injection</option>
+                        <option value="consult">Consult</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Chief Complaint (optional)</label>
+                    <input type="text" id="clinicApptComplaint" placeholder="e.g. right knee pain" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.95rem;">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeClinicApptModal()">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveClinicAppt()">Schedule Appointment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    var clinicApptPatientId = null;
+    function openClinicApptModal(patientId) {
+        clinicApptPatientId = patientId;
+        var today = new Date().toISOString().split('T')[0];
+        document.getElementById('clinicApptDate').value = today;
+        document.getElementById('clinicApptTime').value = '09:00';
+        document.getElementById('clinicApptComplaint').value = '';
+        document.getElementById('clinicApptType').value = 'follow_up';
+        var p = typeof patients !== 'undefined' ? patients.find(function(x){return x.id===patientId;}) : null;
+        document.getElementById('clinicApptModalTitle').textContent = 'Schedule Appointment' + (p ? ' \u2014 ' + p.last_name + ', ' + p.first_name : '');
+        document.getElementById('clinicApptModal').style.display = 'flex';
+    }
+    function closeClinicApptModal() {
+        document.getElementById('clinicApptModal').style.display = 'none';
+    }
+    async function saveClinicAppt() {
+        var date = document.getElementById('clinicApptDate').value;
+        var time = document.getElementById('clinicApptTime').value;
+        var vtype = document.getElementById('clinicApptType').value;
+        var complaint = document.getElementById('clinicApptComplaint').value;
+        if (!date) { alert('Please select a date.'); return; }
+        var clinicId = sessionStorage.getItem('clinicId') || '11111111-1111-1111-1111-111111111111';
+        var p = typeof patients !== 'undefined' ? patients.find(function(x){return x.id===clinicApptPatientId;}) : null;
+        try {
+            await fetch('/api/clinic-visits', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({
+                    patient_id: clinicApptPatientId,
+                    episode_id: p ? (p.episode_id || null) : null,
+                    clinic_id: clinicId,
+                    surgeon_id: p ? (p.surgeon_id || null) : null,
+                    visit_date: date,
+                    visit_time: time || null,
+                    visit_type: vtype,
+                    chief_complaint: complaint || null
+                })
+            });
+            closeClinicApptModal();
+            if (typeof showToast === 'function') showToast('Appointment scheduled!');
+        } catch(e) { alert('Failed to save appointment.'); }
     }
     </script>
 </body>

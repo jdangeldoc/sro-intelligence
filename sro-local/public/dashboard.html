@@ -630,11 +630,9 @@
         </div>
         <div class="nav-links">
             <a href="/dashboard.html" class="nav-link active">Dashboard</a>
-            <a href="/preop.html" class="nav-link">Pre-Op</a>
-            <a href="/surgical-prep.html" class="nav-link" onclick="if(typeof currentPatient!=='undefined'&&currentPatient&&currentPatient.id){this.href='/surgical-prep.html?patient='+currentPatient.id;}">Surg Prep</a>
             <a href="/clinic-worklist.html" class="nav-link" style="color:#00e5ff;">Worklist</a>
             <a href="/all-patients.html" class="nav-link">All Patients</a>
-            <a href="/nonop-plan.html" class="nav-link">Non-Op Plan</a>
+            <a href="#" class="nav-link" onclick="event.preventDefault();document.getElementById('panelSchedule').scrollIntoView({behavior:'smooth'});" style="color:#34d399;font-weight:600;">📅 Clinic Appt</a>
             <a href="/analytics.html" class="nav-link">Analytics</a>
             <a href="/rpm-report.html" class="nav-link">RPM Billing</a>
             <a href="/settings.html" class="nav-link">Settings</a>
@@ -1443,16 +1441,38 @@
                                 <option value="Revision THA">Revision THA</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label>Surgery Date *</label>
-                            <input type="date" id="newSurgeryDate" required>
-                        </div>
                     </div>
                     <div class="form-group">
                         <label>Surgeon *</label>
                         <select id="newSurgeon" required>
                             <option value="">Select surgeon...</option>
                         </select>
+                    </div>
+                    <hr>
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                        <input type="checkbox" id="newPatientAddAppt" onchange="document.getElementById('newPatientApptFields').style.display=this.checked?'block':'none';" style="width:16px;height:16px;cursor:pointer;">
+                        <label for="newPatientAddAppt" style="font-weight:600;cursor:pointer;margin:0;">Schedule First Appointment</label>
+                    </div>
+                    <div id="newPatientApptFields" style="display:none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Appointment Date</label>
+                                <input type="date" id="newApptDate">
+                            </div>
+                            <div class="form-group">
+                                <label>Time</label>
+                                <input type="time" id="newApptTime">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Visit Type</label>
+                            <select id="newApptType" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.95rem;">
+                                <option value="new_patient">New Consult</option>
+                                <option value="pre_op">Pre-Op</option>
+                                <option value="follow_up">Follow-Up</option>
+                                <option value="post_op">Post-Op</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="form-actions">
                         <button type="button" class="btn btn-secondary" onclick="closeAddPatientModal()">Cancel</button>
@@ -1461,6 +1481,59 @@
                 </form>
             </div>
         </div>
+    </div>
+
+    <!-- Clinic Appointment Modal -->
+    <div id="clinicApptModal" class="modal" style="display:none;">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2 id="clinicApptModalTitle">Schedule Clinic Appointment</h2>
+                <button class="btn btn-close" onclick="closeClinicApptModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group" id="clinicApptPatientGroup">
+                    <label>Patient</label>
+                    <select id="clinicApptPatient" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.95rem;">
+                        <option value="">Select patient...</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Date *</label>
+                        <input type="date" id="clinicApptDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Time *</label>
+                        <input type="time" id="clinicApptTime" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Visit Type</label>
+                    <select id="clinicApptType" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.95rem;">
+                        <option value="follow_up">Follow-Up</option>
+                        <option value="new_patient">New Consult</option>
+                        <option value="pre_op">Pre-Op</option>
+                        <option value="post_op">Post-Op</option>
+                        <option value="injection">Injection</option>
+                        <option value="consult">Consult</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Chief Complaint (optional)</label>
+                    <input type="text" id="clinicApptComplaint" placeholder="e.g. right knee pain" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.95rem;">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeClinicApptModal()">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveClinicAppt()">Schedule Appointment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right-click context menu -->
+    <div id="schedContextMenu" style="display:none;position:fixed;background:white;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.15);z-index:9000;min-width:200px;padding:4px 0;">
+        <div id="schedContextSlot" style="padding:8px 16px;font-size:0.8rem;color:#6b7280;border-bottom:1px solid #f3f4f6;"></div>
+        <button onclick="schedContextAddPatient()" style="display:block;width:100%;text-align:left;padding:10px 16px;border:none;background:none;cursor:pointer;font-size:0.9rem;color:#1e293b;">➕ Add Patient to This Slot</button>
     </div>
 
     <!-- RPM Log Modal -->
@@ -1897,41 +1970,176 @@ function getCockpitPage() {
     return pages[layout] || '/cockpit-view.html';
 }
 
+var SCHED_SLOT_TIMES = (function() {
+    var slots = [];
+    for (var h = 8; h <= 17; h++) {
+        slots.push(String(h).padStart(2,'0') + ':00');
+        if (h < 17) slots.push(String(h).padStart(2,'0') + ':30');
+    }
+    return slots;
+})();
+
+var typeBadges = {
+    new_patient: 'background:#dbeafe;color:#1e40af;',
+    follow_up: 'background:#f0fdf4;color:#166534;',
+    pre_op: 'background:#f5f3ff;color:#5b21b6;',
+    post_op: 'background:#fef3c7;color:#92400e;',
+    injection: 'background:#fce7f3;color:#9d174d;',
+    consult: 'background:#e0e7ff;color:#3730a3;'
+};
+
 function renderScheduleTable() {
     var tbody = document.getElementById('schedTableBody');
-    if (!schedVisits.length) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--sro-gray-500);">No patients scheduled for ' + schedFmtDisplay(schedDate) + '</td></tr>';
-        return;
+
+    // Build map: time -> [visits]
+    var slotMap = {};
+    SCHED_SLOT_TIMES.forEach(function(t) { slotMap[t] = []; });
+    schedVisits.forEach(function(v) {
+        var t = v.visit_time ? v.visit_time.substring(0,5) : null;
+        if (t && slotMap[t] !== undefined) {
+            slotMap[t].push(v);
+        } else if (t) {
+            // round to nearest slot
+            var parts = t.split(':');
+            var rnd = String(parseInt(parts[0])).padStart(2,'0') + ':' + (parseInt(parts[1]) < 30 ? '00' : '30');
+            if (slotMap[rnd]) slotMap[rnd].push(v); else slotMap[t] = [v];
+        }
+    });
+
+    var rows = '';
+    SCHED_SLOT_TIMES.forEach(function(slotTime) {
+        var visits = slotMap[slotTime] || [];
+        var displayTime = (function(t) {
+            var p = t.split(':'); var h = parseInt(p[0]); var m = p[1];
+            return (h > 12 ? h-12 : h) + ':' + m + ' ' + (h >= 12 ? 'PM' : 'AM');
+        })(slotTime);
+
+        if (!visits.length) {
+            rows += '<tr class="sched-empty-slot" data-slot="' + slotTime + '" oncontextmenu="schedRightClick(event,\'' + slotTime + '\')" style="color:#9ca3af;cursor:default;">' +
+                '<td style="font-size:0.85rem;color:#9ca3af;">' + displayTime + '</td>' +
+                '<td colspan="6" style="color:#d1d5db;font-size:0.8rem;font-style:italic;">— open —</td>' +
+                '</tr>';
+        } else {
+            visits.forEach(function(v, idx) {
+                var name = (v.last_name || '') + ', ' + (v.first_name || '');
+                var mrn = v.mrn || '--';
+                var vtype = (v.visit_type || 'follow_up').replace(/_/g, ' ');
+                var vtypeStyle = typeBadges[v.visit_type] || 'background:var(--sro-gray-100);color:var(--sro-gray-700);';
+                var stype = v.surgery_type || '--';
+                var joint = getJointLabel(v.surgery_type);
+                var pid = v.patient_id;
+                rows += '<tr onclick="openPatientModal(\'' + pid + '\')" oncontextmenu="schedRightClick(event,\'' + slotTime + '\')" style="cursor:pointer;" class="clickable">' +
+                    '<td style="font-weight:600;font-size:0.9rem;">' + (idx === 0 ? displayTime : '') + '</td>' +
+                    '<td style="font-weight:600;">' + name + '</td>' +
+                    '<td>' + mrn + '</td>' +
+                    '<td><span style="padding:3px 8px;border-radius:8px;font-size:0.72rem;font-weight:600;' + vtypeStyle + '">' + vtype + '</span></td>' +
+                    '<td>' + stype + '</td>' +
+                    '<td>' + joint + '</td>' +
+                    '<td style="display:flex;gap:4px;flex-wrap:wrap;">' +
+                    '<button class="btn btn-sm" onclick="event.stopPropagation();openPatientModal(\'' + pid + '\')">View</button>' +
+                    '<a class="btn btn-sm" style="background:#2c5aa0;color:white;text-decoration:none;font-size:0.7rem;padding:4px 8px;" href="' + getCockpitPage() + '?patient=' + pid + '" onclick="event.stopPropagation();">COCKPIT</a>' +
+                    '<a class="btn btn-sm" style="background:#d4a04a;color:white;text-decoration:none;font-size:0.7rem;padding:4px 8px;" href="/nurse-cockpit.html?patient=' + pid + '" onclick="event.stopPropagation();">NURSE</a>' +
+                    '</td>' +
+                    '</tr>';
+            });
+        }
+    });
+    tbody.innerHTML = rows;
+}
+
+// ============ RIGHT-CLICK CONTEXT MENU ============
+var schedContextSlotTime = null;
+function schedRightClick(e, slotTime) {
+    e.preventDefault();
+    e.stopPropagation();
+    schedContextSlotTime = slotTime;
+    var menu = document.getElementById('schedContextMenu');
+    var label = (function(t) {
+        var p = t.split(':'); var h = parseInt(p[0]); var m = p[1];
+        return (h > 12 ? h-12 : h) + ':' + m + ' ' + (h >= 12 ? 'PM' : 'AM');
+    })(slotTime);
+    document.getElementById('schedContextSlot').textContent = schedFmtDate(schedDate) + ' at ' + label;
+    menu.style.display = 'block';
+    menu.style.left = Math.min(e.clientX, window.innerWidth - 220) + 'px';
+    menu.style.top = Math.min(e.clientY, window.innerHeight - 100) + 'px';
+}
+function schedContextAddPatient() {
+    document.getElementById('schedContextMenu').style.display = 'none';
+    openClinicApptModal(null, schedFmtDate(schedDate), schedContextSlotTime);
+}
+document.addEventListener('click', function() {
+    document.getElementById('schedContextMenu').style.display = 'none';
+});
+
+// ============ CLINIC APPOINTMENT MODAL ============
+var clinicApptPatientId = null;
+
+async function openClinicApptModal(patientId, preDate, preTime) {
+    clinicApptPatientId = patientId || null;
+    var today = schedFmtDate(new Date());
+    document.getElementById('clinicApptDate').value = preDate || today;
+    document.getElementById('clinicApptTime').value = preTime || '09:00';
+    document.getElementById('clinicApptComplaint').value = '';
+    document.getElementById('clinicApptType').value = 'follow_up';
+
+    var patGroup = document.getElementById('clinicApptPatientGroup');
+    var patSel = document.getElementById('clinicApptPatient');
+    if (patientId) {
+        // patient is fixed — hide the selector, show name in title
+        patGroup.style.display = 'none';
+        var p = typeof patients !== 'undefined' ? patients.find(function(x){return x.id===patientId;}) : null;
+        document.getElementById('clinicApptModalTitle').textContent = 'Schedule Appointment' + (p ? ' — ' + p.last_name + ', ' + p.first_name : '');
+    } else {
+        patGroup.style.display = 'block';
+        document.getElementById('clinicApptModalTitle').textContent = 'Schedule Clinic Appointment';
+        // Populate patient dropdown
+        patSel.innerHTML = '<option value="">Select patient...</option>';
+        var allPats = typeof patients !== 'undefined' ? patients : [];
+        allPats.forEach(function(p) {
+            var opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = p.last_name + ', ' + p.first_name + (p.mrn ? ' [' + p.mrn + ']' : '');
+            patSel.appendChild(opt);
+        });
     }
-    var typeBadges = {
-        new_patient: 'background:#dbeafe;color:#1e40af;',
-        follow_up: 'background:#f0fdf4;color:#166534;',
-        pre_op: 'background:#f5f3ff;color:#5b21b6;',
-        post_op: 'background:#fef3c7;color:#92400e;',
-        injection: 'background:#fce7f3;color:#9d174d;',
-        consult: 'background:#e0e7ff;color:#3730a3;'
-    };
-    tbody.innerHTML = schedVisits.map(function(v) {
-        var time = v.visit_time ? v.visit_time.substring(0,5) : '--';
-        var name = (v.last_name || '') + ', ' + (v.first_name || '');
-        var mrn = v.mrn || '--';
-        var vtype = (v.visit_type || 'follow_up').replace(/_/g, ' ');
-        var vtypeStyle = typeBadges[v.visit_type] || 'background:var(--sro-gray-100);color:var(--sro-gray-700);';
-        var stype = v.surgery_type || '--';
-        var joint = getJointLabel(v.surgery_type);
-        var pid = v.patient_id;
-        return '<tr onclick="openPatientModal(\'' + pid + '\')" style="cursor:pointer;" class="clickable">' +
-            '<td style="font-weight:600;font-size:0.95rem;">' + time + '</td>' +
-            '<td style="font-weight:600;">' + name + '</td>' +
-            '<td>' + mrn + '</td>' +
-            '<td><span style="padding:3px 10px;border-radius:8px;font-size:0.75rem;font-weight:600;' + vtypeStyle + '">' + vtype + '</span></td>' +
-            '<td>' + stype + '</td>' +
-            '<td>' + joint + '</td>' +
-            '<td style="display:flex;gap:4px;"><button class="btn btn-sm" onclick="event.stopPropagation();openPatientModal(\'' + pid + '\')">View</button>' +
-            '<a class="btn btn-sm" style="background:#2c5aa0;color:white;text-decoration:none;font-size:0.7rem;padding:4px 8px;" href="' + getCockpitPage() + '?patient=' + pid + '" onclick="event.stopPropagation();">COCKPIT</a>' +
-            '<a class="btn btn-sm" style="background:#d4a04a;color:white;text-decoration:none;font-size:0.7rem;padding:4px 8px;" href="/nurse-cockpit.html?patient=' + pid + '" onclick="event.stopPropagation();">NURSE</a></td>' +
-            '</tr>';
-    }).join('');
+    document.getElementById('clinicApptModal').style.display = 'flex';
+}
+
+function closeClinicApptModal() {
+    document.getElementById('clinicApptModal').style.display = 'none';
+}
+
+async function saveClinicAppt() {
+    var pid = clinicApptPatientId || document.getElementById('clinicApptPatient').value;
+    var date = document.getElementById('clinicApptDate').value;
+    var time = document.getElementById('clinicApptTime').value;
+    var vtype = document.getElementById('clinicApptType').value;
+    var complaint = document.getElementById('clinicApptComplaint').value;
+    if (!pid) { alert('Please select a patient.'); return; }
+    if (!date) { alert('Please select a date.'); return; }
+    var clinicId = sessionStorage.getItem('clinicId') || '11111111-1111-1111-1111-111111111111';
+    var p = typeof patients !== 'undefined' ? patients.find(function(x){return x.id===pid;}) : null;
+    try {
+        await fetch('/api/clinic-visits', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({
+                patient_id: pid,
+                episode_id: p ? (p.episode_id || null) : null,
+                clinic_id: clinicId,
+                surgeon_id: p ? (p.surgeon_id || null) : null,
+                visit_date: date,
+                visit_time: time || null,
+                visit_type: vtype,
+                chief_complaint: complaint || null
+            })
+        });
+        closeClinicApptModal();
+        if (typeof loadSchedule === 'function') loadSchedule();
+        if (typeof showToast === 'function') showToast('Appointment scheduled!');
+    } catch(e) {
+        alert('Failed to save appointment.');
+    }
 }
 
 async function loadScheduleSurgeons() {

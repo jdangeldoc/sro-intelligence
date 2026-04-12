@@ -241,9 +241,30 @@ const StageTracker = (function() {
         .stage-btn { padding: 6px 14px; font-size: 0.82rem; }
       }
 
+      /* Launch Intake button under intake node */
+      .stage-launch-intake {
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        background: #0d9488;
+        color: white;
+        white-space: nowrap;
+        transition: background 0.15s;
+      }
+      .stage-launch-intake:hover { background: #0f766e; }
+      .stage-strip.dark-mode .stage-launch-intake {
+        background: rgba(13,148,136,0.85);
+        color: white;
+      }
+      .stage-strip.dark-mode .stage-launch-intake:hover { background: rgba(13,148,136,1); }
+
       @media print {
         .stage-strip { border-bottom: 1px solid #ccc; }
         .stage-actions { display: none; }
+        .stage-launch-intake { display: none; }
       }
     `;
     document.head.appendChild(style);
@@ -274,12 +295,6 @@ const StageTracker = (function() {
     const stage = stageInfo.stages.find(s => s.key === stageKey);
     if (!stage || !stage.page) return;
 
-    // Hard block: cannot go to preop_assessment unless conservative_care is completed
-    if (stageKey === 'preop_assessment' && !isConservativeCareCompleted()) {
-      alert('Conservative Care must be completed before accessing PreOp Assessment.');
-      return;
-    }
-
     // If intake/dashboard, don't navigate — we're already on the dashboard
     if (stageKey === 'intake') return;
 
@@ -292,7 +307,9 @@ const StageTracker = (function() {
     }
 
     if (patientId) {
-      window.location.href = stage.page + '?patient=' + patientId;
+      // postop stage goes to dashboard patient detail panel
+      var param = stageKey === 'postop' ? '?openPatient=' : '?patient=';
+      window.location.href = stage.page + param + patientId;
     } else {
       window.location.href = stage.page;
     }
@@ -327,17 +344,21 @@ const StageTracker = (function() {
       let extraClasses = stage.status;
       // No page (surgery stage)
       if (!stage.page) extraClasses += ' no-page';
-      // Blocked: preop_assessment when conservative_care not completed
-      if (stage.key === 'preop_assessment' && !ccCompleted) extraClasses += ' blocked';
 
       // Click handler — all stages with a page are clickable
       var clickHandler = stage.page ?
         'onclick="StageTracker._handleClick(\'' + stage.key + '\')"' : '';
 
+        html += '<div class="stage-node-wrap" style="display:inline-flex;flex-direction:column;align-items:center;gap:4px;">';
       html += '<div class="stage-node ' + extraClasses + '" data-stage="' + stage.key + '" data-tooltip="' + tooltip + '" ' + clickHandler + '>';
       html += '<span class="stage-icon">' + stage.icon + '</span>';
       html += '<span class="stage-label">' + stage.label + '</span>';
       html += '<span class="stage-check">\u2713</span>';
+      html += '</div>';
+      // Launch Intake button — only on intake node, always clickable
+      if (stage.key === 'intake' && options.launchIntake) {
+        html += '<button class="stage-launch-intake" onclick="StageTracker._launchIntake()" title="Open patient intake form — can be re-run any time">&#128203; Launch Intake</button>';
+      }
       html += '</div>';
     });
 
@@ -397,6 +418,11 @@ const StageTracker = (function() {
     // Internal click handler (called from rendered HTML)
     _handleClick: function(stageKey) {
       handleStageClick(stageKey);
+    },
+
+    // Launch intake (called from rendered HTML button)
+    _launchIntake: function() {
+      if (typeof options.launchIntake === 'function') options.launchIntake();
     },
 
     // Navigate to a stage's page (legacy — still used for programmatic nav)

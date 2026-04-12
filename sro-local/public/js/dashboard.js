@@ -1478,6 +1478,7 @@ function renderPatientTable() {
                 <td>
                     <button class="btn btn-sm" onclick="event.stopPropagation(); openPatientModal('${patient.id}')">View</button>
                     <button class="btn btn-sm" style="background: #28a745; color: white;" onclick="event.stopPropagation(); quickRpmLog('${patient.id}', '${patient.episode_id}', '${patient.first_name} ${patient.last_name}')">⏱️ Log Time</button>
+                    <button class="btn btn-sm" style="background:#0d9488;color:white;" onclick="event.stopPropagation(); if(typeof openClinicApptModal==='function')openClinicApptModal('${patient.id}',null,null); else alert('Open the dashboard to schedule.');">📅 Clinic Appt</button>
                     <a href="${(sessionStorage.getItem('userRole')==='nurse'?'/nurse-cockpit.html':'/cockpit-view.html')+'?patient='+patient.id}" onclick="event.stopPropagation()" style="background:rgba(212,160,74,0.15);border:1px solid rgba(212,160,74,0.4);color:#d4a04a;padding:4px 10px;border-radius:4px;font-size:12px;cursor:pointer;text-decoration:none;display:inline-block;margin-top:4px;">Cockpit</a>
                 </td>
             </tr>
@@ -1535,7 +1536,10 @@ async function openPatientModal(patientId) {
     
     // Initialize stage tracker
     if (typeof StageTracker !== 'undefined' && currentPatient.episode_id) {
-        StageTracker.init('stageTracker', currentPatient.episode_id, { showActions: true, darkMode: true, patientId: currentPatient.id });
+        StageTracker.init('stageTracker', currentPatient.episode_id, {
+            showActions: true, darkMode: true, patientId: currentPatient.id,
+            launchIntake: function() { launchIntakeForPatient(currentPatient.id); }
+        });
     }
     
     // Clear search
@@ -2166,70 +2170,122 @@ function renderCheckinsList(checkins) {
 function renderPainChart(checkins) {
     const canvas = document.getElementById('painChartCanvas');
     const ctx = canvas.getContext('2d');
-    
+
+    // Ensure canvas has explicit pixel dimensions
+    canvas.width = 560;
+    canvas.height = 220;
+
     // Get last 14 days of data
     const last14Days = checkins.slice(0, 14).reverse();
-    
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     if (last14Days.length === 0) {
-        ctx.font = '14px sans-serif';
+        ctx.font = '13px sans-serif';
         ctx.fillStyle = '#666';
         ctx.textAlign = 'center';
         ctx.fillText('No check-in data yet', canvas.width / 2, canvas.height / 2);
         return;
     }
-    
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Chart dimensions
-    const padding = 40;
-    const chartWidth = canvas.width - padding * 2;
-    const chartHeight = canvas.height - padding * 2;
-    
-    // Draw axes
-    ctx.strokeStyle = '#ddd';
-    ctx.beginPath();
-    ctx.moveTo(padding, padding);
-    ctx.lineTo(padding, canvas.height - padding);
-    ctx.lineTo(canvas.width - padding, canvas.height - padding);
-    ctx.stroke();
-    
-    // Draw Y-axis labels (0-10)
-    ctx.fillStyle = '#666';
-    ctx.font = '12px sans-serif';
-    ctx.textAlign = 'right';
+
+    const pad = { top: 28, right: 20, bottom: 44, left: 38 };
+    const chartW = canvas.width - pad.left - pad.right;
+    const chartH = canvas.height - pad.top - pad.bottom;
+
+    const toX = (i) => pad.left + (i / Math.max(1, last14Days.length - 1)) * chartW;
+    const toY = (v) => pad.top + chartH - (v / 10) * chartH;
+
+    // Grid lines
+    ctx.strokeStyle = '#e8e8e8';
+    ctx.lineWidth = 1;
     for (let i = 0; i <= 10; i += 2) {
-        const y = canvas.height - padding - (i / 10) * chartHeight;
-        ctx.fillText(i.toString(), padding - 5, y + 4);
+        const y = toY(i);
+        ctx.beginPath();
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(pad.left + chartW, y);
+        ctx.stroke();
+        ctx.fillStyle = '#888';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(i, pad.left - 5, y + 4);
     }
-    
-    // Draw data points and line
-    ctx.strokeStyle = '#e74c3c';
-    ctx.fillStyle = '#e74c3c';
-    ctx.lineWidth = 2;
+
+    // Axes
+    ctx.strokeStyle = '#ccc';
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    
-    last14Days.forEach((checkin, index) => {
-        const x = padding + (index / (last14Days.length - 1 || 1)) * chartWidth;
-        const y = canvas.height - padding - (checkin.pain_level / 10) * chartHeight;
-        
-        if (index === 0) {
-            ctx.moveTo(x, y);
-        } else {
-            ctx.lineTo(x, y);
-        }
+    ctx.moveTo(pad.left, pad.top);
+    ctx.lineTo(pad.left, pad.top + chartH);
+    ctx.lineTo(pad.left + chartW, pad.top + chartH);
+    ctx.stroke();
+
+    // Gradient fill under line
+    const grad = ctx.createLinearGradient(0, pad.top, 0, pad.top + chartH);
+    grad.addColorStop(0, 'rgba(231,76,60,0.18)');
+    grad.addColorStop(1, 'rgba(231,76,60,0.01)');
+    ctx.beginPath();
+    last14Days.forEach((c, i) => {
+        const x = toX(i), y = toY(c.pain_level);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.lineTo(toX(last14Days.length - 1), pad.top + chartH);
+    ctx.lineTo(toX(0), pad.top + chartH);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Line
+    ctx.strokeStyle = '#e74c3c';
+    ctx.lineWidth = 2.5;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    last14Days.forEach((c, i) => {
+        const x = toX(i), y = toY(c.pain_level);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
     });
     ctx.stroke();
-    
-    // Draw points
-    last14Days.forEach((checkin, index) => {
-        const x = padding + (index / (last14Days.length - 1 || 1)) * chartWidth;
-        const y = canvas.height - padding - (checkin.pain_level / 10) * chartHeight;
-        
+
+    // Points + value labels + date labels
+    last14Days.forEach((c, i) => {
+        const x = toX(i), y = toY(c.pain_level);
+        const color = c.pain_level >= 7 ? '#c0392b' : c.pain_level >= 4 ? '#e67e22' : '#27ae60';
+
+        // Point
+        ctx.fillStyle = color;
         ctx.beginPath();
         ctx.arc(x, y, 5, 0, Math.PI * 2);
         ctx.fill();
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Value above point
+        ctx.fillStyle = '#222';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(c.pain_level, x, y - 9);
+
+        // Date below axis — show every other if crowded
+        if (last14Days.length <= 8 || i % 2 === 0) {
+            const d = new Date(c.checkin_date || c.created_at);
+            const label = (d.getMonth() + 1) + '/' + d.getDate();
+            ctx.fillStyle = '#888';
+            ctx.font = '10px sans-serif';
+            ctx.fillText(label, x, pad.top + chartH + 14);
+        }
     });
+
+    // Y-axis title
+    ctx.save();
+    ctx.translate(11, pad.top + chartH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = '#aaa';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Pain (0–10)', 0, 0);
+    ctx.restore();
 }
 
 function openEpisodeTimeline() {
@@ -2266,8 +2322,7 @@ function openAddPatientModal() {
     document.getElementById('addPatientModal').style.display = 'flex';
     document.getElementById('addPatientForm').reset();
     
-    // Set default surgery date to today
-    document.getElementById('newSurgeryDate').value = new Date().toISOString().split('T')[0];
+    // Surgery date removed from new patient form — set later in workflow
 }
 
 function closeAddPatientModal() {
@@ -2393,15 +2448,33 @@ async function handleAddPatient(event) {
                 clinic_id: CLINIC_ID,
                 surgeon_id: document.getElementById('newSurgeon').value,
                 surgery_type: document.getElementById('newSurgeryType').value,
-                surgery_date: document.getElementById('newSurgeryDate').value
+                surgery_date: null
             })
         });
         
+        // Schedule first appointment if requested
+        const apptDate = document.getElementById('newApptDate') ? document.getElementById('newApptDate').value : '';
+        const apptChecked = document.getElementById('newPatientAddAppt') ? document.getElementById('newPatientAddAppt').checked : false;
+        if (apptChecked && apptDate) {
+            await fetch('/api/clinic-visits', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    patient_id: patient.id,
+                    clinic_id: CLINIC_ID,
+                    visit_date: apptDate,
+                    visit_time: document.getElementById('newApptTime').value || null,
+                    visit_type: document.getElementById('newApptType').value || 'new_patient'
+                })
+            });
+        }
+
         // Refresh and close
         closeAddPatientModal();
         await loadPatients();
         await loadStats();
-        
+        if (typeof loadSchedule === 'function') loadSchedule();
+
         showToast('Patient added successfully!');
     } catch (error) {
         console.error('Error adding patient:', error);
